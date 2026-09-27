@@ -131,7 +131,7 @@ forgive.
       consequential legal action for them: a pass while bidding, the first legal
       card while playing. The deadline is sent to the client as a moment, so the
       clock a player watches is the clock they are judged by.
-- [ ] Reconnect: rejoining mid-deal restores the full view. `GET /belot/state` already re-sends one seat’s view; what is missing is the play in progress, which does not exist yet.
+- [x] Reconnect: `GET /belot/state` re-sends that seat’s whole view — hand, trick on the table, bidding so far, and the turn deadline — and the client asks for it when a tab comes back. Was: `GET /belot/state` already re-sends one seat’s view; what is missing is the play in progress, which does not exist yet.
 - [x] The play itself: `belot.play` holds one row per card; tricks, hands and whose turn it is are rebuilt from it. `POST /belot/play` enforces the turn and `LegalMoves`; the last card scores the deal onto the sheet and deals the next hand.
 - [x] Declarations are detected from the hands rather than announced — they are in the cards, and the cards are in the seed. **Simplification worth revisiting:** at a real table an unannounced declaration does not count.
 - [x] Each deal records what it came to (card points, game points, made/вътре/висящи), which is the score sheet M3 needs.
@@ -148,28 +148,28 @@ tab and reopening it restores that seat's hand exactly.
 
 # M3 — client (1.5–2 weeks)
 
-- [ ] `src/api/belotService.ts`, `src/types/belot.types.ts` (hand-mirrored, no codegen).
-- [ ] Route `/play/belot`; a Belot card in `GameHub`.
-- [ ] Four-hand layout — **the hard part on a phone**; santase's two-hand layout gives nothing to reuse. Partner opposite, opponents left and right, only your own cards face up.
-- [ ] Bidding panel: pass · four suits · no trumps · all trumps · contra.
-- [ ] Declaration prompts on the first trick.
-- [ ] Score sheet: per-deal rows, running totals, the 151 line.
-- [ ] Design tokens only — no hardcoded hex, px or durations (`theme.css`).
-- [ ] ≥44px touch targets, visible focus rings, reduced-motion respected.
+- [x] `src/api/belotService.ts`, `src/types/belot.types.ts` (hand-mirrored, no codegen).
+- [x] Route `/play/belot` behind `RequireService`; a Belot card in `GameHub`, with its own art and its own record line.
+- [x] Four-hand layout. The table is turned so the player is always at the bottom and their partner opposite, whichever seat the server gave them; the other three show a fan of real card backs. Checked at 375px.
+- [x] Bidding panel, built from the calls the server says are legal — naming a suit is printed on card stock in that suit’s ink, the two that name no suit are set in words, and контра is the one loud thing on the screen.
+- [x] Declarations shown from the first trick, cancelled ones struck through rather than hidden. They are detected rather than claimed — the simplification noted in M2.
+- [x] Score sheet: a ruled sheet of paper, one line per hand, the contract printed in the column of the side that called it, card points under written points, double rule before the totals.
+- [x] Design tokens only.
+- [x] ≥ 44px touch targets on every call and card, focus rings inherited from the base theme, no belot-only animation to respect or not.
 
 # M4 — stats and profile (2–3 days)
 
 - [x] `belot.player_stats(username, games, wins, losses)` — changeset 026. No rating column: see the question below, and a column holding a number nobody has agreed on is worse than no column.
 - [ ] **❓ Team Elo:** does a 2v2 result move both partners equally, or by individual contribution?
 - [x] `GET /belot/profile` — games, wins, losses. Written for all four seats when a game is won, since a win belongs to a pair.
-- [ ] `ProfilePage` merges santase stats with belot stats client-side.
+- [x] `ProfilePage` shows a third card for belot, with no rank line — `GameStatsCard` takes rank as optional rather than being handed UNRANKED.
 
 # M5 — loose ends that are easy to forget
 
 - [x] **Account deletion.** `UserUtilService` publishes `UserDeleted` after the deletion commits; `BelotAccountListener` forgets the `belot.player` row and renames every seat that account sat in. Seats are kept, so a finished game can still name four people and nobody loses their record because an opponent left. The event carries a username and nothing else — the same thing that crosses the seam on every request.
 - [ ] Rate limiting — belot's matchmaking endpoints inherit the gap noted in the OWASP review.
-- [ ] `CLAUDE.md`: add belot's package and the three laws.
-- [ ] Prod `ddl-auto: none` means **Liquibase must create every belot table** — dev's `update` will hide a missing changeset until deploy.
+- [x] `CLAUDE.md`: belot's package and the three laws.
+- [x] Prod `ddl-auto: none`: every belot table has a changeset (021–026), and `BelotSchemaTest` pins the list so adding one without a changeset fails. Was: **Liquibase must create every belot table** — dev's `update` will hide a missing changeset until deploy.
 - [ ] Check the belot schema exists in production before the first deploy that needs it.
 
 ---

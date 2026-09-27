@@ -3,6 +3,10 @@
 `bg.deck`: `controller`, `service`, `scheduler`, `repository`, `model`,
 `security`, `config`, `constant`, `enums`, `exception`, `util`.
 
+`bg.deck.belot` is a package apart, with its own `controller`, `service`,
+`scheduler`, `repository`, `model`, `config` and `engine` — see **The belot**
+**seam** below before writing anything in it.
+
 ## One repository, one service
 
 **A repository is injected into exactly one class: the service that owns that
@@ -19,6 +23,10 @@ that service.**
 | `GameRepository`, `GameStateRepository` | `GameUtilService` |
 | `DeletedUserRepository` | `UserUtilService` |
 | `AvailableServiceRepository` | `CacheService` |
+| `BelotPlayerRepository` | `BelotPlayerService` |
+| `BelotGameRepository` | `BelotTableService` |
+| `BelotDealRepository` | `BelotDealService` |
+| `BelotPlayerStatsRepository` | `BelotStatsService` |
 
 Check it in one line — every repository must print `1`:
 
@@ -155,6 +163,44 @@ registered by the configuration that needs it, with
 
 `TemplateLoader` is a class for the other reason: it holds no state at all, it
 is behaviour, and a record with no components says nothing about it.
+
+## The belot seam
+
+Belot is built so it can be lifted out into a service of its own later. Three
+rules keep that option open, and breaking any of them closes it quietly.
+
+1. **Belot tables live in schema `belot`.** Every entity carries
+   `@Table(schema = "belot")`.
+2. **No cross-schema foreign key, ever.** Belot names a player by username,
+   never by a `@ManyToOne User`.
+3. **Belot code reads no `public` table; santase code reads no `belot` table.**
+   The only thing that crosses is the authenticated username — on a request,
+   from the security context; on a deletion, in a `UserDeleted` event.
+
+The checks, before a belot commit:
+
+```bash
+grep -rn "bg.deck.model.User" --include=*.java src/main/java/bg/deck/belot   # empty
+grep -rn "bg.deck.belot" --include=*.java src/main/java/bg/deck/service         # empty
+```
+
+Three things that look reasonable and are not:
+
+- **Do not add `BELOT` to `GameType`.** `UserService.getProfile` loops over
+  `GameType.values()` and `User.statsFor` throws on a missing row: adding a
+  value 500s every existing profile until a backfill runs. Belot keeps
+  `belot.player_stats` and `GET /belot/profile`, and the profile page asks both.
+- **Do not widen `Game`.** Two seats, one state column per game type. Belot
+  needs four seats and two teams, and has its own tables.
+- **Do not reuse `GameInactivityService`.** It branches on `GameType` and works
+  on `Game`. Belot has `BelotTurnScheduler`, built on the same pattern.
+
+What is shared, deliberately: `JwtAuthenticationFilter`, `SecurityConfig`, the
+STOMP transport, `WebSocketService`, the scheduler and its ShedLock, and
+`GlobalExceptionHandler` — so the error shape a client sees is identical.
+
+`docs/belot/RULES.md` holds the rules of the game; `docs/belot/BUILD.md` the
+plan and what is still open.
 
 ## Everything else
 
