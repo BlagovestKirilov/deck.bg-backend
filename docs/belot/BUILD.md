@@ -176,10 +176,16 @@ tab and reopening it restores that seat's hand exactly.
 # M5 — loose ends that are easy to forget
 
 - [x] **Account deletion.** `UserUtilService` publishes `UserDeleted` after the deletion commits; `BelotAccountListener` forgets the `belot.player` row and renames every seat that account sat in. Seats are kept, so a finished game can still name four people and nobody loses their record because an opponent left. The event carries a username and nothing else — the same thing that crosses the seam on every request.
-- [ ] Rate limiting — belot's matchmaking endpoints inherit the gap noted in the OWASP review.
+- [x] Rate limiting — two nginx zones, written out in [`DEPLOY.md`](DEPLOY.md):
+      `belot_search_limit` (30r/m, burst 10) for matchmaking and `belot_limit`
+      (120r/m, burst 30) for everything else. `burst ... nodelay` is what keeps a
+      fast table from ever feeling it. The config lives on the server, not here,
+      so the block is in the doc rather than in the repository.
 - [x] `CLAUDE.md`: belot's package and the three laws.
 - [x] Prod `ddl-auto: none`: every belot table has a changeset (021–026), and `BelotSchemaTest` pins the list so adding one without a changeset fails. Was: **Liquibase must create every belot table** — dev's `update` will hide a missing changeset until deploy.
-- [ ] Check the belot schema exists in production before the first deploy that needs it.
+- [ ] Check the belot schema exists in production before the first deploy that
+      needs it — the `psql` one-liner and the fallback `CREATE SCHEMA` are in
+      [`DEPLOY.md`](DEPLOY.md). Ops step, so it stays open until it is done.
 
 ---
 
