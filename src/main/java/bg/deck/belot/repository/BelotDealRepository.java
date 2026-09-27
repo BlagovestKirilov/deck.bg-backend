@@ -16,6 +16,9 @@ public interface BelotDealRepository extends JpaRepository<BelotDeal, UUID> {
     List<BelotDeal> findByStatusInAndTurnStartedAtBefore(
             List<BelotDealStatus> statuses, Instant startedBefore);
 
+    /** Every hand at this table, oldest first — the score sheet. */
+    List<BelotDeal> findByGameOrderByDealNumberAsc(BelotGame game);
+
     /** The deal being played at this table, if one is. */
     Optional<BelotDeal> findFirstByGameOrderByDealNumberDesc(BelotGame game);
 }

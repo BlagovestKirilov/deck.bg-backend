@@ -25,7 +25,6 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -101,10 +100,15 @@ class BelotTurnTest {
         @Test
         @DisplayName("restarts with every turn taken")
         void restartsEachTurn() {
-            Instant before = deal.getTurnStartedAt();
+            // Wound back rather than read twice: two calls to the clock in the
+            // same millisecond are equal, and a test that depends on them not
+            // being equal fails for a reason that has nothing to do with belot.
+            Instant longAgo = Instant.now().minusSeconds(600);
+            deal.setTurnStartedAt(longAgo);
+
             dealService.bid(deal, BidAction.pass(deal.bidding().toAct()));
 
-            assertNotEquals(before, deal.getTurnStartedAt(),
+            assertTrue(deal.getTurnStartedAt().isAfter(longAgo),
                     "the next seat's time is their own, not what is left of somebody else's");
         }
 

@@ -28,6 +28,7 @@ import java.util.UUID;
  * @param bidding         the bidding, or null once a hand is being played
  * @param play            the hand being played, or null while it is being bid for
  * @param turn            who the table is waiting for, and until when
+ * @param sheet           every hand counted so far, oldest first
  * @param northSouthScore the score sheet
  * @param eastWestScore   the score sheet
  * @param hangingPoints   points from a level deal, waiting on the next one
@@ -45,6 +46,7 @@ public record BelotStateResponse(
         BelotBiddingView bidding,
         BelotPlayView play,
         BelotTurnView turn,
+        List<BelotDealRow> sheet,
         int northSouthScore,
         int eastWestScore,
         int hangingPoints
@@ -52,6 +54,7 @@ public record BelotStateResponse(
 
     public BelotStateResponse {
         seats = List.copyOf(seats);
+        sheet = List.copyOf(sheet);
         yourHand = List.copyOf(yourHand);
     }
 }

@@ -3,6 +3,7 @@ package bg.deck;
 import bg.deck.belot.engine.BidKind;
 import bg.deck.belot.engine.Card;
 import bg.deck.belot.engine.Contract;
+import bg.deck.belot.engine.DealResult;
 import bg.deck.belot.engine.Doubling;
 import bg.deck.belot.engine.Rank;
 import bg.deck.belot.engine.Seat;
@@ -13,6 +14,7 @@ import bg.deck.belot.model.BelotGameStatus;
 import bg.deck.belot.model.request.BelotBidRequest;
 import bg.deck.belot.model.request.BelotPlayRequest;
 import bg.deck.belot.model.response.BelotBidView;
+import bg.deck.belot.model.response.BelotDealRow;
 import bg.deck.belot.model.response.BelotBiddingView;
 import bg.deck.belot.model.response.BelotPlayView;
 import bg.deck.belot.model.response.BelotPlayedCard;
@@ -158,6 +160,10 @@ class WireFormatSnapshotTest {
                                 new BelotPlayedCard(Seat.WEST, new Card(Suit.CLUBS, Rank.KING))),
                         List.of(new Card(Suit.CLUBS, Rank.SEVEN))),
                 new BelotTurnView(Seat.EAST, Instant.parse("2026-09-27T10:15:30Z")),
+                List.of(new BelotDealRow(1, Contract.SPADES, Seat.NORTH, Team.NORTH_SOUTH,
+                        Doubling.NONE, 97, 65, 10, 6, DealResult.MADE),
+                        new BelotDealRow(2, Contract.NO_TRUMPS, Seat.EAST, Team.EAST_WEST,
+                                Doubling.CONTRA, 120, 140, 0, 52, DealResult.INSIDE)),
                 91, 64, 0));
 
         out.put("SearchGameResponse.waiting", SearchGameResponse.waiting());

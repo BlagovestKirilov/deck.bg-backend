@@ -109,6 +109,12 @@ public class BelotDealService {
                 List.of(BelotDealStatus.BIDDING, BelotDealStatus.PLAYING), since);
     }
 
+    /** Every hand at this table, oldest first. */
+    @Transactional(readOnly = true)
+    public List<BelotDeal> history(BelotGame game) {
+        return belotDealRepository.findByGameOrderByDealNumberAsc(game);
+    }
+
     /** Writes a deal and the bids and cards hanging off it. */
     @Transactional
     public BelotDeal save(BelotDeal deal) {

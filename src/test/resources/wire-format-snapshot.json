@@ -101,6 +101,29 @@
       "seat" : "EAST",
       "deadline" : "2026-09-27T10:15:30Z"
     },
+    "sheet" : [ {
+      "dealNumber" : 1,
+      "contract" : "SPADES",
+      "declarer" : "NORTH",
+      "callerTeam" : "NORTH_SOUTH",
+      "doubling" : "NONE",
+      "callerPoints" : 97,
+      "opponentPoints" : 65,
+      "callerScore" : 10,
+      "opponentScore" : 6,
+      "result" : "MADE"
+    }, {
+      "dealNumber" : 2,
+      "contract" : "NO_TRUMPS",
+      "declarer" : "EAST",
+      "callerTeam" : "EAST_WEST",
+      "doubling" : "CONTRA",
+      "callerPoints" : 120,
+      "opponentPoints" : 140,
+      "callerScore" : 0,
+      "opponentScore" : 52,
+      "result" : "INSIDE"
+    } ],
     "northSouthScore" : 91,
     "eastWestScore" : 64,
     "hangingPoints" : 0

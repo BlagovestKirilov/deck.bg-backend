@@ -5,6 +5,7 @@ import bg.deck.belot.engine.Bidding;
 import bg.deck.belot.engine.Card;
 import bg.deck.belot.engine.Dealing;
 import bg.deck.belot.engine.Seat;
+import bg.deck.belot.engine.Team;
 import bg.deck.belot.engine.Seat;
 import bg.deck.belot.model.BelotDeal;
 import bg.deck.belot.model.BelotDealStatus;
@@ -17,6 +18,7 @@ import bg.deck.belot.model.request.BelotPlayRequest;
 import bg.deck.belot.engine.Trick;
 import bg.deck.belot.model.BelotDealStatus;
 import bg.deck.belot.model.response.BelotBidView;
+import bg.deck.belot.model.response.BelotDealRow;
 import bg.deck.belot.model.response.BelotBiddingView;
 import bg.deck.belot.model.response.BelotPlayView;
 import bg.deck.belot.model.response.BelotPlayedCard;
@@ -231,6 +233,7 @@ public class BelotService {
                 deal.map(current -> biddingFor(current, seat)).orElse(null),
                 deal.map(current -> playFor(table, current, seat)).orElse(null),
                 deal.map(this::turnFor).orElse(null),
+                sheetOf(table),
                 table.getNorthSouthScore(),
                 table.getEastWestScore(),
                 table.getHangingPoints());
@@ -309,5 +312,30 @@ public class BelotService {
             return null;
         }
         return new BelotTurnView(toAct.get(), belotTurnService.deadline(deal).orElse(null));
+    }
+
+    /**
+     * The score sheet: every hand that has been counted, oldest first.
+     *
+     * <p>Sent with the state rather than fetched on demand. A game runs to
+     * 151, which is a dozen or so lines — small enough that a second
+     * request to keep them in step with the running total would cost more
+     * than it saves.
+     */
+    private List<BelotDealRow> sheetOf(BelotGame table) {
+        return belotDealService.history(table).stream()
+                .filter(played -> played.getResult() != null)
+                .map(played -> new BelotDealRow(
+                        played.getDealNumber(),
+                        played.getContract(),
+                        played.getDeclarerSeat(),
+                        played.getDeclarerSeat() == null ? null : Team.of(played.getDeclarerSeat()),
+                        played.getDoubling(),
+                        played.getCallerPoints(),
+                        played.getOpponentPoints(),
+                        played.getCallerScore(),
+                        played.getOpponentScore(),
+                        played.getResult()))
+                .toList();
     }
 }
