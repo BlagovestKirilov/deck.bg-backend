@@ -18,7 +18,10 @@ import bg.deck.belot.model.request.BelotPlayRequest;
 import bg.deck.belot.engine.Trick;
 import bg.deck.belot.model.BelotDealStatus;
 import bg.deck.belot.model.response.BelotBidView;
+import bg.deck.belot.engine.Declaration;
 import bg.deck.belot.model.response.BelotDealRow;
+import bg.deck.belot.model.response.BelotDeclarationView;
+import bg.deck.belot.model.response.BelotDeclarationsView;
 import bg.deck.belot.model.response.BelotBiddingView;
 import bg.deck.belot.model.response.BelotPlayView;
 import bg.deck.belot.model.response.BelotPlayedCard;
@@ -33,6 +36,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 import java.time.Instant;
 
 import java.util.List;
@@ -234,6 +238,7 @@ public class BelotService {
                 deal.map(current -> biddingFor(current, seat)).orElse(null),
                 deal.map(current -> playFor(table, current, seat)).orElse(null),
                 deal.map(this::turnFor).orElse(null),
+                deal.map(current -> declarationsFor(table, current)).orElse(null),
                 sheetOf(table),
                 table.getNorthSouthScore(),
                 table.getEastWestScore(),
@@ -352,5 +357,29 @@ public class BelotService {
                         played.getOpponentScore(),
                         played.getResult()))
                 .toList();
+    }
+
+    /**
+     * What the table announced, once the first trick is complete.
+     *
+     * <p>Not before: at a table these are called out as the first trick is
+     * played, and sending them sooner would tell three people what is in
+     * somebody’s hand before they have played a card of it.
+     */
+    private BelotDeclarationsView declarationsFor(BelotGame table, BelotDeal deal) {
+        boolean firstTrickDone = deal.getPlays().size() >= Seat.values().length;
+        if (deal.getContract() == null || !firstTrickDone) {
+            return null;
+        }
+
+        Map<Seat, List<Declaration>> bySeat = belotPlayService.declarationsBySeat(table, deal);
+        List<BelotDeclarationView> shown = bySeat.entrySet().stream()
+                .flatMap(held -> held.getValue().stream()
+                        .map(declaration -> BelotDeclarationView.of(held.getKey(), declaration)))
+                .toList();
+
+        return new BelotDeclarationsView(shown,
+                belotPlayService.declarationPoints(bySeat, Team.NORTH_SOUTH),
+                belotPlayService.declarationPoints(bySeat, Team.EAST_WEST));
     }
 }

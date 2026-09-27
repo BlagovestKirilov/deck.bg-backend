@@ -6,6 +6,7 @@ import bg.deck.belot.engine.DealOutcome;
 import bg.deck.belot.engine.DealPoints;
 import bg.deck.belot.engine.DealScorer;
 import bg.deck.belot.engine.Declaration;
+import bg.deck.belot.engine.DeclarationScoring;
 import bg.deck.belot.engine.Declarations;
 import bg.deck.belot.engine.GameScorer;
 import bg.deck.belot.engine.LegalMoves;
@@ -170,6 +171,32 @@ public class BelotPlayService {
      * cards, and the cards are in the seed, so there is nothing for a player
      * to forget to claim and nothing for the server to take their word about.
      */
+    /**
+     * What each seat holds that is worth announcing, by seat.
+     *
+     * <p>The dealt hand, not what is left of it: a sequence announced on the
+     * first trick is still that player’s sequence when the cards have been
+     * played away.
+     */
+    public Map<Seat, List<Declaration>> declarationsBySeat(BelotGame game, BelotDeal deal) {
+        Map<Seat, List<Declaration>> bySeat = new EnumMap<>(Seat.class);
+        belotDealService.hands(game, deal).forEach(
+                (seat, hand) -> bySeat.put(seat, Declarations.in(hand, deal.getContract())));
+        return bySeat;
+    }
+
+    /** What one side scores from its announcements, once the other’s is weighed. */
+    public int declarationPoints(Map<Seat, List<Declaration>> bySeat, Team team) {
+        return DeclarationScoring.scoreFor(ofTeam(bySeat, team), ofTeam(bySeat, team.opponent()));
+    }
+
+    private static List<Declaration> ofTeam(Map<Seat, List<Declaration>> bySeat, Team team) {
+        return bySeat.entrySet().stream()
+                .filter(held -> Team.of(held.getKey()) == team)
+                .flatMap(held -> held.getValue().stream())
+                .toList();
+    }
+
     private Map<Team, List<Declaration>> declarations(Map<Seat, List<Card>> hands, Contract contract) {
         Map<Team, List<Declaration>> byTeam = new EnumMap<>(Team.class);
         byTeam.put(Team.NORTH_SOUTH, new ArrayList<>());

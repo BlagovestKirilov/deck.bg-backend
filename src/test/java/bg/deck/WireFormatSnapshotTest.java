@@ -14,7 +14,10 @@ import bg.deck.belot.model.BelotGameStatus;
 import bg.deck.belot.model.request.BelotBidRequest;
 import bg.deck.belot.model.request.BelotPlayRequest;
 import bg.deck.belot.model.response.BelotBidView;
+import bg.deck.belot.engine.DeclarationKind;
 import bg.deck.belot.model.response.BelotDealRow;
+import bg.deck.belot.model.response.BelotDeclarationView;
+import bg.deck.belot.model.response.BelotDeclarationsView;
 import bg.deck.belot.model.response.BelotBiddingView;
 import bg.deck.belot.model.response.BelotPlayView;
 import bg.deck.belot.model.response.BelotPlayedCard;
@@ -162,6 +165,12 @@ class WireFormatSnapshotTest {
                         null,
                         List.of(new Card(Suit.CLUBS, Rank.SEVEN))),
                 new BelotTurnView(Seat.EAST, Instant.parse("2026-09-27T10:15:30Z")),
+                new BelotDeclarationsView(
+                        List.of(new BelotDeclarationView(Seat.NORTH, DeclarationKind.TERZ,
+                                        Suit.SPADES, Rank.KING, 20),
+                                new BelotDeclarationView(Seat.EAST, DeclarationKind.BELOTE,
+                                        Suit.HEARTS, Rank.KING, 20)),
+                        20, 20),
                 List.of(new BelotDealRow(1, Contract.SPADES, Seat.NORTH, Team.NORTH_SOUTH,
                         Doubling.NONE, 97, 65, 10, 6, DealResult.MADE),
                         new BelotDealRow(2, Contract.NO_TRUMPS, Seat.EAST, Team.EAST_WEST,

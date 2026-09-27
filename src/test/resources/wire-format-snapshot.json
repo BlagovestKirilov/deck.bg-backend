@@ -103,6 +103,24 @@
       "seat" : "EAST",
       "deadline" : "2026-09-27T10:15:30Z"
     },
+    "declarations" : {
+      "shown" : [ {
+        "seat" : "NORTH",
+        "kind" : "TERZ",
+        "suit" : "SPADES",
+        "topRank" : "KING",
+        "points" : 20
+      }, {
+        "seat" : "EAST",
+        "kind" : "BELOTE",
+        "suit" : "HEARTS",
+        "topRank" : "KING",
+        "points" : 20
+      } ],
+      "northSouthPoints" : 20,
+      "eastWestPoints" : 20,
+      "empty" : false
+    },
     "sheet" : [ {
       "dealNumber" : 1,
       "contract" : "SPADES",

@@ -30,6 +30,8 @@ import java.util.UUID;
  * @param bidding         the bidding, or null once a hand is being played
  * @param play            the hand being played, or null while it is being bid for
  * @param turn            who the table is waiting for, and until when
+ * @param declarations    what the table announced this deal, once the first
+ *                        trick is complete; null before that
  * @param sheet           every hand counted so far, oldest first
  * @param northSouthScore the score sheet
  * @param eastWestScore   the score sheet
@@ -49,6 +51,7 @@ public record BelotStateResponse(
         BelotBiddingView bidding,
         BelotPlayView play,
         BelotTurnView turn,
+        BelotDeclarationsView declarations,
         List<BelotDealRow> sheet,
         int northSouthScore,
         int eastWestScore,
