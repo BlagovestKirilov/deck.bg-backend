@@ -43,7 +43,8 @@ public class BelotTurnService {
         return switch (deal.getStatus()) {
             case BIDDING -> Optional.of(deal.bidding().toAct());
             case PLAYING -> Optional.of(belotPlayService.toAct(deal));
-            case THROWN_IN, FINISHED -> Optional.empty();
+            // Nobody is to act on a hand that is over, given up on included.
+            case THROWN_IN, FINISHED, ABANDONED -> Optional.empty();
         };
     }
 

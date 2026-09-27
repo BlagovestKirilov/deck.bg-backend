@@ -10,5 +10,7 @@ public enum BelotDealStatus {
     /** All four passed. Nothing is scored and the next seat deals. */
     THROWN_IN,
     /** Played out and scored. */
-    FINISHED
+    FINISHED,
+    /** Given up on: a player conceded the game and the hand was never counted. */
+    ABANDONED
 }

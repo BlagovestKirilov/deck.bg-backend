@@ -109,6 +109,20 @@ public class BelotDealService {
                 List.of(BelotDealStatus.BIDDING, BelotDealStatus.PLAYING), since);
     }
 
+    /**
+     * Gives up on the hand in progress, without counting it.
+     *
+     * <p>Called when a player concedes the game. The hand is left where it
+     * stopped: nothing goes on the sheet for it, and it drops out of
+     * {@link #waitingSince} so the turn clock lets it alone.
+     */
+    @Transactional
+    public void abandon(BelotDeal deal) {
+        deal.setStatus(BelotDealStatus.ABANDONED);
+        deal.setTurnStartedAt(null);
+        belotDealRepository.save(deal);
+    }
+
     /** Every hand at this table, oldest first. */
     @Transactional(readOnly = true)
     public List<BelotDeal> history(BelotGame game) {

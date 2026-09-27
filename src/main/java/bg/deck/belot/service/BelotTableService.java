@@ -91,6 +91,28 @@ public class BelotTableService {
     }
 
     /**
+     * One player gives up, and the game goes to the other pair.
+     *
+     * <p>A concession binds the partner. There is no way for it not to: belot
+     * is scored per pair, the sheet has two columns, and a game cannot end for
+     * two of the four and go on for the other two. So the client says out loud
+     * whose game is being given up before it asks for this.
+     *
+     * <p>The score stands as it was. A conceded game is not a 151, and nothing
+     * is invented to make it look like one — what is recorded is who won.
+     */
+    @Transactional
+    public void concede(BelotGame game, BelotSeat seat) {
+        game.setWinnerTeam(seat.team().opponent());
+        game.setStatus(BelotGameStatus.FINISHED);
+        belotGameRepository.save(game);
+
+        log.info("Belot: {} conceded table {}, so it goes to {} ({}-{})",
+                seat.getUsername(), game.getId(), game.getWinnerTeam(),
+                game.getNorthSouthScore(), game.getEastWestScore());
+    }
+
+    /**
      * Renames every seat a deleted account sat in.
      *
      * <p>The seats stay. A finished game still has to say four people were

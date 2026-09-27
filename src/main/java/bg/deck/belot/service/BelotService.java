@@ -4,42 +4,39 @@ import bg.deck.belot.engine.BidAction;
 import bg.deck.belot.engine.Bidding;
 import bg.deck.belot.engine.Card;
 import bg.deck.belot.engine.Dealing;
+import bg.deck.belot.engine.Declaration;
 import bg.deck.belot.engine.Seat;
 import bg.deck.belot.engine.Team;
-import bg.deck.belot.engine.Seat;
+import bg.deck.belot.engine.Trick;
 import bg.deck.belot.model.BelotDeal;
 import bg.deck.belot.model.BelotDealStatus;
 import bg.deck.belot.model.BelotGame;
-import bg.deck.belot.model.BelotSeat;
-import bg.deck.belot.model.response.BelotTurnView;
 import bg.deck.belot.model.BelotGameStatus;
+import bg.deck.belot.model.BelotSeat;
 import bg.deck.belot.model.request.BelotBidRequest;
 import bg.deck.belot.model.request.BelotPlayRequest;
-import bg.deck.belot.engine.Trick;
-import bg.deck.belot.model.BelotDealStatus;
 import bg.deck.belot.model.response.BelotBidView;
-import bg.deck.belot.engine.Declaration;
+import bg.deck.belot.model.response.BelotBiddingView;
 import bg.deck.belot.model.response.BelotDealRow;
 import bg.deck.belot.model.response.BelotDeclarationView;
 import bg.deck.belot.model.response.BelotDeclarationsView;
-import bg.deck.belot.model.response.BelotBiddingView;
 import bg.deck.belot.model.response.BelotPlayView;
 import bg.deck.belot.model.response.BelotPlayedCard;
 import bg.deck.belot.model.response.BelotSeatView;
 import bg.deck.belot.model.response.BelotStateResponse;
+import bg.deck.belot.model.response.BelotTurnView;
 import bg.deck.enums.GameType;
 import bg.deck.service.AvailabilityService;
 import bg.deck.service.WebSocketService;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
-import java.time.Instant;
-
-import java.util.List;
 import java.util.Optional;
 
 /**
@@ -63,6 +60,7 @@ public class BelotService {
     private final BelotPlayService belotPlayService;
     private final BelotTurnService belotTurnService;
     private final BelotPlayerService belotPlayerService;
+    private final BelotStatsService belotStatsService;
     private final AvailabilityService availabilityService;
     private final WebSocketService webSocketService;
 
@@ -137,6 +135,35 @@ public class BelotService {
                 && table.getStatus() != BelotGameStatus.FINISHED) {
             belotDealService.dealNext(table);
         }
+
+        tellEveryone(table);
+    }
+
+    /**
+     * A player gives up, and the game goes to the other pair.
+     *
+     * <p>The whole pair gives up with them, which is why the client confirms
+     * it in those words.
+     *
+     * <p>Idempotent on purpose. A table that is already over — because their
+     * partner pressed it a moment earlier, or because the last card fell — is
+     * left alone rather than refused.
+     */
+    @Transactional
+    public void surrender(String username) {
+        Optional<BelotGame> seated = belotTableService.tableOf(username);
+        if (seated.isEmpty() || seated.get().getStatus() == BelotGameStatus.FINISHED) {
+            // Nothing to give up. Their partner pressed it a moment ago, or
+            // the last card has just been played. Neither is an error, and a
+            // 500 for the slower of two hands is worse than doing nothing.
+            return;
+        }
+
+        BelotGame table = seated.get();
+        BelotSeat seat = seatFor(table, username);
+        belotDealService.current(table).ifPresent(belotDealService::abandon);
+        belotTableService.concede(table, seat);
+        belotStatsService.record(table);
 
         tellEveryone(table);
     }
@@ -254,7 +281,9 @@ public class BelotService {
         return deal.map(current -> switch (current.getStatus()) {
             case BIDDING -> Dealing.BEFORE_BIDDING;
             case PLAYING -> Dealing.HAND_SIZE - current.playedBy(seat).size();
-            case THROWN_IN, FINISHED -> 0;
+            // A hand that is over, however it ended: nobody is holding
+            // anything at the table any more.
+            case THROWN_IN, FINISHED, ABANDONED -> 0;
         }).orElse(0);
     }
 

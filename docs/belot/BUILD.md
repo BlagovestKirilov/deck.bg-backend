@@ -175,6 +175,15 @@ tab and reopening it restores that seat's hand exactly.
 
 # M5 — loose ends that are easy to forget
 
+- [x] **Surrender.** `POST /belot/surrender`, and it gives the game up for the
+      pair. There is no other shape it could have: belot is scored per pair and
+      the sheet has two columns, so a game cannot end for two of the four and
+      go on for the other two. The client says so in those words before it
+      asks. The score stands as it was — a conceded game is not invented as a
+      151 — the hand in progress goes ABANDONED rather than THROWN_IN or
+      FINISHED (nobody passed, and nothing was counted), and that drops it out
+      of the turn clock's sweep. Idempotent: two partners pressing at once is
+      not an error. `BelotSurrenderTest`.
 - [x] **Account deletion.** `UserUtilService` publishes `UserDeleted` after the deletion commits; `BelotAccountListener` forgets the `belot.player` row and renames every seat that account sat in. Seats are kept, so a finished game can still name four people and nobody loses their record because an opponent left. The event carries a username and nothing else — the same thing that crosses the seam on every request.
 - [x] Rate limiting — two nginx zones, written out in [`DEPLOY.md`](DEPLOY.md):
       `belot_search_limit` (30r/m, burst 10) for matchmaking and `belot_limit`

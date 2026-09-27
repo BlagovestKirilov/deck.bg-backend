@@ -1,0 +1,38 @@
+databaseChangeLog:
+  # A hand can now end without being counted.
+  #
+  # Belot has a surrender, and a player who gives up leaves a hand in the
+  # middle of itself. It is not THROWN_IN — nobody passed — and it is not
+  # FINISHED, because nothing went on the sheet for it. ABANDONED says what
+  # happened, and it keeps the hand out of the turn clock's sweep, which
+  # looks only at BIDDING and PLAYING.
+  #
+  # Additive: one more value allowed by an existing CHECK. Every row that
+  # exists already satisfies the new constraint, since it is the old one with
+  # a value added.
+  - changeSet:
+      id: 028-belot-abandoned-deal
+      author: Blagovest Kirilov
+      comment: A deal can be given up on, not only passed out or played out
+      changes:
+        - sql:
+            dbms: postgresql
+            splitStatements: false
+            sql: |
+              ALTER TABLE belot.deal
+                  DROP CONSTRAINT IF EXISTS belot_deal_status_check;
+
+              ALTER TABLE belot.deal
+                  ADD CONSTRAINT belot_deal_status_check
+                  CHECK (status IN ('BIDDING', 'PLAYING', 'THROWN_IN', 'FINISHED', 'ABANDONED'));
+      rollback:
+        - sql:
+            dbms: postgresql
+            splitStatements: false
+            sql: |
+              ALTER TABLE belot.deal
+                  DROP CONSTRAINT IF EXISTS belot_deal_status_check;
+
+              ALTER TABLE belot.deal
+                  ADD CONSTRAINT belot_deal_status_check
+                  CHECK (status IN ('BIDDING', 'PLAYING', 'THROWN_IN', 'FINISHED'));

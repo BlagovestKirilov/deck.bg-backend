@@ -73,7 +73,8 @@ class BelotViewTest {
     private final WebSocketService sockets = mock(WebSocketService.class);
 
     private final BelotService belot =
-            new BelotService(tables, dealService, playService, turnService, players, availability, sockets);
+            new BelotService(tables, dealService, playService, turnService, players, statsService,
+                    availability, sockets);
 
     private BelotGame table;
     private BelotDeal deal;

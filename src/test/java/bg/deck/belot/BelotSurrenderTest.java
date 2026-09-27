@@ -1,0 +1,188 @@
+package bg.deck.belot;
+
+import bg.deck.belot.config.BelotProperties;
+import bg.deck.belot.engine.BidKind;
+import bg.deck.belot.engine.Contract;
+import bg.deck.belot.engine.Seat;
+import bg.deck.belot.engine.Team;
+import bg.deck.belot.model.BelotDeal;
+import bg.deck.belot.model.BelotDealStatus;
+import bg.deck.belot.model.BelotGame;
+import bg.deck.belot.model.BelotGameStatus;
+import bg.deck.belot.model.request.BelotBidRequest;
+import bg.deck.belot.repository.BelotPlayerStatsRepository;
+import bg.deck.belot.service.BelotDealService;
+import bg.deck.belot.service.BelotPlayService;
+import bg.deck.belot.service.BelotPlayerService;
+import bg.deck.belot.service.BelotSeedService;
+import bg.deck.belot.service.BelotService;
+import bg.deck.belot.service.BelotStatsService;
+import bg.deck.belot.service.BelotTableService;
+import bg.deck.belot.service.BelotTurnService;
+import bg.deck.service.AvailabilityService;
+import bg.deck.service.WebSocketService;
+import jakarta.persistence.EntityManager;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
+import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
+import org.springframework.context.annotation.Import;
+import org.springframework.test.context.TestPropertySource;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+
+import java.time.Instant;
+import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+/**
+ * Giving up.
+ *
+ * <p>Belot is scored per pair and the sheet has two columns, so a game cannot
+ * end for two of the four and go on for the other two: a concession binds the
+ * partner. That is the decision this pins down, along with the two things that
+ * have to stop when it happens — the hand in progress and the turn clock over
+ * it.
+ */
+@DisplayName("Giving up a game")
+@DataJpaTest
+@EnableConfigurationProperties(BelotProperties.class)
+@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
+@Import({BelotService.class, BelotTableService.class, BelotDealService.class, BelotPlayService.class,
+        BelotTurnService.class, BelotPlayerService.class, BelotSeedService.class, BelotStatsService.class})
+@TestPropertySource(properties = {
+        "spring.liquibase.enabled=false",
+        "spring.jpa.hibernate.ddl-auto=create-drop",
+        "spring.datasource.url=jdbc:h2:mem:belotsurrender;INIT=CREATE SCHEMA IF NOT EXISTS belot",
+        "spring.datasource.username=sa",
+        "spring.datasource.password=",
+        "spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.H2Dialect",
+})
+class BelotSurrenderTest {
+
+    /** North, East, South, West, in that order: petko and gosho are partners. */
+    private static final List<String> PLAYERS = List.of("petko91", "ninja2011", "gosho", "ivan");
+
+    @MockitoBean private AvailabilityService availabilityService;
+    @MockitoBean private WebSocketService webSocketService;
+
+    @Autowired private BelotService belot;
+    @Autowired private BelotTableService tables;
+    @Autowired private BelotDealService deals;
+    @Autowired private BelotPlayerStatsRepository records;
+    @Autowired private EntityManager entityManager;
+
+    private BelotGame seatFour() {
+        PLAYERS.forEach(belot::search);
+        return tables.tableOf(PLAYERS.getFirst()).orElseThrow();
+    }
+
+    @Test
+    @DisplayName("the game goes to the other pair, and the partner goes down with them")
+    void thePairGivesUpTogether() {
+        BelotGame table = seatFour();
+
+        belot.surrender("petko91");
+
+        assertEquals(BelotGameStatus.FINISHED, table.getStatus());
+        assertEquals(Team.EAST_WEST, table.getWinnerTeam(),
+                "petko sits north, so the game goes to east and west");
+
+        entityManager.flush();
+        entityManager.clear();
+
+        assertEquals(1, records.findByUsername("gosho").orElseThrow().getLosses(),
+                "his partner loses it with him: there is no way for the pair to split a result");
+        assertEquals(1, records.findByUsername("ninja2011").orElseThrow().getWins());
+        assertEquals(1, records.findByUsername("ivan").orElseThrow().getWins());
+    }
+
+    @Test
+    @DisplayName("the hand in progress is given up on, not counted")
+    void theHandIsAbandoned() {
+        BelotGame table = seatFour();
+
+        belot.surrender("petko91");
+
+        BelotDeal deal = deals.current(table).orElseThrow();
+        assertEquals(BelotDealStatus.ABANDONED, deal.getStatus());
+        assertEquals(0, table.getNorthSouthScore() + table.getEastWestScore() + table.getHangingPoints(),
+                "nothing went on the sheet for a hand nobody finished");
+    }
+
+    @Test
+    @DisplayName("and the turn clock lets the table alone afterwards")
+    void theClockStops() {
+        BelotGame table = seatFour();
+        BelotDeal deal = deals.current(table).orElseThrow();
+
+        // Wind the clock back past any plausible timeout, so the only reason
+        // the sweep could skip this deal is the concession.
+        deal.setTurnStartedAt(Instant.now().minusSeconds(3600));
+        deals.save(deal);
+
+        assertFalse(deals.waitingSince(Instant.now()).isEmpty(), "the sweep would have taken it");
+
+        belot.surrender("petko91");
+
+        assertTrue(deals.waitingSince(Instant.now()).isEmpty(),
+                "a hand given up on is not a hand somebody is late for");
+    }
+
+    @Test
+    @DisplayName("pressing it twice changes nothing")
+    void surrenderingTwiceIsHarmless() {
+        BelotGame table = seatFour();
+
+        belot.surrender("petko91");
+        belot.surrender("gosho");
+
+        assertEquals(Team.EAST_WEST, table.getWinnerTeam(), "the first one settled it");
+
+        entityManager.flush();
+        entityManager.clear();
+
+        assertEquals(1, records.findByUsername("gosho").orElseThrow().getGames(),
+                "and it is one game on the record, not two: the second press found"
+                        + " no live table and did nothing");
+    }
+
+    @Test
+    @DisplayName("a score already on the sheet stands: a conceded game is not invented as a 151")
+    void theScoreStandsAsItWas() {
+        BelotGame table = seatFour();
+        table.setNorthSouthScore(40);
+        table.setEastWestScore(12);
+        tables.save(table);
+
+        belot.surrender("ninja2011");
+
+        assertEquals(40, table.getNorthSouthScore());
+        assertEquals(12, table.getEastWestScore());
+        assertEquals(Team.NORTH_SOUTH, table.getWinnerTeam(),
+                "the pair that was behind gave up, and the sheet still says they were ahead");
+    }
+
+    @Test
+    @DisplayName("it works during the bidding too, not only once cards are down")
+    void givingUpWhileBidding() {
+        BelotGame table = seatFour();
+        BelotDeal deal = deals.current(table).orElseThrow();
+        assertEquals(BelotDealStatus.BIDDING, deal.getStatus());
+
+        Seat toAct = deal.bidding().toAct();
+        String speaker = table.getSeats().stream()
+                .filter(seat -> seat.getSeat() == toAct)
+                .findFirst().orElseThrow().getUsername();
+        belot.bid(speaker, new BelotBidRequest(BidKind.BID, Contract.SPADES));
+
+        belot.surrender(speaker);
+
+        assertEquals(BelotGameStatus.FINISHED, table.getStatus());
+        assertEquals(BelotDealStatus.ABANDONED, deals.current(table).orElseThrow().getStatus());
+    }
+}

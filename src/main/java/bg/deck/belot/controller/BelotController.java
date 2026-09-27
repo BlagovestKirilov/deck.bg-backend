@@ -62,6 +62,17 @@ public class BelotController {
         return ResponseEntity.accepted().build();
     }
 
+    /**
+     * Give up the game. It is given up for the pair, not for one seat.
+     *
+     * <p>No body: the seat comes from the token, as everywhere else here.
+     */
+    @PostMapping("/surrender")
+    public ResponseEntity<Void> surrender() {
+        belotService.surrender(AuthenticatedUser.username());
+        return ResponseEntity.accepted().build();
+    }
+
     /** This player’s belot record. The profile page asks santase separately. */
     @GetMapping("/profile")
     public ResponseEntity<BelotProfileResponse> profile() {
