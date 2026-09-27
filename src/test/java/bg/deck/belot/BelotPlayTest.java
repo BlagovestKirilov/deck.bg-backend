@@ -13,6 +13,7 @@ import bg.deck.belot.model.BelotSeat;
 import bg.deck.belot.repository.BelotDealRepository;
 import bg.deck.belot.service.BelotDealService;
 import bg.deck.belot.service.BelotPlayService;
+import bg.deck.belot.service.BelotStatsService;
 import bg.deck.belot.service.BelotSeedService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -46,7 +47,8 @@ class BelotPlayTest {
     private final BelotDealRepository deals = mock(BelotDealRepository.class);
     private final BelotSeedService seeds = new BelotSeedService();
     private final BelotDealService dealService = new BelotDealService(deals, seeds);
-    private final BelotPlayService play = new BelotPlayService(dealService);
+    private final BelotStatsService statsService = mock(BelotStatsService.class);
+    private final BelotPlayService play = new BelotPlayService(dealService, statsService);
 
     private BelotGame table;
     private BelotDeal deal;

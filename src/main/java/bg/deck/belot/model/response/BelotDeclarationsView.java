@@ -24,7 +24,4 @@ public record BelotDeclarationsView(
         shown = List.copyOf(shown);
     }
 
-    public boolean isEmpty() {
-        return shown.isEmpty();
-    }
 }

@@ -53,7 +53,7 @@ class BelotSchemaTest {
                         """)
                 .getResultList();
 
-        assertEquals(List.of("bid", "deal", "game", "play", "player", "seat"), belotTables,
+        assertEquals(List.of("bid", "deal", "game", "play", "player", "player_stats", "seat"), belotTables,
                 "belot owns exactly its own tables — this list grows with each migration, "
                         + "and a table appearing anywhere else fails here");
     }

@@ -47,6 +47,7 @@ import java.util.Map;
 public class BelotPlayService {
 
     private final BelotDealService belotDealService;
+    private final BelotStatsService belotStatsService;
 
     /**
      * Whose turn it is to play.
@@ -151,6 +152,7 @@ public class BelotPlayService {
         verdict.winningTeam().ifPresent(winner -> {
             game.setWinnerTeam(winner);
             game.setStatus(BelotGameStatus.FINISHED);
+            belotStatsService.record(game);
             log.info("Belot: table {} goes to {} ({}–{})", game.getId(), winner,
                     game.getNorthSouthScore(), game.getEastWestScore());
         });

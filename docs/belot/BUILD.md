@@ -159,9 +159,9 @@ tab and reopening it restores that seat's hand exactly.
 
 # M4 — stats and profile (2–3 days)
 
-- [ ] `belot.player_stats(user_id, wins, losses, elo, …)`.
+- [x] `belot.player_stats(username, games, wins, losses)` — changeset 026. No rating column: see the question below, and a column holding a number nobody has agreed on is worse than no column.
 - [ ] **❓ Team Elo:** does a 2v2 result move both partners equally, or by individual contribution?
-- [ ] `GET /belot/profile`.
+- [x] `GET /belot/profile` — games, wins, losses. Written for all four seats when a game is won, since a win belongs to a pair.
 - [ ] `ProfilePage` merges santase stats with belot stats client-side.
 
 # M5 — loose ends that are easy to forget

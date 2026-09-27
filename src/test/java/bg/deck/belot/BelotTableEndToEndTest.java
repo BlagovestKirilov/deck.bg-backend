@@ -14,6 +14,7 @@ import bg.deck.belot.service.BelotDealService;
 import bg.deck.belot.service.BelotPlayService;
 import bg.deck.belot.service.BelotPlayerService;
 import bg.deck.belot.service.BelotSeedService;
+import bg.deck.belot.service.BelotStatsService;
 import bg.deck.belot.service.BelotService;
 import bg.deck.belot.service.BelotTableService;
 import bg.deck.belot.service.BelotTurnService;
@@ -54,7 +55,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @EnableConfigurationProperties(BelotProperties.class)
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Import({BelotService.class, BelotTableService.class, BelotDealService.class, BelotPlayService.class,
-        BelotTurnService.class, BelotPlayerService.class, BelotSeedService.class})
+        BelotTurnService.class, BelotPlayerService.class, BelotSeedService.class, BelotStatsService.class})
 @TestPropertySource(properties = {
         "spring.liquibase.enabled=false",
         "spring.jpa.hibernate.ddl-auto=create-drop",

@@ -13,6 +13,7 @@ import bg.deck.belot.repository.BelotDealRepository;
 import bg.deck.belot.service.BelotDealService;
 import bg.deck.belot.config.BelotProperties;
 import bg.deck.belot.service.BelotPlayService;
+import bg.deck.belot.service.BelotStatsService;
 import bg.deck.belot.service.BelotPlayerService;
 import bg.deck.belot.service.BelotSeedService;
 import bg.deck.belot.service.BelotService;
@@ -61,7 +62,8 @@ class BelotViewTest {
     private final BelotDealRepository deals = mock(BelotDealRepository.class);
     private final BelotSeedService seeds = new BelotSeedService();
     private final BelotDealService dealService = new BelotDealService(deals, seeds);
-    private final BelotPlayService playService = new BelotPlayService(dealService);
+    private final BelotStatsService statsService = mock(BelotStatsService.class);
+    private final BelotPlayService playService = new BelotPlayService(dealService, statsService);
     private final BelotTurnService turnService = new BelotTurnService(dealService, playService,
             new BelotProperties(Duration.ofSeconds(45), Duration.ofSeconds(10), Duration.ofMinutes(1)));
 

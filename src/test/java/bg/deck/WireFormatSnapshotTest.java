@@ -20,6 +20,7 @@ import bg.deck.belot.model.response.BelotDeclarationView;
 import bg.deck.belot.model.response.BelotDeclarationsView;
 import bg.deck.belot.model.response.BelotBiddingView;
 import bg.deck.belot.model.response.BelotPlayView;
+import bg.deck.belot.model.response.BelotProfileResponse;
 import bg.deck.belot.model.response.BelotPlayedCard;
 import bg.deck.belot.model.response.BelotSeatView;
 import bg.deck.belot.model.response.BelotTurnView;
@@ -133,6 +134,8 @@ class WireFormatSnapshotTest {
                 new AvailableServicesResponse(List.of("SANTASE", "TABLA")));
 
         // Belot sends one of these per seat, each with that seat’s own hand.
+        out.put("BelotProfileResponse", new BelotProfileResponse(31, 18, 13));
+
         out.put("BelotStateResponse", new BelotStateResponse(
                 ID,
                 BelotGameStatus.PLAYING,

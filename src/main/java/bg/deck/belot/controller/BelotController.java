@@ -2,7 +2,9 @@ package bg.deck.belot.controller;
 
 import bg.deck.belot.model.request.BelotBidRequest;
 import bg.deck.belot.model.request.BelotPlayRequest;
+import bg.deck.belot.model.response.BelotProfileResponse;
 import bg.deck.belot.service.BelotPlayerService;
+import bg.deck.belot.service.BelotStatsService;
 import bg.deck.belot.service.BelotService;
 import bg.deck.util.AuthenticatedUser;
 import jakarta.validation.Valid;
@@ -29,6 +31,7 @@ public class BelotController {
 
     private final BelotService belotService;
     private final BelotPlayerService belotPlayerService;
+    private final BelotStatsService belotStatsService;
 
     /** Sit down: at the table this player already has, or at one short of four. */
     @PostMapping("/search")
@@ -56,6 +59,14 @@ public class BelotController {
     public ResponseEntity<Void> play(@Valid @RequestBody BelotPlayRequest request) {
         belotService.play(AuthenticatedUser.username(), request);
         return ResponseEntity.accepted().build();
+    }
+
+    /** This player’s belot record. The profile page asks santase separately. */
+    @GetMapping("/profile")
+    public ResponseEntity<BelotProfileResponse> profile() {
+        var stats = belotStatsService.of(AuthenticatedUser.username());
+        return ResponseEntity.ok(
+                new BelotProfileResponse(stats.getGames(), stats.getWins(), stats.getLosses()));
     }
 
     /**

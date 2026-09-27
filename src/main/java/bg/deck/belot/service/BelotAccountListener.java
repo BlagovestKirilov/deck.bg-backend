@@ -28,6 +28,7 @@ public class BelotAccountListener {
 
     private final BelotPlayerService belotPlayerService;
     private final BelotTableService belotTableService;
+    private final BelotStatsService belotStatsService;
 
     // REQUIRES_NEW, because the deletion’s own transaction has committed by
     // the time this runs: there is nothing left to join, and Spring refuses
@@ -37,8 +38,10 @@ public class BelotAccountListener {
     public void onUserDeleted(UserDeleted event) {
         int seats = belotTableService.anonymise(event.username());
         boolean player = belotPlayerService.forget(event.username());
+        boolean stats = belotStatsService.forget(event.username());
 
-        log.info("Belot: let go of {} — {} seat(s) renamed, player row {}",
-                event.username(), seats, player ? "removed" : "not found");
+        log.info("Belot: let go of {} — {} seat(s) renamed, player row {}, record {}",
+                event.username(), seats, player ? "removed" : "not found",
+                stats ? "removed" : "not found");
     }
 }

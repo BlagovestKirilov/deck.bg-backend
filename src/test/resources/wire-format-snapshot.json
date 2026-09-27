@@ -18,6 +18,11 @@
   "AvailableServicesResponse" : {
     "services" : [ "SANTASE", "TABLA" ]
   },
+  "BelotProfileResponse" : {
+    "games" : 31,
+    "wins" : 18,
+    "losses" : 13
+  },
   "BelotStateResponse" : {
     "gameId" : "11111111-2222-3333-4444-555555555555",
     "status" : "PLAYING",
@@ -118,8 +123,7 @@
         "points" : 20
       } ],
       "northSouthPoints" : 20,
-      "eastWestPoints" : 20,
-      "empty" : false
+      "eastWestPoints" : 20
     },
     "sheet" : [ {
       "dealNumber" : 1,

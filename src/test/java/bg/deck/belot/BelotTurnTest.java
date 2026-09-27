@@ -11,6 +11,7 @@ import bg.deck.belot.model.BelotSeat;
 import bg.deck.belot.repository.BelotDealRepository;
 import bg.deck.belot.service.BelotDealService;
 import bg.deck.belot.service.BelotPlayService;
+import bg.deck.belot.service.BelotStatsService;
 import bg.deck.belot.service.BelotSeedService;
 import bg.deck.belot.service.BelotTurnService;
 import org.junit.jupiter.api.BeforeEach;
@@ -46,7 +47,8 @@ class BelotTurnTest {
     private final BelotDealRepository deals = mock(BelotDealRepository.class);
     private final BelotSeedService seeds = new BelotSeedService();
     private final BelotDealService dealService = new BelotDealService(deals, seeds);
-    private final BelotPlayService playService = new BelotPlayService(dealService);
+    private final BelotStatsService statsService = mock(BelotStatsService.class);
+    private final BelotPlayService playService = new BelotPlayService(dealService, statsService);
     private final BelotTurnService turns = new BelotTurnService(
             dealService, playService, new BelotProperties(TIMEOUT, Duration.ofSeconds(10), Duration.ofMinutes(1)));
 
