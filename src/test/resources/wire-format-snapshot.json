@@ -97,6 +97,10 @@
         "rank" : "SEVEN"
       } ]
     },
+    "turn" : {
+      "seat" : "EAST",
+      "deadline" : "2026-09-27T10:15:30Z"
+    },
     "northSouthScore" : 91,
     "eastWestScore" : 64,
     "hangingPoints" : 0

@@ -5,10 +5,12 @@ import bg.deck.belot.engine.Bidding;
 import bg.deck.belot.engine.Card;
 import bg.deck.belot.engine.Dealing;
 import bg.deck.belot.engine.Seat;
+import bg.deck.belot.engine.Seat;
 import bg.deck.belot.model.BelotDeal;
 import bg.deck.belot.model.BelotDealStatus;
 import bg.deck.belot.model.BelotGame;
 import bg.deck.belot.model.BelotSeat;
+import bg.deck.belot.model.response.BelotTurnView;
 import bg.deck.belot.model.BelotGameStatus;
 import bg.deck.belot.model.request.BelotBidRequest;
 import bg.deck.belot.model.request.BelotPlayRequest;
@@ -27,6 +29,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+import java.time.Instant;
 
 import java.util.List;
 import java.util.Optional;
@@ -50,6 +55,7 @@ public class BelotService {
     private final BelotTableService belotTableService;
     private final BelotDealService belotDealService;
     private final BelotPlayService belotPlayService;
+    private final BelotTurnService belotTurnService;
     private final BelotPlayerService belotPlayerService;
     private final AvailabilityService availabilityService;
     private final WebSocketService webSocketService;
@@ -139,6 +145,55 @@ public class BelotService {
                 () -> new IllegalStateException(username + " has no seat at table " + table.getId()));
     }
 
+    /**
+     * Acts for every seat that has run out of time, and tells its table.
+     *
+     * <p>One transaction per table rather than one for the sweep: a table
+     * whose deal has moved on since it was read should cost the others
+     * nothing, and a failure on one is not a reason to leave the rest
+     * waiting.
+     *
+     * @return how many seats were acted for
+     */
+    public int actForAbsentPlayers() {
+        List<BelotDeal> waiting = belotDealService.waitingSince(
+                Instant.now().minus(belotTurnService.turnTimeout()));
+
+        int acted = 0;
+        for (BelotDeal deal : waiting) {
+            try {
+                if (actFor(deal)) {
+                    acted++;
+                }
+            } catch (RuntimeException e) {
+                // The table moved on between the sweep reading it and this,
+                // or something worse. Either way the other tables are none
+                // of its business.
+                log.warn("Belot: could not act for the absent seat at deal {}", deal.getId(), e);
+            }
+        }
+        return acted;
+    }
+
+    @Transactional
+    public boolean actFor(BelotDeal deal) {
+        BelotGame table = deal.getGame();
+        if (!belotTurnService.actForAbsentPlayer(table, deal)) {
+            return false;
+        }
+
+        // A thrown-in or finished hand is followed by the next one, exactly
+        // as it is when a player does the acting.
+        if (deal.getStatus() == BelotDealStatus.THROWN_IN
+                || (deal.getStatus() == BelotDealStatus.FINISHED
+                    && table.getStatus() != BelotGameStatus.FINISHED)) {
+            belotDealService.dealNext(table);
+        }
+
+        tellEveryone(table);
+        return true;
+    }
+
     private void tellEveryone(BelotGame table) {
         table.getSeats().forEach(seat -> tell(table, seat.getUsername()));
     }
@@ -175,6 +230,7 @@ public class BelotService {
                 hand,
                 deal.map(current -> biddingFor(current, seat)).orElse(null),
                 deal.map(current -> playFor(table, current, seat)).orElse(null),
+                deal.map(this::turnFor).orElse(null),
                 table.getNorthSouthScore(),
                 table.getEastWestScore(),
                 table.getHangingPoints());
@@ -238,5 +294,20 @@ public class BelotService {
                 deal.currentTrickNumber(),
                 trick.plays().stream().map(play -> new BelotPlayedCard(play.seat(), play.card())).toList(),
                 seat == null ? List.of() : belotPlayService.legalFor(table, deal, seat));
+    }
+
+    /**
+     * Whose turn it is and when it runs out.
+     *
+     * <p>The deadline is sent rather than the seconds left: a client that
+     * counts down from a number the server sent drifts, and one that
+     * counts to a moment the server sent does not.
+     */
+    private BelotTurnView turnFor(BelotDeal deal) {
+        Optional<Seat> toAct = belotTurnService.toAct(deal);
+        if (toAct.isEmpty()) {
+            return null;
+        }
+        return new BelotTurnView(toAct.get(), belotTurnService.deadline(deal).orElse(null));
     }
 }

@@ -27,6 +27,7 @@ import java.util.UUID;
  * @param yourHand        this player's cards: five during the bidding, eight after
  * @param bidding         the bidding, or null once a hand is being played
  * @param play            the hand being played, or null while it is being bid for
+ * @param turn            who the table is waiting for, and until when
  * @param northSouthScore the score sheet
  * @param eastWestScore   the score sheet
  * @param hangingPoints   points from a level deal, waiting on the next one
@@ -43,6 +44,7 @@ public record BelotStateResponse(
         List<Card> yourHand,
         BelotBiddingView bidding,
         BelotPlayView play,
+        BelotTurnView turn,
         int northSouthScore,
         int eastWestScore,
         int hangingPoints

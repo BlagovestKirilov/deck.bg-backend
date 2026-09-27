@@ -15,6 +15,8 @@ import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
+
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -56,6 +58,7 @@ public class BelotDealService {
         Seat dealer = previous.map(deal -> deal.getDealerSeat().next()).orElseGet(game::getDealerSeat);
 
         BelotDeal deal = new BelotDeal(game, number, dealer);
+        deal.setTurnStartedAt(Instant.now());
         log.info("Belot: table {} deals hand {}, {} dealing", game.getId(), number, dealer);
         return belotDealRepository.save(deal);
     }
@@ -76,6 +79,8 @@ public class BelotDealService {
         Bidding after = before.apply(action);
 
         deal.add(new BelotBid(deal.nextOrdinal(), action));
+        // The next seat’s clock starts the moment this one stops.
+        deal.setTurnStartedAt(Instant.now());
 
         if (after.isThrownIn()) {
             deal.setStatus(BelotDealStatus.THROWN_IN);
@@ -90,6 +95,18 @@ public class BelotDealService {
         }
 
         return belotDealRepository.save(deal);
+    }
+
+    /**
+     * Deals that have been waiting on somebody since before {@code since}.
+     *
+     * <p>Only the two statuses that have a turn to wait on: a deal that is
+     * finished or thrown in is nobody’s move.
+     */
+    @Transactional(readOnly = true)
+    public List<BelotDeal> waitingSince(Instant since) {
+        return belotDealRepository.findByStatusInAndTurnStartedAtBefore(
+                List.of(BelotDealStatus.BIDDING, BelotDealStatus.PLAYING), since);
     }
 
     /** Writes a deal and the bids and cards hanging off it. */

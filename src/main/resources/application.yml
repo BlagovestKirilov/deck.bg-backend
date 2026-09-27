@@ -44,6 +44,14 @@ deck:
       interval: PT5M
       initial-delay: PT1M
 
+  # Belot. Defaults also live in BelotProperties.
+  belot:
+    # How long a seat may think before the table acts for them.
+    turn-timeout: PT45S
+    # How often the tables are checked for a seat that has run out.
+    turn-sweep: PT10S
+    sweep-delay: PT1M
+
 jwt:
   secret-key: ${JWT_SECRET}
   expiration: ${JWT_EXPIRATION}

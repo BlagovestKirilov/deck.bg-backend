@@ -25,6 +25,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.time.Instant;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -95,6 +97,17 @@ public class BelotDeal extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(length = 20)
     private DealResult result;
+
+    /**
+     * When the turn now on the table started.
+     *
+     * <p>Set whenever a turn begins — the deal being dealt, a bid taken, a
+     * card played — and read by two: the scheduler that acts for a player
+     * who has run out, and the client that counts down. One clock, so the
+     * one the player watches is the one they are judged by.
+     */
+    @Column(name = "turn_started_at")
+    private Instant turnStartedAt;
 
     @OrderBy("ordinal ASC")
     @OneToMany(mappedBy = "deal", cascade = CascadeType.ALL, orphanRemoval = true)

@@ -10,11 +10,13 @@ import bg.deck.belot.model.BelotSeat;
 import bg.deck.belot.model.response.BelotStateResponse;
 import bg.deck.belot.repository.BelotDealRepository;
 import bg.deck.belot.service.BelotDealService;
+import bg.deck.belot.config.BelotProperties;
 import bg.deck.belot.service.BelotPlayService;
 import bg.deck.belot.service.BelotPlayerService;
 import bg.deck.belot.service.BelotSeedService;
 import bg.deck.belot.service.BelotService;
 import bg.deck.belot.service.BelotTableService;
+import bg.deck.belot.service.BelotTurnService;
 import bg.deck.service.AvailabilityService;
 import bg.deck.service.WebSocketService;
 import org.junit.jupiter.api.BeforeEach;
@@ -25,6 +27,8 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.time.Duration;
+
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -57,6 +61,8 @@ class BelotViewTest {
     private final BelotSeedService seeds = new BelotSeedService();
     private final BelotDealService dealService = new BelotDealService(deals, seeds);
     private final BelotPlayService playService = new BelotPlayService(dealService);
+    private final BelotTurnService turnService = new BelotTurnService(dealService, playService,
+            new BelotProperties(Duration.ofSeconds(45), Duration.ofSeconds(10), Duration.ofMinutes(1)));
 
     private final BelotTableService tables = mock(BelotTableService.class);
     private final BelotPlayerService players = mock(BelotPlayerService.class);
@@ -64,7 +70,7 @@ class BelotViewTest {
     private final WebSocketService sockets = mock(WebSocketService.class);
 
     private final BelotService belot =
-            new BelotService(tables, dealService, playService, players, availability, sockets);
+            new BelotService(tables, dealService, playService, turnService, players, availability, sockets);
 
     private BelotGame table;
     private BelotDeal deal;

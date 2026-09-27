@@ -65,3 +65,6 @@ databaseChangeLog:
 
   - include:
       file: db/changelog/changes/024-belot-play.yaml
+
+  - include:
+      file: db/changelog/changes/025-belot-turn-clock.yaml

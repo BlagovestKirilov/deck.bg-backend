@@ -17,6 +17,7 @@ import bg.deck.belot.model.response.BelotBiddingView;
 import bg.deck.belot.model.response.BelotPlayView;
 import bg.deck.belot.model.response.BelotPlayedCard;
 import bg.deck.belot.model.response.BelotSeatView;
+import bg.deck.belot.model.response.BelotTurnView;
 import bg.deck.belot.model.response.BelotStateResponse;
 import bg.deck.model.dto.CardDTO;
 import bg.deck.model.request.CardRequest;
@@ -156,6 +157,7 @@ class WireFormatSnapshotTest {
                         List.of(new BelotPlayedCard(Seat.NORTH, new Card(Suit.CLUBS, Rank.TEN)),
                                 new BelotPlayedCard(Seat.WEST, new Card(Suit.CLUBS, Rank.KING))),
                         List.of(new Card(Suit.CLUBS, Rank.SEVEN))),
+                new BelotTurnView(Seat.EAST, Instant.parse("2026-09-27T10:15:30Z")),
                 91, 64, 0));
 
         out.put("SearchGameResponse.waiting", SearchGameResponse.waiting());

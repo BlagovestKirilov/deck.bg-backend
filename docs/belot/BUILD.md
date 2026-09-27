@@ -124,8 +124,13 @@ forgive.
 - [x] Turn order counter-clockwise; the deal moves one seat along each hand, thrown-in hands included.
 - [x] Per-player views — one `BelotStateResponse` per seat on `/topic/belot/{gameId}/{username}`, carrying that seat’s hand and the calls it may make. `BelotViewTest` checks no other seat’s cards appear in it.
 - [x] Provably fair dealing: the hash is committed when the table opens and travels in every view; hands are derived from seed + deal number and stored nowhere. The reveal at the end comes with the game’s finish.
-- [ ] Inactivity: own scheduler, own timeout, and a decision —
-      **❓ does a dropped player forfeit for their team, or does the table pause?**
+- [x] Inactivity: own scheduler (`BelotTurnScheduler`, ShedLock), own timeout
+      (`deck.belot.turn-timeout`, 45s). **Answered: neither.** A dropped player
+      does not forfeit — their partner did nothing wrong — and the table does not
+      pause, or one person could hold three hostage. The table takes the least
+      consequential legal action for them: a pass while bidding, the first legal
+      card while playing. The deadline is sent to the client as a moment, so the
+      clock a player watches is the clock they are judged by.
 - [ ] Reconnect: rejoining mid-deal restores the full view. `GET /belot/state` already re-sends one seat’s view; what is missing is the play in progress, which does not exist yet.
 - [x] The play itself: `belot.play` holds one row per card; tricks, hands and whose turn it is are rebuilt from it. `POST /belot/play` enforces the turn and `LegalMoves`; the last card scores the deal onto the sheet and deals the next hand.
 - [x] Declarations are detected from the hands rather than announced — they are in the cards, and the cards are in the seed. **Simplification worth revisiting:** at a real table an unannounced declaration does not count.

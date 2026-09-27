@@ -23,6 +23,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Service;
 
+import java.time.Instant;
+
 import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.List;
@@ -96,6 +98,7 @@ public class BelotPlayService {
         }
 
         deal.add(new BelotPlay(deal.currentTrickNumber(), deal.nextPlaceInTrick(), seat, card));
+        deal.setTurnStartedAt(Instant.now());
 
         if (deal.isPlayedOut()) {
             settle(game, deal);
