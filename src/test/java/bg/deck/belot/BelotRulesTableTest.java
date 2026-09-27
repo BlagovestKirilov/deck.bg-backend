@@ -4,9 +4,18 @@ import bg.deck.belot.engine.Card;
 import bg.deck.belot.engine.CardPoints;
 import bg.deck.belot.engine.Contract;
 import bg.deck.belot.engine.Deck;
+import bg.deck.belot.engine.Declaration;
+import bg.deck.belot.engine.DeclarationKind;
+import bg.deck.belot.engine.DeclarationScoring;
+import bg.deck.belot.engine.Declarations;
+import bg.deck.belot.engine.GameScorer;
+import bg.deck.belot.engine.LegalMoves;
+import bg.deck.belot.engine.Play;
 import bg.deck.belot.engine.Rank;
+import bg.deck.belot.engine.Seat;
 import bg.deck.belot.engine.Suit;
-import org.junit.jupiter.api.Disabled;
+import bg.deck.belot.engine.Team;
+import bg.deck.belot.engine.Trick;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -14,6 +23,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.EnumSource;
 
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
@@ -27,10 +37,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * {@code docs/belot/RULES.md}.
  *
  * <p>This is the table the engine is built against: a rule that is not here is
- * a rule nobody has agreed on yet. Where the rules page is silent the test is
- * {@code @Disabled} and names the open question — a disabled test is a question
- * waiting for an answer, and it keeps that question in front of whoever runs
- * the suite instead of in a document nobody opens.
+ * a rule nobody has agreed on yet. Every question the rules page left open
+ * has an answer now, each marked ANSWERED with the number it used to carry,
+ * so a variant that plays it differently fails here and nowhere else.
  */
 @DisplayName("The rules of belot")
 class BelotRulesTableTest {
@@ -224,40 +233,259 @@ class BelotRulesTableTest {
         }
     }
 
-    /* ---------------- the rules nobody has answered yet ---------------- */
+    /* ------------- the rules that were open, now answered -------------- */
 
     @Nested
-    @DisplayName("waiting on an answer")
-    class Open {
+    @DisplayName("§6 — the obligations, and where they stop")
+    class Obligations {
 
+        /** ANSWERED (OPEN 4). */
         @Test
-        @Disabled("OPEN 4 — in all trumps, with a partner winning the trick, must you still beat the led suit?")
+        @DisplayName("in all trumps, a partner winning the trick lifts every obligation")
         void allTrumpsObligationWhenPartnerIsWinning() {
+            // North leads the ace of spades; South, his partner, is winning.
+            // South is under no obligation to beat it: "ако взятката до
+            // момента принадлежи на противника" is the whole of the
+            // condition, and here it does not.
+            Trick trick = new Trick(List.of(
+                    new Play(Seat.NORTH, new Card(Suit.SPADES, Rank.ACE))));
+
+            List<Card> hand = List.of(
+                    new Card(Suit.SPADES, Rank.JACK),
+                    new Card(Suit.SPADES, Rank.SEVEN));
+
+            assertEquals(hand, LegalMoves.of(hand, trick, Seat.SOUTH, Contract.ALL_TRUMPS),
+                    "the partner of the seat holding the trick may play either spade");
+        }
+
+        /** ANSWERED (OPEN 4), the other half: an opponent holding it binds you. */
+        @Test
+        @DisplayName("but an opponent winning it makes you beat the led suit if you can")
+        void allTrumpsObligationWhenAnOpponentIsWinning() {
+            Trick trick = new Trick(List.of(
+                    new Play(Seat.NORTH, new Card(Suit.SPADES, Rank.ACE))));
+
+            List<Card> hand = List.of(
+                    new Card(Suit.SPADES, Rank.JACK),
+                    new Card(Suit.SPADES, Rank.SEVEN));
+
+            assertEquals(List.of(new Card(Suit.SPADES, Rank.JACK)),
+                    LegalMoves.of(hand, trick, Seat.EAST, Contract.ALL_TRUMPS),
+                    "the jack is the one spade that beats the ace in all trumps");
+        }
+
+        /** ANSWERED (OPEN 13). */
+        @Test
+        @DisplayName("an unbeatable trump on the table frees the hand: no trump is wasted")
+        void undertrumpingIsNotForced() {
+            // Spades are trumps. North led a heart, East trumped with the jack.
+            // South holds one spade, the seven, which cannot beat it: "в случай
+            // че няма по-висок коз, може да изиграе произволна карта".
+            Trick trick = new Trick(List.of(
+                    new Play(Seat.NORTH, new Card(Suit.HEARTS, Rank.ACE)),
+                    new Play(Seat.EAST, new Card(Suit.SPADES, Rank.JACK))));
+
+            List<Card> hand = List.of(
+                    new Card(Suit.SPADES, Rank.SEVEN),
+                    new Card(Suit.CLUBS, Rank.ACE));
+
+            assertEquals(hand, LegalMoves.of(hand, trick, Seat.SOUTH, Contract.SPADES),
+                    "the seven of trumps is not compulsory on a trick already lost");
         }
 
         @Test
-        @Disabled("OPEN 5 — do fours compete with sequences, or is each compared on its own?")
+        @DisplayName("a trump that can beat it, though, is compulsory")
+        void overtrumpingIsForced() {
+            Trick trick = new Trick(List.of(
+                    new Play(Seat.NORTH, new Card(Suit.HEARTS, Rank.ACE)),
+                    new Play(Seat.EAST, new Card(Suit.SPADES, Rank.QUEEN))));
+
+            List<Card> hand = List.of(
+                    new Card(Suit.SPADES, Rank.KING),
+                    new Card(Suit.SPADES, Rank.SEVEN),
+                    new Card(Suit.CLUBS, Rank.ACE));
+
+            assertEquals(List.of(new Card(Suit.SPADES, Rank.KING)),
+                    LegalMoves.of(hand, trick, Seat.SOUTH, Contract.SPADES),
+                    "the king beats the queen, so the king it is");
+        }
+    }
+
+    @Nested
+    @DisplayName("§7 — what is declared, and what it is worth")
+    class DeclarationRules {
+
+        /** ANSWERED (OPEN 5), first half: the two kinds are compared apart. */
+        @Test
+        @DisplayName("fours and sequences are weighed against their own kind, not each other")
         void foursVersusSequences() {
+            // Ours: four kings, 100. Theirs: a quinte, also 100. Each side takes
+            // what it holds — the four does not beat the sequence out of the
+            // scoring, nor the sequence the four.
+            List<Declaration> ours = List.of(
+                    new Declaration(DeclarationKind.CARRE, null, Rank.KING, 100));
+            List<Declaration> theirs = List.of(
+                    new Declaration(DeclarationKind.QUINTE, Suit.HEARTS, Rank.ACE, 100));
+
+            assertEquals(100, DeclarationScoring.scoreFor(ours, theirs), "our four still scores");
+            assertEquals(100, DeclarationScoring.scoreFor(theirs, ours), "and their quinte still scores");
+        }
+
+        /** ANSWERED (OPEN 5), second half: one card, one combination. */
+        @Test
+        @DisplayName("a card serves one combination only, and the hand keeps the better")
+        void aCardCountsOnce() {
+            // Four nines (150) and 7 8 9 of spades (20) share the nine of spades:
+            // "играчът избира кое от двете да обяви", and the four is worth more.
+            List<Card> hand = List.of(
+                    new Card(Suit.SPADES, Rank.NINE),
+                    new Card(Suit.HEARTS, Rank.NINE),
+                    new Card(Suit.DIAMONDS, Rank.NINE),
+                    new Card(Suit.CLUBS, Rank.NINE),
+                    new Card(Suit.SPADES, Rank.SEVEN),
+                    new Card(Suit.SPADES, Rank.EIGHT));
+
+            List<Declaration> held = Declarations.in(hand, Contract.HEARTS);
+
+            assertEquals(1, held.size(), "one of the two, not both: " + held);
+            assertEquals(DeclarationKind.CARRE, held.getFirst().kind());
+            assertEquals(150, held.getFirst().points());
         }
 
         @Test
-        @Disabled("OPEN 6 — does belote (K+Q of trumps) score even when the other team holds the best sequence?")
+        @DisplayName("and both stand when they share nothing")
+        void bothStandWhenTheyDoNotOverlap() {
+            // Four nines, and J Q K of spades. The run stops short of the ten,
+            // so the nine of spades is not part of it and both hold up.
+            List<Card> hand = List.of(
+                    new Card(Suit.SPADES, Rank.NINE),
+                    new Card(Suit.HEARTS, Rank.NINE),
+                    new Card(Suit.DIAMONDS, Rank.NINE),
+                    new Card(Suit.CLUBS, Rank.NINE),
+                    new Card(Suit.SPADES, Rank.JACK),
+                    new Card(Suit.SPADES, Rank.QUEEN),
+                    new Card(Suit.SPADES, Rank.KING));
+
+            List<Declaration> held = Declarations.in(hand, Contract.HEARTS);
+
+            assertEquals(170, held.stream().mapToInt(Declaration::points).sum(),
+                    "150 for the nines and 20 for the terz: " + held);
+        }
+
+        /** ANSWERED (OPEN 6). */
+        @Test
+        @DisplayName("a belote scores whoever holds the best sequence")
         void beloteIsIndependent() {
+            List<Declaration> ours = List.of(
+                    new Declaration(DeclarationKind.TERZ, Suit.SPADES, Rank.NINE, 20),
+                    new Declaration(DeclarationKind.BELOTE, Suit.HEARTS, Rank.KING, 20));
+            List<Declaration> theirs = List.of(
+                    new Declaration(DeclarationKind.QUINTE, Suit.CLUBS, Rank.ACE, 100));
+
+            assertEquals(20, DeclarationScoring.scoreFor(ours, theirs),
+                    "the terz is beaten and scores nothing; the belote is not in that contest");
         }
 
-        @Test
-        @Disabled("OPEN 7 — which four wins when both teams hold one: J > 9 > A > 10 > K > Q?")
-        void whichFourWins() {
+        /** ANSWERED (OPEN 7). */
+        @ParameterizedTest(name = "four {0}s beats four {1}s")
+        @CsvSource({
+                "JACK, NINE",
+                "NINE, ACE",
+                "ACE, TEN",
+                "TEN, KING",
+                "KING, QUEEN",
+        })
+        @DisplayName("fours rank J > 9 > A > 10 > K > Q")
+        void whichFourWins(Rank better, Rank worse) {
+            List<Declaration> ours = List.of(four(better));
+            List<Declaration> theirs = List.of(four(worse));
+
+            assertTrue(DeclarationScoring.scoreFor(ours, theirs) > 0,
+                    "four " + better + "s is the better holding");
+            assertEquals(0, DeclarationScoring.scoreFor(theirs, ours),
+                    "four " + worse + "s is beaten by it");
         }
 
+        /** ANSWERED (OPEN 8). */
         @Test
-        @Disabled("OPEN 9 — rounding: is 154 recorded as 15 or 16, and is the rule the same for both teams?")
-        void rounding() {
+        @DisplayName("declarations stand in a suit contract, and only no trumps forbids them")
+        void declarationsInASuitContract() {
+            List<Card> hand = List.of(
+                    new Card(Suit.SPADES, Rank.SEVEN),
+                    new Card(Suit.SPADES, Rank.EIGHT),
+                    new Card(Suit.SPADES, Rank.NINE));
+
+            assertFalse(Declarations.in(hand, Contract.HEARTS).isEmpty(), "a suit contract has them");
+            assertFalse(Declarations.in(hand, Contract.ALL_TRUMPS).isEmpty(), "all trumps too");
+            assertTrue(Declarations.in(hand, Contract.NO_TRUMPS).isEmpty(),
+                    "играчите нямат право да обявяват притежаваните от тях комбинации");
         }
 
+        /** ANSWERED (OPEN 14). */
+        @ParameterizedTest(name = "{0} in a row is worth {1}")
+        @CsvSource({"3, 20", "4, 50", "5, 100", "6, 100", "7, 100", "8, 100"})
+        @DisplayName("a run of five or more is a quinte, however long it runs")
+        void longRuns(int length, int expected) {
+            List<Card> hand = new ArrayList<>();
+            for (int i = 0; i < length; i++) {
+                hand.add(new Card(Suit.SPADES, Rank.values()[i]));
+            }
+
+            List<Declaration> held = Declarations.in(hand, Contract.HEARTS);
+
+            assertEquals(1, held.size(), "one run, not several: " + held);
+            assertEquals(expected, held.getFirst().points());
+        }
+
+        /** ANSWERED (OPEN 15). */
         @Test
-        @Disabled("OPEN 10 — both teams cross 151 in the same deal: who wins, and what if the totals are equal?")
+        @DisplayName("in all trumps a belote is held in every suit that has the king and queen")
+        void belotesInAllTrumps() {
+            List<Card> hand = List.of(
+                    new Card(Suit.SPADES, Rank.KING), new Card(Suit.SPADES, Rank.QUEEN),
+                    new Card(Suit.HEARTS, Rank.KING), new Card(Suit.HEARTS, Rank.QUEEN),
+                    new Card(Suit.CLUBS, Rank.KING), new Card(Suit.CLUBS, Rank.QUEEN));
+
+            assertEquals(3, belotesIn(hand, Contract.ALL_TRUMPS),
+                    "в игра всичко коз белот може да се обяви във всяка боя");
+            assertEquals(1, belotesIn(hand, Contract.HEARTS),
+                    "in a suit contract only the trump suit has one");
+        }
+
+        private static long belotesIn(List<Card> hand, Contract contract) {
+            return Declarations.in(hand, contract).stream()
+                    .filter(held -> held.kind() == DeclarationKind.BELOTE)
+                    .count();
+        }
+
+        private static Declaration four(Rank rank) {
+            int points = switch (rank) {
+                case JACK -> 200;
+                case NINE -> 150;
+                default -> 100;
+            };
+            return new Declaration(DeclarationKind.CARRE, null, rank, points);
+        }
+    }
+
+    @Nested
+    @DisplayName("§9 — crossing the line")
+    class TheLine {
+
+        /** ANSWERED (OPEN 10). */
+        @Test
+        @DisplayName("both teams over 151: the higher total takes it")
         void bothTeamsCrossTheLine() {
+            assertEquals(Team.NORTH_SOUTH,
+                    GameScorer.verdict(162, 155, false).winningTeam().orElseThrow(),
+                    "печели този от тях, който има повече точки");
+        }
+
+        /** ANSWERED (OPEN 10), the tie. */
+        @Test
+        @DisplayName("level on the line, another deal is played rather than a draw")
+        void levelOnTheLine() {
+            assertFalse(GameScorer.verdict(155, 155, false).isFinished());
         }
     }
 }

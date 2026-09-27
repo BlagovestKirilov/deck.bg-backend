@@ -74,19 +74,19 @@ doubled, the last trick included.
 
   `pass < ♣ < ♦ < ♥ < ♠ < no trumps < all trumps`
 
-> **❓ OPEN 2 — Confirm the suit order.** The page's own list is garbled
-> ("Spades, Diamonds, Hearts, Spades"). The order above is the usual Bulgarian
-> one (спатия, каро, купа, пика) — confirm before coding, since it decides which
-> bids are legal.
+> **ANSWERED 2 — the order above is right.** The page's own list is garbled in
+> translation, but its Bulgarian reads "Спатия < Каро < Купа < Пика < Без Коз <
+> Всичко Коз", which is the usual Bulgarian order and what the engine has.
 
 - Bidding ends after **three consecutive passes**.
 - **Contra** — an opponent of the last bid doubles the deal's score. **Recontra**
   by the bidding side quadruples it.
 
-> **❓ OPEN 3 — After a contra, may bidding continue with a higher contract, or
-> is the contract fixed?** The engine assumes a raise is allowed and clears the
-> contra with it, since the contra was aimed at the contract just outbid. See
-> `BelotBiddingTest.openThreeRaisingOverAContra`.
+> **ANSWERED 3 — bidding continues, and a raise clears the contra.** The page
+> never says a contra ends the auction; what it does say is "наддаването
+> приключва, когато трима поредни играчи обявят «пас»", and a contra is not a
+> pass. So the auction runs on, and a contra aimed at a contract that has since
+> been outbid does not survive it. `BelotBiddingTest.openThreeRaisingOverAContra`.
 
 ## 6. Playing a trick
 
@@ -98,18 +98,24 @@ doubled, the last trick included.
   the rule applies only "ако взятката до момента принадлежи на противника".
 - In **no trumps**, only following suit is required; there is nothing to trump with.
 
-> **❓ OPEN 4 — In all trumps, when a partner is winning, must you still play a
-> higher card of the led suit if you hold one?** (In some variants the
-> overtrumping obligation applies within the led suit regardless.)
+> **ANSWERED 4 — no. A partner winning the trick lifts every obligation, in all
+> trumps as anywhere else.** The page states the condition once and does not
+> qualify it by contract: "ако играчът не притежава карта от искания цвят и
+> взятката до момента принадлежи на противника, трябва да играе коз". An
+> opponent holding it still binds you. `BelotRulesTableTest.Obligations`.
 
 > **❓ OPEN 12 — When the led suit is the one played by the trump order and you
-> can follow, must you play a card that beats what is on the table?** The engine
-> assumes yes, while an opponent holds the trick. `BelotTrickTest.openTwelveFollowingTrumps`
-> states the assumption and what the other answer would expect instead.
+> can follow, must you play a card that beats what is on the table?** The page
+> is silent. The engine plays it the usual Bulgarian way — yes, while an
+> opponent holds the trick — and `BelotTrickTest.openTwelveFollowingTrumps`
+> states the assumption and what the other answer would expect instead. The
+> only question left in this document.
 >
-> **❓ OPEN 13 — You must trump, but every trump you hold is too low to win.
-> Must you still play one, or may you discard?** The engine assumes the trump is
-> compulsory. See `BelotTrickTest.openThirteenUndertrumping`.
+> **ANSWERED 13 — you may discard.** "В случай че няма по-висок коз, може да
+> изиграе произволна карта." Nobody is made to waste a trump on a trick already
+> lost. Note this is the opposite of the answer to OPEN 12: you must beat what
+> you can beat, and you are free when you cannot.
+> `BelotTrickTest.undertrumpingIsNotForced`.
 
 ## 7. Declarations (анонси)
 
@@ -134,24 +140,33 @@ Rules:
 - **No trumps: declarations are forbidden**, except the last trick and capot.
 - All trumps: declarations are normal.
 
-> **❓ OPEN 5 — Do fours (карета) compete separately from sequences, or does one
-> comparison cover both?** Classic belote compares them separately.
+> **ANSWERED 5 — separately, and a card may serve only one of them.** Fours are
+> weighed against fours and sequences against sequences, so a four does not beat
+> a sequence out of the scoring. But "ако една и съща карта участва едновременно
+> в каре и поредица (терца, кварта, квинта), играчът избира кое от двете да
+> обяви" — four nines and 7 8 9 of spades share the nine of spades, and only one
+> of them may have it. Declarations here are read off the hand rather than
+> announced, so the choice is made the way a player would make it: the most
+> valuable first, and anything needing a card already spoken for is dropped.
+> `Declarations.chosen`, `BelotRulesTableTest.aCardCountsOnce`.
 >
-> **❓ OPEN 6 — Is Belote (K+Q) independent of the comparison above — i.e. does
-> it always score even if the other team holds the best sequence?** Classic
-> belote: yes, always.
+> **ANSWERED 6 — yes, always.** A belote is two named cards of the trump suit
+> and is not in the contest at all. `BelotRulesTableTest.beloteIsIndependent`.
 >
-> **❓ OPEN 7 — Which four wins when both teams hold one (J > 9 > A > 10 > K > Q)?**
+> **ANSWERED 7 — J > 9 > A > 10 > K > Q**, which is the points the page gives
+> (200, 150, 100) with the trump order breaking the tie among the hundreds.
 >
-> **❓ OPEN 8 — Are declarations allowed in a suit contract, or only all trumps?**
-> §7 of the page implies yes for suit contracts; confirm.
+> **ANSWERED 8 — yes in a suit contract.** Only no trumps forbids them: "при
+> игра на «Без коз» играчите нямат право да обявяват притежаваните от тях
+> комбинации".
 >
-> **❓ OPEN 14 — Six, seven or eight cards in a row: still 100, or more?** The
-> page stops at five. The engine scores any run of five or more as a quinte.
+> **ANSWERED 14 — still 100.** The page stops at five and gives nothing beyond
+> it, so a run of six, seven or eight is a quinte and worth what a quinte is
+> worth. It is one run, not a quinte plus a terz.
 >
-> **❓ OPEN 15 — In all trumps, where every suit is a trump suit, how many
-> belotes can a hand hold?** The engine counts one per suit holding both the
-> king and the queen. See `Declarations.belotes`.
+> **ANSWERED 15 — one per suit that holds both, so up to four.** In all trumps
+> every suit is a trump suit and a belot may be announced in any of them.
+> `Declarations.belotes`.
 
 ## 8. Scoring a deal
 
@@ -181,14 +196,27 @@ Rules:
 - **"С капо не се излиза"** — a team cannot finish on a capot deal: if the
   winning team reached 151+ with a capot, **one more deal is played**.
 
-> **❓ OPEN 10 — Both teams cross 151 in the same deal — who wins?** The higher
-> total, which the engine implements. When the two are **level** it plays another
-> deal rather than leave the game drawn — see
-> `BelotGameScoringTest.openTenALevelFinish` if that is wrong.
+> **ANSWERED 10 — the higher total.** "Ако и двата отбора едновременно преминат
+> тази граница, то печели този от тях, който има повече точки." Level on the
+> line, another deal is played: a game of belot is not left drawn.
 >
-> **❓ OPEN 11 — Does a deal where everyone passes count for the "no capot" rule?**
-> The page excludes all-pass rounds and previous capot deals from the extra deal;
-> confirm what that means in practice.
+> **ANSWERED 11 — the extra deal must be a deal that was actually played and
+> was not itself a capot.** "Изключва се раздаване, в което всички са обявили
+> пас и раздаване завършило с капо." Both fall out for free: an all-pass hand is
+> thrown in and dealt again, so it is never scored and `GameScorer` never sees
+> it, and a second capot hits the same rule as the first and calls for another
+> deal. `BelotGameScoringTest.TheExtraDeal`.
+
+> **ANSWERED 16 — the doubling is of what goes on the sheet.** "Резултатът се
+> удвоява" — the result is the number recorded, so the rounding happens first
+> and the multiplier is applied to it. 85 rounds to 8 and doubles to 16, where
+> doubling the points first would give 170 and round to 17.
+> `BelotDealScoringTest.Doubling`.
+>
+> **ANSWERED 17 — whoever records the deal takes what was hanging.** When the
+> next deal goes вътре the defenders record everything, and the hanging points
+> go on the sheet with it. They are not the callers' to keep by failing.
+> `BelotDealScoringTest.HangingCollected`.
 
 ## 10. Worked examples to turn into tests
 

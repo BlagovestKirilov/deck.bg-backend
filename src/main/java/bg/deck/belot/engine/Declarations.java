@@ -2,9 +2,12 @@ package bg.deck.belot.engine;
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * What a hand holds worth declaring. RULES §7.
@@ -34,10 +37,41 @@ public final class Declarations {
         if (contract == Contract.NO_TRUMPS) {
             return List.of();
         }
-        List<Declaration> found = new ArrayList<>(sequences(hand));
-        found.addAll(carres(hand));
+
+        List<Declaration> found = new ArrayList<>(chosen(sequences(hand), carres(hand)));
+        // A belote is not in the contest: it is two named cards of the trump
+        // suit and it always scores, so it never gives way to anything.
         found.addAll(belotes(hand, contract));
         return List.copyOf(found);
+    }
+
+    /**
+     * Sequences and fours, with no card counted twice.
+     *
+     * <p>"Ако една и съща карта участва едновременно в каре и поредица,
+     * играчът избира кое от двете да обяви" — four nines and 7 8 9 of spades
+     * share the nine of spades, and only one of them may have it.
+     *
+     * <p>Declarations here are read off the hand rather than announced, so
+     * there is nobody to do the choosing. The choice is made the way a player
+     * would make it: take the most valuable first, and drop whatever needs a
+     * card already spoken for. Ties go to the four, which is the rarer thing
+     * to hold.
+     */
+    private static List<Declaration> chosen(List<Declaration> sequences, List<Declaration> carres) {
+        List<Declaration> byWorth = Stream.concat(carres.stream(), sequences.stream())
+                .sorted(Comparator.comparingInt(Declaration::points).reversed())
+                .toList();
+
+        Set<Card> spokenFor = new HashSet<>();
+        List<Declaration> kept = new ArrayList<>();
+        for (Declaration declaration : byWorth) {
+            if (declaration.cards().stream().noneMatch(spokenFor::contains)) {
+                spokenFor.addAll(declaration.cards());
+                kept.add(declaration);
+            }
+        }
+        return kept;
     }
 
     /** The longest run of three or more in each suit. */

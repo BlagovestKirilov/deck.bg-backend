@@ -191,10 +191,27 @@ tab and reopening it restores that seat's hand exactly.
 
 ## Open questions, collected
 
-Rules (see `RULES.md`): 1 no-trump totals · 2 suit order · 3 contra and further
-bidding · 4 all-trumps obligation with a partner winning · 5 fours vs sequences ·
-6 belote independence · 7 which four wins · 8 declarations in suit contracts ·
-9 rounding · 10 both teams over 151 · 11 all-pass and the capot rule.
+Rules (see `RULES.md`): **one left.** OPEN 12 — when trumps are led and you can
+follow, must you beat what is on the table? The page never says. The engine
+plays it the usual Bulgarian way, yes while an opponent holds the trick, and
+`BelotTrickTest.openTwelveFollowingTrumps` names the assumption.
+
+The other sixteen are answered against the Bulgarian text of the rules page,
+quoted where the answer is written down. Two of them changed the engine:
+
+- **13** — a trump too low to win is no longer compulsory. "В случай че няма
+  по-висок коз, може да изиграе произволна карта": nobody is made to waste a
+  trump on a trick already lost. Note this is the opposite of the reading in
+  OPEN 12, and deliberately so — you must beat what you can beat, and you are
+  free when you cannot.
+- **5** — a card was being counted in both a four and a sequence. "Ако една и
+  съща карта участва едновременно в каре и поредица, играчът избира кое от
+  двете да обяви", so four nines and 7 8 9 of spades are now one declaration,
+  not two. Since declarations here are read off the hand rather than announced,
+  the choice is made the way a player would make it: the most valuable first.
+
+Both were over-strict or over-generous in the player's favour respectively, and
+both are the kind of thing only a real player would have noticed.
 
 Build: both answered. Dropped player — neither forfeit nor pause; the table
 takes the least consequential legal action for them. Team Elo — equally, with

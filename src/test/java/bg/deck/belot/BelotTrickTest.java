@@ -194,7 +194,7 @@ class BelotTrickTest {
     }
 
     @Nested
-    @DisplayName("the two branches the rules page leaves open")
+    @DisplayName("the two branches the rules page does not spell out")
     class Assumptions {
 
         @Test
@@ -213,9 +213,16 @@ class BelotTrickTest {
                             + "If the answer is that any trump may follow, this expects both spades.");
         }
 
+        /**
+         * ANSWERED (OPEN 13) — no longer an assumption.
+         *
+         * <p>"В случай че няма по-висок коз, може да изиграе произволна
+         * карта." Kept here beside OPEN 12 because the two are the same
+         * question asked twice, and the answers went different ways.
+         */
         @Test
-        @DisplayName("OPEN 13 — holding only trumps too low to win, you must still trump")
-        void openThirteenUndertrumping() {
+        @DisplayName("holding only trumps too low to win, you may discard instead")
+        void undertrumpingIsNotForced() {
             List<Card> hand = List.of(
                     card(Rank.SEVEN, Suit.SPADES),
                     card(Rank.ACE, Suit.CLUBS));
@@ -224,11 +231,9 @@ class BelotTrickTest {
                     play(Seat.WEST, Rank.SEVEN, Suit.DIAMONDS),
                     play(Seat.SOUTH, Rank.JACK, Suit.SPADES));
 
-            assertEquals(
-                    List.of(card(Rank.SEVEN, Suit.SPADES)),
-                    LegalMoves.of(hand, played, Seat.EAST, Contract.SPADES),
-                    "assumed: the low trump is compulsory. If discarding is allowed instead, "
-                            + "this expects the whole hand.");
+            assertEquals(hand, LegalMoves.of(hand, played, Seat.EAST, Contract.SPADES),
+                    "the trick is lost to the jack either way, so the seven is not "
+                            + "thrown away on it");
         }
     }
 

@@ -3,7 +3,6 @@ package bg.deck.belot;
 import bg.deck.belot.engine.DealOutcome;
 import bg.deck.belot.engine.DealResult;
 import bg.deck.belot.engine.DealScorer;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -146,27 +145,65 @@ class BelotDealScoringTest {
         }
     }
 
-    @Nested
-    @DisplayName("still to be settled")
-    class Open {
+    /* ------------- the rules that were open, now answered -------------- */
 
+    @Nested
+    @DisplayName("contra, and where the doubling lands")
+    class Doubling {
+
+        /** ANSWERED (OPEN 16). */
         @Test
-        @Disabled("""
-                OPEN 16 — a contra doubles the recorded score here, after rounding. \
-                The alternative is doubling the raw points and rounding that, which \
-                can differ by a point. Which is it?""")
-        @DisplayName("whether the doubling comes before or after the rounding")
-        void whenTheDoublingHappens() {
+        @DisplayName("the doubling is of what goes on the sheet, not of the card points")
+        void theDoublingComesAfterTheRounding() {
+            // "Резултатът се удвоява" — the result is what is written down, so
+            // the rounding happens first and the doubling is applied to it. 85
+            // rounds down to 8 and doubles to 16; doubling the points first
+            // would give 170, which rounds to 17.
+            DealOutcome plainDeal = DealScorer.score(85, 77, 1, 0);
+            DealOutcome doubled = DealScorer.score(85, 77, 2, 0);
+
+            assertEquals(8, plainDeal.recorded().caller());
+            assertEquals(16, doubled.recorded().caller(),
+                    "twice the eight on the sheet, not the rounding of twice the points");
         }
 
+        /** ANSWERED (OPEN 16), the other multiplier. */
         @Test
-        @Disabled("""
-                OPEN 17 — hanging points are handed to the team that wins the next \
-                deal. When that next deal goes вътре, the winners are the defenders \
-                — do they collect what was hanging? This assumes yes: whoever \
-                records the deal takes it.""")
-        @DisplayName("who collects the hanging points when the next deal goes down")
+        @DisplayName("a recontra quadruples the same number")
+        void recontraQuadruplesIt() {
+            assertEquals(32, DealScorer.score(85, 77, 4, 0).recorded().caller());
+        }
+    }
+
+    @Nested
+    @DisplayName("висящи — who ends up with them")
+    class HangingCollected {
+
+        /** ANSWERED (OPEN 17). */
+        @Test
+        @DisplayName("whoever records the next deal takes what was hanging, defenders included")
         void whoCollectsAfterAFailedDeal() {
+            // 16 hanging from a tied deal, and the next one goes вътре: the
+            // defenders record the whole deal, so the hanging points go on the
+            // sheet with it. They are not the callers' to keep by failing.
+            DealOutcome outcome = DealScorer.score(80, 82, 1, 16);
+
+            assertEquals(DealResult.INSIDE, outcome.result());
+            assertEquals(0, outcome.recorded().caller());
+            assertEquals(32, outcome.recorded().opponents(),
+                    "16 for the deal and the 16 that were hanging");
+            assertEquals(0, outcome.hanging(), "nothing is left hanging after it is collected");
+        }
+
+        /** ANSWERED (OPEN 17), the straightforward half. */
+        @Test
+        @DisplayName("and the callers take them when the callers make it")
+        void theCallersCollectWhenTheyMakeIt() {
+            DealOutcome outcome = DealScorer.score(90, 72, 1, 16);
+
+            assertEquals(DealResult.MADE, outcome.result());
+            assertEquals(25, outcome.recorded().caller(), "9 for the deal and the 16 hanging");
+            assertEquals(7, outcome.recorded().opponents(), "the other side takes only its own");
         }
     }
 }

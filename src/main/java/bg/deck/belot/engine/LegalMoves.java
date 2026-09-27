@@ -12,9 +12,8 @@ import java.util.Optional;
  * trick there is no obligation at all — "ако взятката до момента принадлежи на
  * противника" is the whole of the condition.
  *
- * <p>Two branches the rules page does not settle are marked below as OPEN 12
- * and OPEN 13 and implemented the usual Bulgarian way. Each is one line to
- * change once answered, and each has a test that names the question.
+ * <p>One branch the rules page does not settle is marked below as OPEN 12 and
+ * implemented the usual Bulgarian way; {@code BelotTrickTest} names it.
  */
 public final class LegalMoves {
 
@@ -62,10 +61,20 @@ public final class LegalMoves {
         }
 
         List<Card> overtrumps = beating(trumps, trick, contract);
-        // OPEN 13 — holding trumps but none high enough. The usual Bulgarian
-        // rule is that you must still put a trump down; the alternative is that
-        // you may discard instead.
-        return overtrumps.isEmpty() ? trumps : overtrumps;
+        if (!overtrumps.isEmpty()) {
+            return overtrumps;
+        }
+
+        // ANSWERED (OPEN 13) — holding trumps but none high enough. An opponent
+        // has trumped and cannot be beaten: "в случай че няма по-висок коз,
+        // може да изиграе произволна карта". Nobody is made to waste a trump on
+        // a trick that is already lost.
+        //
+        // This branch is reached only when a trump is already on the table: with
+        // none there, every trump beats the leader and the list above is not
+        // empty. So "no overtrump" and "an opponent has trumped" are the same
+        // condition, which is why there is no separate check for it.
+        return hand;
     }
 
     private static List<Card> suit(List<Card> hand, Suit suit) {

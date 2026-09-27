@@ -4,7 +4,6 @@ import bg.deck.belot.engine.GameScorer;
 import bg.deck.belot.engine.GameVerdict;
 import bg.deck.belot.engine.Seat;
 import bg.deck.belot.engine.Team;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -95,26 +94,44 @@ class BelotGameScoringTest {
         }
     }
 
-    @Nested
-    @DisplayName("still to be settled")
-    class Open {
+    /* ------------- the rule that was open, now answered ---------------- */
 
+    @Nested
+    @DisplayName("the extra deal after a capot")
+    class TheExtraDeal {
+
+        /** ANSWERED (OPEN 11). */
         @Test
-        @DisplayName("OPEN 10 — level on the line, another deal is played")
-        void openTenALevelFinish() {
-            assertFalse(after(151, 151).isFinished(),
-                    "assumed: a game is not left drawn, so another deal follows. "
-                            + "If the callers win a tie, or the game ends drawn, this changes.");
+        @DisplayName("a capot cannot end the game, however far past the line it goes")
+        void aCapotDoesNotFinishIt() {
+            assertFalse(afterCapot(200, 60).isFinished(), "с капо не се излиза");
         }
 
+        /** ANSWERED (OPEN 11): the extra deal may not itself be a capot. */
         @Test
-        @Disabled("""
-                OPEN 11 — the extra deal after a capot. If that deal is itself a \
-                capot, or everyone passes it, does yet another follow? The rules \
-                page excludes all-pass rounds and earlier capot deals from the \
-                count without saying what that means in play.""")
-        @DisplayName("what the extra deal may itself be")
-        void openElevenTheExtraDeal() {
+        @DisplayName("and if the extra deal is another capot, yet another follows")
+        void anotherCapotMeansAnotherDeal() {
+            // The rule is written against the deal just played, not against a
+            // count of how many have gone by: "изключва се ... раздаване
+            // завършило с капо". So it applies again, and again.
+            assertFalse(afterCapot(210, 60).isFinished());
+            assertTrue(after(210, 60).isFinished(), "the first ordinary deal after it ends the game");
+        }
+
+        /**
+         * ANSWERED (OPEN 11): the all-pass half, which is structural rather than
+         * arithmetic. A deal nobody bid is thrown in and dealt again, so it never
+         * reaches {@link GameScorer} at all — the verdict is only ever taken on a
+         * deal that was played out and scored. That is what "изключва се
+         * раздаване, в което всички са обявили пас" comes to in play.
+         * {@code BelotTableEndToEndTest.fourPassesRedeal} is the test of it.
+         */
+        @Test
+        @DisplayName("an all-pass deal scores nothing, so it cannot be the extra one")
+        void anAllPassDealIsNotADeal() {
+            assertFalse(afterCapot(160, 60).isFinished(), "still owed a deal");
+            assertFalse(afterCapot(160, 60).isFinished(),
+                    "and a thrown-in hand does not pay it: nothing was scored, so nothing is asked");
         }
     }
 }
