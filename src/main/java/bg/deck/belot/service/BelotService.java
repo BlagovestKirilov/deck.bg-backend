@@ -220,6 +220,7 @@ public class BelotService {
         return new BelotStateResponse(
                 table.getId(),
                 table.getStatus(),
+                table.getWinnerTeam(),
                 table.getServerSeedHash(),
                 table.getSeats().stream()
                         .map(taken -> new BelotSeatView(taken.getSeat(), taken.team(),

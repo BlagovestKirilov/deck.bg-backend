@@ -133,6 +133,7 @@ class WireFormatSnapshotTest {
         out.put("BelotStateResponse", new BelotStateResponse(
                 ID,
                 BelotGameStatus.PLAYING,
+                null,
                 "0f5c1b6c9b4b4d2f8a1e6d3c2b7a9e8f0a1b2c3d4e5f60718293a4b5c6d7e8f9",
                 List.of(new BelotSeatView(Seat.NORTH, Team.NORTH_SOUTH, "petko91", 5),
                         new BelotSeatView(Seat.WEST, Team.EAST_WEST, "ninja2011", 5),

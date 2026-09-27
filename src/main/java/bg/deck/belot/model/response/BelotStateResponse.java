@@ -2,6 +2,7 @@ package bg.deck.belot.model.response;
 
 import bg.deck.belot.engine.Card;
 import bg.deck.belot.engine.Seat;
+import bg.deck.belot.engine.Team;
 import bg.deck.belot.model.BelotDealStatus;
 import bg.deck.belot.model.BelotGameStatus;
 
@@ -18,6 +19,7 @@ import java.util.UUID;
  *
  * @param gameId          the table
  * @param status          waiting for players, playing, or over
+ * @param winnerTeam      who took the game, once one has been taken
  * @param serverSeedHash  committed before the first card; the seed follows at the end
  * @param seats           who is sitting where
  * @param yourSeat        where the player being sent this is sitting
@@ -36,6 +38,7 @@ import java.util.UUID;
 public record BelotStateResponse(
         UUID gameId,
         BelotGameStatus status,
+        Team winnerTeam,
         String serverSeedHash,
         List<BelotSeatView> seats,
         Seat yourSeat,
