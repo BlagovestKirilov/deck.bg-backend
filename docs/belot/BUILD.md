@@ -121,6 +121,13 @@ forgive.
 
 - [x] Tables: `belot.game`, `belot.seat` (022), `belot.deal`, `belot.bid` (023), `belot.play` (024). All `@Table(schema = "belot")`. No trick table — a trick is four plays in order — and no declaration table, for the reason below.
 - [x] Matchmaking for four: `POST /belot/search` — the oldest table short of players, or a new one; seats handed out in playing order so partners sit opposite.
+- [x] **Matchmaking is serialised.** Seating is read-then-write, so four
+      people pressing Търси in the same second all read "no table with room"
+      and all open one — four players landed at three tables the first time
+      belot was played for real. `belot.matchmaking` is one row whose only
+      job is to be locked (changeset 029); `join` takes it first and the
+      database releases it on commit. `BelotMatchmakingRaceTest` runs four
+      and eight threads at once and is the only multi-threaded test here.
 - [x] Turn order counter-clockwise; the deal moves one seat along each hand, thrown-in hands included.
 - [x] Per-player views — one `BelotStateResponse` per seat on `/topic/belot/{gameId}/{username}`, carrying that seat’s hand and the calls it may make. `BelotViewTest` checks no other seat’s cards appear in it.
 - [x] Provably fair dealing: the hash is committed when the table opens and travels in every view; hands are derived from seed + deal number and stored nowhere. The reveal at the end comes with the game’s finish.

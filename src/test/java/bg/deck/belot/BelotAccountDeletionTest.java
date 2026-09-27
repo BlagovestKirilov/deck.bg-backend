@@ -6,6 +6,7 @@ import bg.deck.belot.model.BelotSeat;
 import bg.deck.belot.repository.BelotGameRepository;
 import bg.deck.belot.repository.BelotPlayerRepository;
 import bg.deck.belot.service.BelotPlayerService;
+import bg.deck.belot.service.BelotMatchmakingService;
 import bg.deck.belot.service.BelotSeedService;
 import bg.deck.belot.service.BelotStatsService;
 import bg.deck.belot.service.BelotTableService;
@@ -43,7 +44,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @DisplayName("A deleted account, as belot sees it")
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@Import({BelotTableService.class, BelotPlayerService.class, BelotSeedService.class, BelotStatsService.class})
+@Import({BelotTableService.class, BelotMatchmakingService.class, BelotPlayerService.class, BelotSeedService.class, BelotStatsService.class})
 @TestPropertySource(properties = {
         "spring.liquibase.enabled=false",
         "spring.jpa.hibernate.ddl-auto=create-drop",

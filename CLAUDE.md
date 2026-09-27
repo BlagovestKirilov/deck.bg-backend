@@ -27,6 +27,7 @@ that service.**
 | `BelotGameRepository` | `BelotTableService` |
 | `BelotDealRepository` | `BelotDealService` |
 | `BelotPlayerStatsRepository` | `BelotStatsService` |
+| `BelotMatchmakingRepository` | `BelotMatchmakingService` |
 
 Check it in one line — every repository must print `1`:
 

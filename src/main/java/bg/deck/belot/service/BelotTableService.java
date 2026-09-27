@@ -3,11 +3,13 @@ package bg.deck.belot.service;
 import bg.deck.belot.engine.Seat;
 import bg.deck.belot.model.BelotGame;
 import bg.deck.belot.model.BelotGameStatus;
+import bg.deck.belot.model.BelotMatchmaking;
 import bg.deck.belot.model.BelotSeat;
 import bg.deck.belot.repository.BelotGameRepository;
 import bg.deck.constant.Constants;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,14 +34,24 @@ import java.util.UUID;
 public class BelotTableService {
 
     private final BelotGameRepository belotGameRepository;
+    private final BelotMatchmakingService belotMatchmakingService;
     private final BelotSeedService belotSeedService;
 
     /**
      * Sits this player down: back at their own table if they have one, at the
      * oldest table short of players otherwise, or at a new one.
+     *
+     * <p>One player at a time, enforced by the database. Everything below is
+     * read-then-write — look for a table with room, open one if there is none
+     * — and four people pressing Търси in the same second all read "no table
+     * with room" and all open one. That is not a rare interleaving: it is what
+     * happens every time a table fills up at once, and it put four players at
+     * three tables the first time belot was played by four people.
      */
     @Transactional
     public BelotGame join(String username) {
+        takeTheMatchmakingLock();
+
         Optional<BelotGame> existing = belotGameRepository.findUnfinishedGameOf(username);
         if (existing.isPresent()) {
             // Rejoining is simply finding them where they were.
@@ -79,6 +91,33 @@ public class BelotTableService {
     private Optional<BelotGame> oldestTableWithRoom() {
         List<BelotGame> waiting = belotGameRepository.findByStatusOrderByCreatedAtAsc(BelotGameStatus.WAITING);
         return waiting.stream().filter(game -> !game.isFull()).findFirst();
+    }
+
+    /**
+     * Blocks until whoever else is being seated has been.
+     *
+     * <p>Released when this transaction commits, so the next player in reads
+     * a table that already has the last one sitting at it. See
+     * {@link BelotMatchmaking} for why the lock is a row of its own, and
+     * {@link BelotMatchmakingService} for why creating that row needs a
+     * transaction of its own.
+     */
+    private void takeTheMatchmakingLock() {
+        if (belotMatchmakingService.lock()) {
+            return;
+        }
+
+        // Only on a database the changeset has not reached, which in practice
+        // means a test. Created in a transaction of its own, so the players
+        // who lose the race to create it still have a working transaction to
+        // be seated in — this one, which was suspended while that happened.
+        try {
+            belotMatchmakingService.ensureRowExists();
+        } catch (DataIntegrityViolationException raced) {
+            log.debug("Belot: another thread created the matchmaking lock row first");
+        }
+
+        belotMatchmakingService.lock();
     }
 
     private BelotGame openTable() {

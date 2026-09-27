@@ -8,6 +8,7 @@ import bg.deck.belot.engine.Team;
 import bg.deck.belot.model.BelotGame;
 import bg.deck.belot.model.BelotGameStatus;
 import bg.deck.belot.repository.BelotGameRepository;
+import bg.deck.belot.service.BelotMatchmakingService;
 import bg.deck.belot.service.BelotSeedService;
 import bg.deck.belot.service.BelotTableService;
 import jakarta.persistence.EntityManager;
@@ -34,7 +35,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @DisplayName("A belot table")
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@Import({BelotTableService.class, BelotSeedService.class})
+@Import({BelotTableService.class, BelotMatchmakingService.class, BelotSeedService.class})
 @TestPropertySource(properties = {
         "spring.liquibase.enabled=false",
         "spring.jpa.hibernate.ddl-auto=create-drop",
@@ -234,7 +235,7 @@ class BelotTableTest {
                         """)
                 .getResultList();
 
-        assertEquals(List.of("bid", "deal", "game", "play", "player", "player_stats", "seat"), tablesInBelot);
+        assertEquals(List.of("bid", "deal", "game", "matchmaking", "play", "player", "player_stats", "seat"), tablesInBelot);
     }
 
     @Test

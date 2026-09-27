@@ -1,0 +1,38 @@
+databaseChangeLog:
+  # One row, and its only job is to be locked.
+  #
+  # Sitting a player down is read-then-write: look for a table with room, and
+  # open one if there is none. Four people pressing Търси in the same second
+  # all read "no table with room" and all open one — which is exactly what
+  # happened the first time four people played belot, and they ended up at
+  # three tables.
+  #
+  # There is nothing else to lock. Locking the table you found does not help
+  # when the race is about a table that does not exist yet, and a partial
+  # unique index on "only one table may be WAITING" is Postgres-only, so the
+  # tests would stop testing the fix. A row that always exists can be locked
+  # with plain SELECT ... FOR UPDATE on either database.
+  #
+  # Additive: one new table in belot's own schema, seeded with its one row.
+  - changeSet:
+      id: 029-belot-matchmaking-lock
+      author: Blagovest Kirilov
+      comment: Serialise belot matchmaking so four players reach one table
+      changes:
+        - sql:
+            dbms: postgresql
+            splitStatements: false
+            sql: |
+              CREATE TABLE IF NOT EXISTS belot.matchmaking (
+                  id INTEGER PRIMARY KEY,
+                  CONSTRAINT belot_matchmaking_single_row CHECK (id = 1)
+              );
+
+              INSERT INTO belot.matchmaking (id) VALUES (1)
+                  ON CONFLICT (id) DO NOTHING;
+      rollback:
+        - sql:
+            dbms: postgresql
+            splitStatements: false
+            sql: |
+              DROP TABLE IF EXISTS belot.matchmaking;

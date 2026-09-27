@@ -12,6 +12,7 @@ import bg.deck.belot.model.BelotGameStatus;
 import bg.deck.belot.model.request.BelotBidRequest;
 import bg.deck.belot.repository.BelotPlayerStatsRepository;
 import bg.deck.belot.service.BelotDealService;
+import bg.deck.belot.service.BelotMatchmakingService;
 import bg.deck.belot.service.BelotPlayService;
 import bg.deck.belot.service.BelotPlayerService;
 import bg.deck.belot.service.BelotSeedService;
@@ -52,7 +53,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @DataJpaTest
 @EnableConfigurationProperties(BelotProperties.class)
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@Import({BelotService.class, BelotTableService.class, BelotDealService.class, BelotPlayService.class,
+@Import({BelotService.class, BelotTableService.class, BelotMatchmakingService.class, BelotDealService.class, BelotPlayService.class,
         BelotTurnService.class, BelotPlayerService.class, BelotSeedService.class, BelotStatsService.class})
 @TestPropertySource(properties = {
         "spring.liquibase.enabled=false",
