@@ -30,6 +30,9 @@ public class Constants {
 
     /** The one cache: the games on offer. @see bg.deck.config.CacheConfig */
     public static final String SERVICES_CACHE = "services";
+
+    /** What a seat says once the account that sat in it is gone. */
+    public static final String DELETED_PLAYER = "Изтрит играч";
     public static final String ROLE = "role";
     public static final String USERNAME = "username";
     public static final String BEARER = "Bearer ";

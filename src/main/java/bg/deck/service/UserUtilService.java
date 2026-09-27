@@ -4,8 +4,10 @@ import bg.deck.model.DeletedUser;
 import bg.deck.model.User;
 import bg.deck.repository.DeletedUserRepository;
 import bg.deck.util.UserMapper;
+import bg.deck.model.event.UserDeleted;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
 @Log4j2
@@ -18,6 +20,7 @@ public class UserUtilService {
     private final UserDeletionService userDeletionService;
     private final PlayerService playerService;
     private final UserAccountService userAccountService;
+    private final ApplicationEventPublisher events;
     private final UserMapper userMapper;
 
     /**
@@ -37,6 +40,12 @@ public class UserUtilService {
         forgotPasswordService.reassignToDeletedUser(user, deletedUser);
         userDeletionService.reassignToDeletedUser(user, deletedUser);
 
+        String username = user.getUsername();
         userAccountService.delete(user);
+
+        // Anything with a schema of its own clears itself. Calling belot
+        // from here would put a public-schema class in charge of a belot
+        // table, which is the seam the whole arrangement depends on.
+        events.publishEvent(new UserDeleted(username));
     }
 }

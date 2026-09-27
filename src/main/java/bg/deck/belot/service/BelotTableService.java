@@ -5,6 +5,7 @@ import bg.deck.belot.model.BelotGame;
 import bg.deck.belot.model.BelotGameStatus;
 import bg.deck.belot.model.BelotSeat;
 import bg.deck.belot.repository.BelotGameRepository;
+import bg.deck.constant.Constants;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Service;
@@ -87,5 +88,31 @@ public class BelotTableService {
         // Committed before anyone sits down, let alone before a card is dealt.
         table.setServerSeedHash(belotSeedService.hash(seed));
         return table;
+    }
+
+    /**
+     * Renames every seat a deleted account sat in.
+     *
+     * <p>The seats stay. A finished game still has to say four people were
+     * at it, and a game their partner played should not lose its record
+     * because the opponent closed their account. What goes is the name.
+     *
+     * @return how many seats were renamed
+     */
+    @Transactional
+    public int anonymise(String username) {
+        List<BelotGame> games = belotGameRepository.findGamesOf(username);
+
+        int renamed = 0;
+        for (BelotGame game : games) {
+            for (BelotSeat seat : game.getSeats()) {
+                if (seat.getUsername().equals(username)) {
+                    seat.setUsername(Constants.DELETED_PLAYER);
+                    renamed++;
+                }
+            }
+            belotGameRepository.save(game);
+        }
+        return renamed;
     }
 }

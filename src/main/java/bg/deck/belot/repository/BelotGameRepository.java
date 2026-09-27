@@ -14,6 +14,14 @@ public interface BelotGameRepository extends JpaRepository<BelotGame, UUID> {
     /** Tables still short of players, oldest first, so nobody waits twice. */
     List<BelotGame> findByStatusOrderByCreatedAtAsc(BelotGameStatus status);
 
+    /** Every table this player has ever sat at, finished ones included. */
+    @Query("""
+            select game from BelotGame game
+              join game.seats seat
+             where seat.username = :username
+            """)
+    List<BelotGame> findGamesOf(String username);
+
     /** The table this player is at, if they are at one. */
     @Query("""
             select game from BelotGame game

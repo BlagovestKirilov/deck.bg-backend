@@ -32,4 +32,23 @@ public class BelotPlayerService {
                     return belotPlayerRepository.save(new BelotPlayer(username));
                 });
     }
+
+    /**
+     * Forgets a player whose account is gone.
+     *
+     * <p>The row is removed rather than renamed: it holds nothing but a
+     * name, so anonymising it would leave a row that means nothing. What
+     * their games record is the seats, and those are kept.
+     *
+     * @return whether there was one to forget
+     */
+    @Transactional
+    public boolean forget(String username) {
+        return belotPlayerRepository.findByUsername(username)
+                .map(player -> {
+                    belotPlayerRepository.delete(player);
+                    return true;
+                })
+                .orElse(false);
+    }
 }

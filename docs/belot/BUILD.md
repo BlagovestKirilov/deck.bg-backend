@@ -160,7 +160,7 @@ tab and reopening it restores that seat's hand exactly.
 
 # M5 — loose ends that are easy to forget
 
-- [ ] **Account deletion.** `UserUtilService.deleteUser` must also clear belot rows — anonymise `player_profile`, keep finished games able to name who sat in them. Write the test with the others in `LinkExpiryTest`'s style.
+- [x] **Account deletion.** `UserUtilService` publishes `UserDeleted` after the deletion commits; `BelotAccountListener` forgets the `belot.player` row and renames every seat that account sat in. Seats are kept, so a finished game can still name four people and nobody loses their record because an opponent left. The event carries a username and nothing else — the same thing that crosses the seam on every request.
 - [ ] Rate limiting — belot's matchmaking endpoints inherit the gap noted in the OWASP review.
 - [ ] `CLAUDE.md`: add belot's package and the three laws.
 - [ ] Prod `ddl-auto: none` means **Liquibase must create every belot table** — dev's `update` will hide a missing changeset until deploy.
