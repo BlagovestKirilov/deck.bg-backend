@@ -66,13 +66,27 @@ public class StompAuthChannelInterceptor implements ChannelInterceptor {
             // The handshake authenticates nobody: the token used to ride in the
             // URL, where every access log kept a copy, and that branch is gone.
             // A CONNECT frame carries its own token or it is refused.
+            log.warn("Game socket refused: no bearer token on the CONNECT frame");
             throw new BadCredentialsException("The game socket needs a token.");
         }
 
         String jwt = header.substring(BEARER.length());
-        String username = jwtService.extractUsername(jwt);
+
+        String username;
+        try {
+            username = jwtService.extractUsername(jwt);
+        } catch (RuntimeException e) {
+            // Say what was wrong with it, never what it was. A client that
+            // sends something that is not a token at all — the wrong
+            // variable, an unawaited promise — reconnects forever, and
+            // without this the only trace is a DISCONNECT with no reason.
+            log.warn("Game socket refused: the token could not be read ({})",
+                    e.getClass().getSimpleName());
+            throw new BadCredentialsException("The game socket's token could not be read.", e);
+        }
 
         if (username == null || !jwtService.isTokenValid(jwt)) {
+            log.warn("Game socket refused: the token is not valid for {}", username);
             throw new BadCredentialsException("The game socket's token is not valid.");
         }
 
