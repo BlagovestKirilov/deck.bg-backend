@@ -7,6 +7,7 @@ import bg.deck.belot.service.BelotPlayerService;
 import bg.deck.belot.service.BelotStatsService;
 import bg.deck.belot.service.BelotService;
 import bg.deck.util.AuthenticatedUser;
+import bg.deck.util.RankLadder;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -65,8 +66,12 @@ public class BelotController {
     @GetMapping("/profile")
     public ResponseEntity<BelotProfileResponse> profile() {
         var stats = belotStatsService.of(AuthenticatedUser.username());
-        return ResponseEntity.ok(
-                new BelotProfileResponse(stats.getGames(), stats.getWins(), stats.getLosses()));
+        return ResponseEntity.ok(new BelotProfileResponse(
+                stats.getGames(),
+                stats.getWins(),
+                stats.getLosses(),
+                stats.getRank().name(),
+                RankLadder.placementGamesRemaining(stats.getGames())));
     }
 
     /**

@@ -159,10 +159,19 @@ tab and reopening it restores that seat's hand exactly.
 
 # M4 — stats and profile (2–3 days)
 
-- [x] `belot.player_stats(username, games, wins, losses)` — changeset 026. No rating column: see the question below, and a column holding a number nobody has agreed on is worse than no column.
-- [ ] **❓ Team Elo:** does a 2v2 result move both partners equally, or by individual contribution?
-- [x] `GET /belot/profile` — games, wins, losses. Written for all four seats when a game is won, since a win belongs to a pair.
-- [x] `ProfilePage` shows a third card for belot, with no rank line — `GameStatsCard` takes rank as optional rather than being handed UNRANKED.
+- [x] `belot.player_stats(username, games, wins, losses, rating, rank)` — changesets 026 and 027.
+- [x] **Team Elo. Answered: equally.** A pair is rated as the average of the
+      two in it, and the same delta goes to both partners. Nothing tries to
+      score who carried the game: the server can see who took tricks, but
+      tricks are won with the cards you were dealt and with what your partner
+      led, so a contribution score would put a number on luck and then charge
+      the unlucky partner for it. The one thing that stays per player is the K
+      factor — that is about how settled their own rating is, not about how
+      much of the game they played, so a newcomer and a veteran can take the
+      same result and move by different amounts. `TeamElo` holds the
+      arithmetic; `BelotRatingTest` and `BelotStatsTest` pin it.
+- [x] `GET /belot/profile` — games, wins, losses, rank and placement games remaining. Written for all four seats when a game is won, since a win belongs to a pair; a seat left by a deleted account is skipped, since there is nobody to hold the result.
+- [x] `ProfilePage` shows a third card for belot. It carries a rank now, on the same ladder as santase (`RankLadder`), so a Gold badge means the same thing on both cards.
 
 # M5 — loose ends that are easy to forget
 
@@ -181,4 +190,6 @@ bidding · 4 all-trumps obligation with a partner winning · 5 fours vs sequence
 6 belote independence · 7 which four wins · 8 declarations in suit contracts ·
 9 rounding · 10 both teams over 151 · 11 all-pass and the capot rule.
 
-Build: dropped player — forfeit or pause? · team Elo — equal or individual?
+Build: both answered. Dropped player — neither forfeit nor pause; the table
+takes the least consequential legal action for them. Team Elo — equally, with
+only the K factor per player.

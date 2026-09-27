@@ -195,9 +195,19 @@ Three things that look reasonable and are not:
 - **Do not reuse `GameInactivityService`.** It branches on `GameType` and works
   on `Game`. Belot has `BelotTurnScheduler`, built on the same pattern.
 
+A fourth thing is true of the rating, and it is a choice rather than a rule:
+**a belot result moves both partners equally.** `TeamElo` rates a pair as the
+average of the two in it and hands the same delta to each. Only the K factor
+is per player, because that is about how settled their own rating is. Do not
+add a contribution term — the reason is written out in `TeamElo` and in
+`docs/belot/BUILD.md`.
+
 What is shared, deliberately: `JwtAuthenticationFilter`, `SecurityConfig`, the
-STOMP transport, `WebSocketService`, the scheduler and its ShedLock, and
-`GlobalExceptionHandler` — so the error shape a client sees is identical.
+STOMP transport, `WebSocketService`, the scheduler and its ShedLock,
+`GlobalExceptionHandler` — so the error shape a client sees is identical — and
+`RankLadder`, the one rating-to-rank ladder, so a Gold badge means the same
+thing on both cards of the profile page. All of it is code; no table is
+shared, which is what the third law is about.
 
 `docs/belot/RULES.md` holds the rules of the game; `docs/belot/BUILD.md` the
 plan and what is still open.

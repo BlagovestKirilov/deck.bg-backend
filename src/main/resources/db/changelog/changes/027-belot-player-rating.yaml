@@ -1,0 +1,46 @@
+databaseChangeLog:
+  # A rating for belot, and the rank it earns.
+  #
+  # The open question in 026 has an answer: a 2v2 result moves both partners
+  # equally. A pair is rated as the average of the two in it, and the same
+  # delta is applied to each — nothing here tries to score who carried the
+  # game. Only the K factor is per player, because that is about how settled
+  # their own rating is, not about how much of the game they played.
+  #
+  # Same ladder as santase (bg.deck.util.RankLadder): a Gold badge has to mean
+  # the same thing wherever it is worn, and the profile page shows both.
+  #
+  # Additive: two columns on a belot table, with defaults, so every row that
+  # already exists starts level and unranked. Nothing in the public schema is
+  # touched.
+  - changeSet:
+      id: 027-belot-player-rating
+      author: Blagovest Kirilov
+      comment: A team rating for belot, applied to both partners equally
+      changes:
+        - sql:
+            dbms: postgresql
+            splitStatements: false
+            sql: |
+              ALTER TABLE belot.player_stats
+                  ADD COLUMN IF NOT EXISTS rating INTEGER     NOT NULL DEFAULT 1500,
+                  ADD COLUMN IF NOT EXISTS rank   VARCHAR(20) NOT NULL DEFAULT 'UNRANKED';
+
+              ALTER TABLE belot.player_stats
+                  DROP CONSTRAINT IF EXISTS belot_stats_rank_check;
+
+              ALTER TABLE belot.player_stats
+                  ADD CONSTRAINT belot_stats_rank_check
+                  CHECK (rank IN ('UNRANKED', 'BRONZE', 'SILVER', 'GOLD',
+                                  'PLATINUM', 'DIAMOND', 'LEGEND'));
+      rollback:
+        - sql:
+            dbms: postgresql
+            splitStatements: false
+            sql: |
+              ALTER TABLE belot.player_stats
+                  DROP CONSTRAINT IF EXISTS belot_stats_rank_check;
+
+              ALTER TABLE belot.player_stats
+                  DROP COLUMN IF EXISTS rating,
+                  DROP COLUMN IF EXISTS rank;

@@ -21,7 +21,9 @@
   "BelotProfileResponse" : {
     "games" : 31,
     "wins" : 18,
-    "losses" : 13
+    "losses" : 13,
+    "rank" : "GOLD",
+    "placementGamesRemaining" : 0
   },
   "BelotStateResponse" : {
     "gameId" : "11111111-2222-3333-4444-555555555555",

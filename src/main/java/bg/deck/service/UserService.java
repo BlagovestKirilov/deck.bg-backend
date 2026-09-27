@@ -3,7 +3,6 @@ package bg.deck.service;
 import bg.deck.constant.Constants;
 import bg.deck.constant.ExceptionConstants;
 import bg.deck.constant.LogConstants;
-import bg.deck.constant.RankingConstants;
 import bg.deck.enums.GameType;
 import bg.deck.enums.UserDeletionStatus;
 import bg.deck.exception.EmailNotConfirmedException;
@@ -17,6 +16,7 @@ import bg.deck.model.dto.GameStatsDTO;
 import bg.deck.model.request.ChangePasswordRequest;
 import bg.deck.model.request.UserDeletionRequest;
 import bg.deck.model.response.ProfileResponse;
+import bg.deck.util.RankLadder;
 import bg.deck.util.TokenFingerprint;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
@@ -53,7 +53,7 @@ public class UserService {
         Map<String, GameStatsDTO> stats = new LinkedHashMap<>();
         for (GameType type : GameType.values()) {
             UserGameStats s = user.statsFor(type);
-            int remaining = Math.max(0, RankingConstants.PLACEMENT_GAMES - s.totalGames());
+            int remaining = RankLadder.placementGamesRemaining(s.totalGames());
             stats.put(type.name(), new GameStatsDTO(
                     s.getWins(), s.getLosses(), s.getRank().name(), remaining));
         }

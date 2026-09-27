@@ -1,10 +1,10 @@
 package bg.deck.service;
 
-import bg.deck.constant.RankingConstants;
 import bg.deck.enums.Rank;
 import bg.deck.model.Game;
 import bg.deck.model.Player;
 import bg.deck.model.UserGameStats;
+import bg.deck.util.RankLadder;
 import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
@@ -35,8 +35,7 @@ public class RankingService {
     }
 
     private int calculateEloDelta(int playerRating, int opponentRating, boolean win, int gamesPlayed) {
-        int kFactor = gamesPlayed < RankingConstants.PLACEMENT_GAMES ?
-                RankingConstants.K_PLACEMENT : RankingConstants.K_RANKED;
+        int kFactor = RankLadder.kFactor(gamesPlayed);
 
         double expected = 1.0 / (1.0 + Math.pow(10, (opponentRating - playerRating) / 400.0));
 
@@ -46,20 +45,6 @@ public class RankingService {
     }
 
     private Rank resolveRank(UserGameStats stats) {
-
-        int gamesPlayed = stats.totalGames();
-        int rating = stats.getRating();
-
-        if (gamesPlayed < RankingConstants.PLACEMENT_GAMES) {
-            return Rank.UNRANKED;
-        }
-
-        if (rating < RankingConstants.BRONZE_THRESHOLD) return Rank.BRONZE;
-        if (rating < RankingConstants.SILVER_THRESHOLD) return Rank.SILVER;
-        if (rating < RankingConstants.GOLD_THRESHOLD) return Rank.GOLD;
-        if (rating < RankingConstants.PLATINUM_THRESHOLD) return Rank.PLATINUM;
-        if (rating < RankingConstants.DIAMOND_THRESHOLD) return Rank.DIAMOND;
-
-        return Rank.LEGEND;
+        return RankLadder.rankFor(stats.getRating(), stats.totalGames());
     }
 }
