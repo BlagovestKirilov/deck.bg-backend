@@ -66,6 +66,22 @@ public class GlobalExceptionHandler {
         return buildResponse(HttpStatus.CONFLICT, "Ходът вече беше отигран.", request.getRequestURI());
     }
 
+    /**
+     * A move the table has already moved past — 409, not 500.
+     *
+     * <p>Answered like the optimistic-lock case above and for the same
+     * reason: the client re-reads state, which the server is pushing anyway.
+     * Logged at info with no stack trace, because it is not a fault; a race
+     * between a tap and a socket is the normal weather of a card game, and a
+     * log full of them is a log nobody reads when something really breaks.
+     */
+    @ExceptionHandler(IllegalMoveException.class)
+    public ResponseEntity<ErrorResponse> handleIllegalMove(IllegalMoveException ex, HttpServletRequest request) {
+        log.info("Move refused on {}: {}", request.getRequestURI(), ex.getMessage());
+        return buildResponse(HttpStatus.CONFLICT, ExceptionConstants.MOVE_NO_LONGER_LEGAL,
+                request.getRequestURI());
+    }
+
     @ExceptionHandler(InvalidCredentialsException.class)
     public ResponseEntity<ErrorResponse> handleInvalidCredentialsException(InvalidCredentialsException ex, HttpServletRequest request) {
         log.warn(LOG_FORMAT_SECURITY, ex.getMessage(), request.getHeader(CF_CONNECTING_IP), request.getRequestURI());

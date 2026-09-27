@@ -92,7 +92,44 @@ docker exec <nginx-container> nginx -t && docker exec <nginx-container> nginx -s
 
 If `nginx -t` fails, nothing has changed yet.
 
-## 3. Belot is off until the catalogue says otherwise
+## 3. Security headers
+
+Not belot's alone — the site sends none at all today, which the OWASP 2025
+review picked up under A02. These go in the `deck.bg` HTTPS server block, once,
+above the locations, and cover every page and every API answer.
+
+```nginx
+# The version number in Server: and on error pages tells a scanner exactly
+# which nginx to look up.
+server_tokens off;
+
+# HTTPS only, from the first visit onwards. Add preload only when you are
+# sure: the list is slow to leave.
+add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+
+# No MIME sniffing, no framing, no referrer leaking a path to another site.
+add_header X-Content-Type-Options "nosniff" always;
+add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+
+# The app is never framed, so say so in the modern way and the old one.
+add_header Content-Security-Policy "frame-ancestors 'none'" always;
+add_header X-Frame-Options "DENY" always;
+
+# Nothing here uses any of these.
+add_header Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=()" always;
+```
+
+`always` matters: without it a header is skipped on error responses, which are
+exactly the ones a scanner looks at.
+
+**A full Content-Security-Policy is worth doing and is not a one-liner.** The
+client is a Vite bundle with no inline scripts, so `script-src 'self'` should
+hold as it stands, but the styles, the fonts and the WebSocket origin all have
+to be named, and a policy that is wrong breaks the site silently for whoever
+loads it first. Add it on its own, with `Content-Security-Policy-Report-Only`
+first, and read the reports for a day before enforcing.
+
+## 4. Belot is off until the catalogue says otherwise
 
 Changeset `023-belot-deal.yaml` inserts the `BELOT` row into
 `available_service` as `ON` with scope `BETA`. Who that covers is

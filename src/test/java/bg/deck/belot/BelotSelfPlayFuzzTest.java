@@ -16,6 +16,7 @@ import bg.deck.belot.engine.Declarations;
 import bg.deck.belot.engine.PlayedDeal;
 import bg.deck.belot.engine.RecordedScore;
 import bg.deck.belot.engine.Seat;
+import bg.deck.belot.engine.ShuffleStream;
 import bg.deck.belot.engine.Team;
 import bg.deck.belot.engine.Trick;
 import org.junit.jupiter.api.DisplayName;
@@ -63,11 +64,24 @@ class BelotSelfPlayFuzzTest {
         }
     }
 
+    /**
+     * A keystream for the fuzz run.
+     *
+     * <p>The shuffle takes bytes now rather than a {@link Random}, and the
+     * point of this test is the rules, not the shuffle: any bytes will do, so
+     * long as the seed printed on a failure reproduces them.
+     */
+    private static ShuffleStream streamFrom(Random random) {
+        byte[] bytes = new byte[256];
+        random.nextBytes(bytes);
+        return new ShuffleStream(bytes);
+    }
+
     private static void playOneDeal(long seed) {
         Random random = new Random(seed);
         Seat dealer = Seat.values()[random.nextInt(Seat.values().length)];
 
-        Map<Seat, List<Card>> hands = Dealing.deal(Dealing.shuffled(random), dealer);
+        Map<Seat, List<Card>> hands = Dealing.deal(Dealing.shuffled(streamFrom(random)), dealer);
         assertDealtProperly(hands);
 
         Bidding bidding = bidRandomly(Bidding.startedBy(dealer), random);
@@ -173,7 +187,7 @@ class BelotSelfPlayFuzzTest {
     void trickWinnersAreRealPlayers() {
         Random random = new Random(7L);
         Seat dealer = Seat.NORTH;
-        Map<Seat, List<Card>> hands = Dealing.deal(Dealing.shuffled(random), dealer);
+        Map<Seat, List<Card>> hands = Dealing.deal(Dealing.shuffled(streamFrom(random)), dealer);
 
         PlayedDeal played = DealPlay.play(hands, Contract.SPADES, dealer.next(),
                 (seat, legal, trick) -> legal.getFirst());

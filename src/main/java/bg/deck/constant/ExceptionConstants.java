@@ -4,6 +4,13 @@ import lombok.experimental.UtilityClass;
 
 @UtilityClass
 public class ExceptionConstants {
+
+    /**
+     * Said to a player whose move arrived after the table moved on. The same
+     * words as the optimistic-lock answer, because it is the same thing from
+     * the player's side: what they tapped is no longer there to tap.
+     */
+    public static final String MOVE_NO_LONGER_LEGAL = "\u0425\u043e\u0434\u044a\u0442 \u0432\u0435\u0447\u0435 \u043d\u0435 \u0435 \u0432\u044a\u0437\u043c\u043e\u0436\u0435\u043d.";
     public static final String INVALID_CREDENTIALS = "Invalid credentials provided for username %s.";
     public static final String INVALID_TOKEN = "Invalid token.";
     public static final String INVALID_LINK = "Invalid or expired link.";

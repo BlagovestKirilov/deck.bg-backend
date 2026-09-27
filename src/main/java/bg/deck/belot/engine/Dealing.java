@@ -5,7 +5,6 @@ import java.util.Collections;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
 
 /**
  * Handing out the cards. RULES §4.
@@ -27,9 +26,20 @@ public final class Dealing {
     private Dealing() {
     }
 
-    public static List<Card> shuffled(Random random) {
+    /**
+     * Fisher–Yates, driven by the deal's own keystream.
+     *
+     * <p>Written out rather than handed to {@code Collections.shuffle} so that
+     * the shuffle is the algorithm and nothing else — a player checking the
+     * published seed reproduces this loop, not a JDK implementation detail.
+     * See {@link ShuffleStream} for why the numbers do not come from
+     * {@code java.util.Random}.
+     */
+    public static List<Card> shuffled(ShuffleStream stream) {
         List<Card> deck = new ArrayList<>(Deck.full());
-        Collections.shuffle(deck, random);
+        for (int i = deck.size() - 1; i > 0; i--) {
+            Collections.swap(deck, i, stream.nextBelow(i + 1));
+        }
         return deck;
     }
 

@@ -26,6 +26,7 @@ import bg.deck.belot.model.response.BelotSeatView;
 import bg.deck.belot.model.response.BelotStateResponse;
 import bg.deck.belot.model.response.BelotTurnView;
 import bg.deck.enums.GameType;
+import bg.deck.exception.IllegalMoveException;
 import bg.deck.service.AvailabilityService;
 import bg.deck.service.WebSocketService;
 
@@ -101,9 +102,16 @@ public class BelotService {
         BelotGame table = tableFor(username);
         BelotSeat seat = seatFor(table, username);
         BelotDeal deal = belotDealService.current(table).orElseThrow(
-                () -> new IllegalStateException("No deal in progress at table " + table.getId()));
+                () -> new IllegalMoveException("No deal in progress at table " + table.getId()));
 
-        belotDealService.bid(deal, new BidAction(seat.getSeat(), request.kind(), request.contract()));
+        try {
+            belotDealService.bid(deal, new BidAction(seat.getSeat(), request.kind(), request.contract()));
+        } catch (IllegalArgumentException e) {
+            // The engine refuses a call that is not legal now. From the
+            // player's side that is a call that arrived too late, or a client
+            // offering a button it should not have.
+            throw new IllegalMoveException(e.getMessage(), e);
+        }
 
         // Nobody wanted it: the next seat deals, and the table is told once.
         if (deal.getStatus() == BelotDealStatus.THROWN_IN) {
@@ -127,9 +135,13 @@ public class BelotService {
         BelotGame table = tableFor(username);
         BelotSeat seat = seatFor(table, username);
         BelotDeal deal = belotDealService.current(table).orElseThrow(
-                () -> new IllegalStateException("No deal in progress at table " + table.getId()));
+                () -> new IllegalMoveException("No deal in progress at table " + table.getId()));
 
-        belotPlayService.play(table, deal, seat.getSeat(), request.card());
+        try {
+            belotPlayService.play(table, deal, seat.getSeat(), request.card());
+        } catch (IllegalArgumentException e) {
+            throw new IllegalMoveException(e.getMessage(), e);
+        }
 
         if (deal.getStatus() == BelotDealStatus.FINISHED
                 && table.getStatus() != BelotGameStatus.FINISHED) {
@@ -168,9 +180,16 @@ public class BelotService {
         tellEveryone(table);
     }
 
+    /**
+     * The table this player is at.
+     *
+     * <p>Not being at one is the player's situation, not a fault: the game
+     * finished while their tap was in flight, or they have two tabs open. So
+     * it is a refused move rather than a 500.
+     */
     private BelotGame tableFor(String username) {
         return belotTableService.tableOf(username).orElseThrow(
-                () -> new IllegalStateException(username + " is not at a belot table"));
+                () -> new IllegalMoveException(username + " is not at a belot table"));
     }
 
     private BelotSeat seatFor(BelotGame table, String username) {

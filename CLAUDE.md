@@ -210,8 +210,9 @@ thing on both cards of the profile page. All of it is code; no table is
 shared, which is what the third law is about.
 
 `docs/belot/RULES.md` holds the rules of the game; `docs/belot/BUILD.md` the
-plan and what is still open; `docs/belot/DEPLOY.md` the two things belot needs
-on the server — the schema and its nginx zones.
+plan and what is still open; `docs/belot/DEPLOY.md` what belot needs on the
+server — the schema, its nginx zones and the security headers the site is
+missing; `docs/belot/SECURITY-REVIEW.md` belot against the OWASP Top 10:2025.
 
 ## Everything else
 

@@ -1,5 +1,8 @@
 package bg.deck.belot;
 
+import bg.deck.belot.engine.Card;
+import bg.deck.belot.engine.Dealing;
+import bg.deck.belot.engine.Deck;
 import bg.deck.belot.engine.Seat;
 import bg.deck.belot.engine.Team;
 import bg.deck.belot.model.BelotGame;
@@ -18,7 +21,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.test.context.TestPropertySource;
 
 import java.util.List;
-import java.util.Random;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -172,10 +175,10 @@ class BelotTableTest {
         @DisplayName("the same deal number always shuffles the same way")
         void reproducible() {
             byte[] seed = seeds.newSeed();
-            Random first = seeds.shuffleFor(seed, 3);
-            Random again = seeds.shuffleFor(seed, 3);
 
-            assertEquals(first.nextLong(), again.nextLong(), "a deal can be dealt again from the seed");
+            assertEquals(Dealing.shuffled(seeds.shuffleFor(seed, 3)),
+                    Dealing.shuffled(seeds.shuffleFor(seed, 3)),
+                    "a deal can be dealt again from the seed, which is the whole promise");
         }
 
         @Test
@@ -183,7 +186,30 @@ class BelotTableTest {
         void differentPerDeal() {
             byte[] seed = seeds.newSeed();
 
-            assertNotEquals(seeds.shuffleFor(seed, 1).nextLong(), seeds.shuffleFor(seed, 2).nextLong());
+            assertNotEquals(Dealing.shuffled(seeds.shuffleFor(seed, 1)),
+                    Dealing.shuffled(seeds.shuffleFor(seed, 2)));
+        }
+
+        @Test
+        @DisplayName("a deal is a whole deck, shuffled and not invented")
+        void everyCardExactlyOnce() {
+            List<Card> dealt = Dealing.shuffled(seeds.shuffleFor(seeds.newSeed(), 1));
+
+            assertEquals(Deck.full().size(), dealt.size());
+            assertEquals(Set.copyOf(Deck.full()), Set.copyOf(dealt), "the same 32 cards, in another order");
+        }
+
+        @Test
+        @DisplayName("and no seat is dealt the same hand twice over a run of deals")
+        void shufflesDiffer() {
+            byte[] seed = seeds.newSeed();
+
+            Set<List<Card>> seen = new java.util.HashSet<>();
+            for (int deal = 1; deal <= 50; deal++) {
+                seen.add(Dealing.shuffled(seeds.shuffleFor(seed, deal)));
+            }
+
+            assertEquals(50, seen.size(), "fifty deal numbers, fifty different shuffles");
         }
 
         @Test
