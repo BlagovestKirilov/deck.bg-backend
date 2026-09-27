@@ -159,6 +159,7 @@ class WireFormatSnapshotTest {
                         4,
                         List.of(new BelotPlayedCard(Seat.NORTH, new Card(Suit.CLUBS, Rank.TEN)),
                                 new BelotPlayedCard(Seat.WEST, new Card(Suit.CLUBS, Rank.KING))),
+                        null,
                         List.of(new Card(Suit.CLUBS, Rank.SEVEN))),
                 new BelotTurnView(Seat.EAST, Instant.parse("2026-09-27T10:15:30Z")),
                 List.of(new BelotDealRow(1, Contract.SPADES, Seat.NORTH, Team.NORTH_SOUTH,

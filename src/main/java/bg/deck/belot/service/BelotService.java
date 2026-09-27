@@ -290,13 +290,27 @@ public class BelotService {
             return null;
         }
         Trick trick = deal.currentTrick();
+        Seat wonBy = null;
+        int trickNo = deal.currentTrickNumber();
+
+        // Between the fourth card and the next lead there is no trick in
+        // progress, and showing an empty table then means nobody ever sees
+        // the trick they just played into, or who took it. So the finished
+        // one stays out until somebody leads the next.
+        if (trick.isEmpty() && !deal.getPlays().isEmpty()) {
+            List<Trick> played = deal.tricks();
+            trick = played.getLast();
+            wonBy = deal.lastTrickWinner().orElse(null);
+            trickNo = played.size();
+        }
 
         return new BelotPlayView(
                 deal.getContract(),
                 deal.getDeclarerSeat(),
                 belotPlayService.toAct(deal),
-                deal.currentTrickNumber(),
+                trickNo,
                 trick.plays().stream().map(play -> new BelotPlayedCard(play.seat(), play.card())).toList(),
+                wonBy,
                 seat == null ? List.of() : belotPlayService.legalFor(table, deal, seat));
     }
 

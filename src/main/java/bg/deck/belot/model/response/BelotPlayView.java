@@ -17,7 +17,10 @@ import java.util.List;
  * @param declarer who bid it
  * @param toAct    whose turn it is to play
  * @param trickNo  which trick, counted from one
- * @param onTable  the cards in the current trick, in the order they were played
+ * @param onTable  the cards on the table, in the order they were played — the
+ *                 trick in progress, or the one just finished until somebody
+ *                 leads the next
+ * @param wonBy    who took the trick on the table, once it is complete
  * @param yours    what the player being sent this may play now
  */
 public record BelotPlayView(
@@ -26,6 +29,7 @@ public record BelotPlayView(
         Seat toAct,
         int trickNo,
         List<BelotPlayedCard> onTable,
+        Seat wonBy,
         List<Card> yours
 ) {
 

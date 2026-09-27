@@ -1,6 +1,7 @@
 package bg.deck.belot;
 
 import bg.deck.belot.engine.BidAction;
+import bg.deck.belot.engine.Contract;
 import bg.deck.belot.engine.Card;
 import bg.deck.belot.engine.Dealing;
 import bg.deck.belot.engine.Seat;
@@ -177,5 +178,29 @@ class BelotViewTest {
             }
         }
         assertEquals(PLAYERS, heard, "a pass is said out loud");
+    }
+
+    @Test
+    @DisplayName("keeps a finished trick on the table until somebody leads")
+    void theFinishedTrickStaysOut() {
+        // A contract, so there are cards to play rather than calls to make.
+        Seat bidder = deal.bidding().toAct();
+        dealService.bid(deal, BidAction.bid(bidder, Contract.SPADES));
+        for (int i = 0; i < 3; i++) {
+            bidder = bidder.next();
+            dealService.bid(deal, BidAction.pass(bidder));
+        }
+
+        for (int card = 0; card < 4; card++) {
+            Seat seat = playService.toAct(deal);
+            playService.play(table, deal, seat, playService.legalFor(table, deal, seat).getFirst());
+        }
+
+        BelotStateResponse view = viewSentTo("petko91");
+        assertNotNull(view.play());
+        assertEquals(4, view.play().onTable().size(),
+                "the four cards stay out: a player must see the trick they played into");
+        assertNotNull(view.play().wonBy(), "and who took it");
+        assertEquals(1, view.play().trickNo(), "it is still the first trick until the next is led");
     }
 }

@@ -93,6 +93,7 @@
           "rank" : "KING"
         }
       } ],
+      "wonBy" : null,
       "yours" : [ {
         "suit" : "CLUBS",
         "rank" : "SEVEN"
