@@ -12,7 +12,7 @@ right or is a server-side change written out in [`DEPLOY.md`](DEPLOY.md).
 |---|---|---|
 | A01 | Broken Access Control | Clean |
 | A02 | Security Misconfiguration | **No security headers at all** — fixed in DEPLOY.md, not yet applied |
-| A03 | Software Supply Chain Failures | **`@master` action, no scanning** — action pinned, scanning still open |
+| A03 | Software Supply Chain Failures | **11 client advisories, 2 critical; `@master` action** — both fixed, scanning still open |
 | A04 | Cryptographic Failures | **Shuffle went through a 48-bit LCG** — fixed |
 | A05 | Injection | Clean |
 | A06 | Insecure Design | Rate limits written, not yet applied |
@@ -88,7 +88,50 @@ back to meaning what it says.
 them run before a production deploy. A suite that does not run before a deploy
 stops being true; the whole of it takes about a minute.
 
-## A03 — a mutable action tag *(fixed)*, and no scanning *(open)*
+## A03 — the client's dependencies *(fixed)*, a mutable action tag *(fixed)*, no scanning *(open)*
+
+The largest single finding of the review, and it was on the other side of the
+repo boundary. `npm audit --omit=dev` on `santase-client`:
+
+```
+11 vulnerabilities (1 moderate, 8 high, 2 critical)
+```
+
+- **axios 1.13.2.** Everything from 1.0.0 to 1.17.0 is affected by a long list
+  of advisories, and the ones that matter for a browser app are the prototype
+  pollution gadgets: response tampering, header injection, XSRF token leakage
+  across origins. This is the library every authenticated call goes through.
+  Now 1.20.0.
+- **react-router-dom 7.11.0.** Most of the fourteen advisories are SSR and RSC
+  paths this app never takes, but not all: open redirect via a backslash in
+  `<Link>` and `useNavigate`, and open redirect leading to XSS, apply to a
+  plain SPA. Now 7.18.4.
+- **websocket-driver 0.7.4, critical**, through `sockjs-client` →
+  `faye-websocket`. Almost certainly not exploitable here — it is the Node
+  implementation, and `grep` over the built bundle confirms it never reaches
+  the browser — but a plain `npm audit fix` resolved it without moving
+  `sockjs-client` off 1.6.1, so there was no reason to keep it.
+- **`@capacitor/cli` and the four `@testing-library` packages were in
+  `dependencies`.** Build and test tools declared as things the app ships.
+  That is where `@xmldom/xmldom` (fifteen advisories) and
+  `@isaacs/brace-expansion` came from. Moved to `devDependencies`, which is
+  both correct and what makes `npm audit --omit=dev` mean anything.
+
+Production dependencies are now at **0 vulnerabilities**. Three moderate ones
+remain in dev, all in `@capacitor/cli`'s iOS toolchain (`xcode` → `uuid`), and
+npm's own fix for them is a *downgrade* of the CLI that it marks as breaking.
+Left alone deliberately.
+
+Checked after: `tsc --noEmit` clean, the build passes, and the app loads and
+routes with no console errors on the new react-router.
+
+Nothing else on the client needed changing. No `dangerouslySetInnerHTML`, no
+`innerHTML`, no `eval`, no `new Function`. Tokens are in `localStorage` rather
+than a cookie, which is the right trade here — it is what makes the
+`Authorization` header work and the CSRF exemption honest, and there is no XSS
+sink for a token thief to use.
+
+## A03, continued — a mutable action tag *(fixed)*, and no scanning *(open)*
 
 `appleboy/scp-action@master` ran with the EC2 deploy key. `master` moves, and
 whatever it moves to gets the key. Now `@v1.0.0`; pinning to the commit SHA is
@@ -190,7 +233,9 @@ evidence after the fact, not a control.
    `DEPLOY.md`. Nothing here needs a deploy, and it is the largest remaining
    gap.
 2. **Dependabot** on both repositories, and a dependency-check step in the
-   build. Half an hour, and it closes A03.
+   build. Eleven advisories had been sitting in the client for however long,
+   and nothing was watching. This is the one control that would have found
+   them without anybody looking.
 3. **Stop logging email addresses** in `AuthService`, on `dev`.
 4. **Pin the actions by SHA**, not by tag.
 5. **A Content-Security-Policy**, report-only first.
