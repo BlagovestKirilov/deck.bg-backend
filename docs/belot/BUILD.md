@@ -137,6 +137,12 @@ forgive.
 - [x] Each deal records what it came to (card points, game points, made/вътре/висящи), which is the score sheet M3 needs.
 - [x] `BelotStateResponse` and `BelotBidRequest` pinned in `WireFormatSnapshotTest`. The rest join them as they are written.
 
+**Checkpoint, the automated half.** `BelotTableEndToEndTest` seats four,
+bids a contract, plays all thirty-two cards through `BelotService` against a
+real database, and checks the hand was scored and the next one dealt — plus
+the thrown-in redeal and the "searching twice keeps your seat" case. What it
+cannot do is the socket, so:
+
 **Checkpoint.** Two browsers × two tabs play a full deal end to end; killing one
 tab and reopening it restores that seat's hand exactly.
 
