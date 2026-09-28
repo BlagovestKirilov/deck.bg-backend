@@ -454,10 +454,23 @@ public class BelotService {
         }
 
         Map<Seat, List<Declaration>> bySeat = belotPlayService.declarationsBySeat(table, deal);
+
+        // While the hand is on, each seat has said what it holds and nothing
+        // else. Which of two terces is the better one is not known at the
+        // table until the cards are down, and sending the answer early would
+        // also send the cards it was worked out from.
+        boolean settled = deal.getStatus() != BelotDealStatus.PLAYING;
+
         List<BelotDeclarationView> shown = bySeat.entrySet().stream()
                 .flatMap(held -> held.getValue().stream()
-                        .map(declaration -> BelotDeclarationView.of(held.getKey(), declaration)))
+                        .map(declaration -> settled
+                                ? BelotDeclarationView.of(held.getKey(), declaration)
+                                : BelotDeclarationView.called(held.getKey(), declaration)))
                 .toList();
+
+        if (!settled) {
+            return new BelotDeclarationsView(shown, 0, 0);
+        }
 
         return new BelotDeclarationsView(shown,
                 belotPlayService.declarationPoints(bySeat, Team.NORTH_SOUTH),
