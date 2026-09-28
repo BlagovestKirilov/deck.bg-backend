@@ -39,6 +39,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 
 /**
  * What a player asks of belot: sit down, look at the table, say something.
@@ -198,37 +199,45 @@ public class BelotService {
     }
 
     /**
-     * Acts for every seat that has run out of time, and tells its table.
+     * The deals somebody has been sitting on for longer than a turn lasts.
      *
-     * <p>One transaction per table rather than one for the sweep: a table
-     * whose deal has moved on since it was read should cost the others
-     * nothing, and a failure on one is not a reason to leave the rest
-     * waiting.
+     * <p>Read here and acted on one at a time by the sweep, each in a
+     * transaction of its own: a table whose deal has moved on since it was
+     * read should cost the others nothing, and a failure on one is not a
+     * reason to leave the rest waiting.
      *
-     * @return how many seats were acted for
+     * @see bg.deck.belot.scheduler.BelotTurnScheduler for why the loop is not here
      */
-    public int actForAbsentPlayers() {
-        List<BelotDeal> waiting = belotDealService.waitingSince(
-                Instant.now().minus(belotTurnService.turnTimeout()));
-
-        int acted = 0;
-        for (BelotDeal deal : waiting) {
-            try {
-                if (actFor(deal)) {
-                    acted++;
-                }
-            } catch (RuntimeException e) {
-                // The table moved on between the sweep reading it and this,
-                // or something worse. Either way the other tables are none
-                // of its business.
-                log.warn("Belot: could not act for the absent seat at deal {}", deal.getId(), e);
-            }
-        }
-        return acted;
+    public List<UUID> dealsOutOfTime() {
+        return belotDealService.waitingSince(Instant.now().minus(belotTurnService.turnTimeout()))
+                .stream()
+                .map(BelotDeal::getId)
+                .toList();
     }
 
+    /**
+     * Acts for the seat at this deal whose time is up, and tells its table.
+     *
+     * <p>Must be called from another bean. Its transaction is what loads the
+     * bids and the plays, and the sweep that used to call it from inside this
+     * class got no transaction at all — every table with an absent player
+     * threw on the first lazy collection, the sweep logged a warning nobody
+     * was reading, and the table sat there for ever. Which is what a player
+     * saw: a clock reaching zero and nothing happening.
+     *
+     * @return whether there was anything to do
+     */
     @Transactional
-    public boolean actFor(BelotDeal deal) {
+    public boolean actFor(UUID dealId) {
+        // Read again, in this transaction. The one the sweep is holding was
+        // loaded in another that has since closed, and a detached deal cannot
+        // load the bids or the plays that deciding anything needs.
+        Optional<BelotDeal> found = belotDealService.byId(dealId);
+        if (found.isEmpty()) {
+            return false;
+        }
+
+        BelotDeal deal = found.get();
         BelotGame table = deal.getGame();
         if (!belotTurnService.actForAbsentPlayer(table, deal)) {
             return false;
@@ -393,18 +402,42 @@ public class BelotService {
     private List<BelotDealRow> sheetOf(BelotGame table) {
         return belotDealService.history(table).stream()
                 .filter(played -> played.getResult() != null)
-                .map(played -> new BelotDealRow(
-                        played.getDealNumber(),
-                        played.getContract(),
-                        played.getDeclarerSeat(),
-                        played.getDeclarerSeat() == null ? null : Team.of(played.getDeclarerSeat()),
-                        played.getDoubling(),
-                        played.getCallerPoints(),
-                        played.getOpponentPoints(),
-                        played.getCallerScore(),
-                        played.getOpponentScore(),
-                        played.getResult()))
+                .map(played -> rowFor(table, played))
                 .toList();
+    }
+
+    /**
+     * One counted hand, as a line of the sheet.
+     *
+     * <p>The announcements are worked out again from the hands rather than
+     * stored: they are a function of what was dealt and what was called, and
+     * both of those are on the deal. A game is a dozen hands, so the cost of
+     * re-deriving them is a dozen shuffles of a known seed.
+     */
+    private BelotDealRow rowFor(BelotGame table, BelotDeal played) {
+        Team caller = played.getDeclarerSeat() == null ? null : Team.of(played.getDeclarerSeat());
+
+        int callerDeclarations = 0;
+        int opponentDeclarations = 0;
+        if (caller != null) {
+            Map<Seat, List<Declaration>> bySeat = belotPlayService.declarationsBySeat(table, played);
+            callerDeclarations = belotPlayService.declarationPoints(bySeat, caller);
+            opponentDeclarations = belotPlayService.declarationPoints(bySeat, caller.opponent());
+        }
+
+        return new BelotDealRow(
+                played.getDealNumber(),
+                played.getContract(),
+                played.getDeclarerSeat(),
+                caller,
+                played.getDoubling(),
+                played.getCallerPoints(),
+                played.getOpponentPoints(),
+                callerDeclarations,
+                opponentDeclarations,
+                played.getCallerScore(),
+                played.getOpponentScore(),
+                played.getResult());
     }
 
     /**

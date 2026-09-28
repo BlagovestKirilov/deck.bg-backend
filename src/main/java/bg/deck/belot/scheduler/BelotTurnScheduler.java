@@ -7,6 +7,8 @@ import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
+import java.util.UUID;
+
 /**
  * Keeps the tables moving when somebody stops answering.
  *
@@ -42,7 +44,25 @@ public class BelotTurnScheduler {
     @SchedulerLock(name = LOCK_NAME, lockAtMostFor = "PT1M")
     public void actForAbsentPlayers() {
         long startedAt = System.nanoTime();
-        int acted = belotService.actForAbsentPlayers();
+        int acted = 0;
+
+        // The loop is here rather than in the service on purpose. Each table
+        // is acted on in a transaction of its own, and a transaction starts
+        // on a call between beans — a loop inside the service called its own
+        // @Transactional method, got no transaction, and threw on the first
+        // lazy collection every single time.
+        for (UUID dealId : belotService.dealsOutOfTime()) {
+            try {
+                if (belotService.actFor(dealId)) {
+                    acted++;
+                }
+            } catch (RuntimeException e) {
+                // This table moved on between the sweep reading it and now,
+                // or something worse. Either way the other tables are none
+                // of its business.
+                log.warn("Belot: could not act for the absent seat at deal {}", dealId, e);
+            }
+        }
 
         if (acted > 0) {
             log.info("Belot: acted for {} seat(s) that ran out of time. Took {} ms",

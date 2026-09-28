@@ -175,9 +175,9 @@ class WireFormatSnapshotTest {
                                         Suit.HEARTS, Rank.KING, 20)),
                         20, 20),
                 List.of(new BelotDealRow(1, Contract.SPADES, Seat.NORTH, Team.NORTH_SOUTH,
-                        Doubling.NONE, 97, 65, 10, 6, DealResult.MADE),
+                        Doubling.NONE, 97, 65, 20, 0, 10, 6, DealResult.MADE),
                         new BelotDealRow(2, Contract.NO_TRUMPS, Seat.EAST, Team.EAST_WEST,
-                                Doubling.CONTRA, 120, 140, 0, 52, DealResult.INSIDE)),
+                                Doubling.CONTRA, 120, 140, 0, 50, 0, 52, DealResult.INSIDE)),
                 91, 64, 0));
 
         out.put("SearchGameResponse.waiting", SearchGameResponse.waiting());

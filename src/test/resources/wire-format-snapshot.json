@@ -135,6 +135,8 @@
       "doubling" : "NONE",
       "callerPoints" : 97,
       "opponentPoints" : 65,
+      "callerDeclarations" : 20,
+      "opponentDeclarations" : 0,
       "callerScore" : 10,
       "opponentScore" : 6,
       "result" : "MADE"
@@ -146,6 +148,8 @@
       "doubling" : "CONTRA",
       "callerPoints" : 120,
       "opponentPoints" : 140,
+      "callerDeclarations" : 0,
+      "opponentDeclarations" : 50,
       "callerScore" : 0,
       "opponentScore" : 52,
       "result" : "INSIDE"

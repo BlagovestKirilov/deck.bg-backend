@@ -20,6 +20,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 
 /**
  * Deals: the only place {@link BelotDealRepository} is spoken to.
@@ -107,6 +108,19 @@ public class BelotDealService {
     public List<BelotDeal> waitingSince(Instant since) {
         return belotDealRepository.findByStatusInAndTurnStartedAtBefore(
                 List.of(BelotDealStatus.BIDDING, BelotDealStatus.PLAYING), since);
+    }
+
+    /**
+     * One deal, read fresh.
+     *
+     * <p>For the sweep, which holds a deal it read in an earlier transaction:
+     * a detached entity cannot load its bids or its plays, so acting on one
+     * has to start by reading it again inside the transaction that will do
+     * the acting.
+     */
+    @Transactional(readOnly = true)
+    public Optional<BelotDeal> byId(UUID id) {
+        return belotDealRepository.findById(id);
     }
 
     /**
