@@ -207,19 +207,19 @@ tab and reopening it restores that seat's hand exactly.
 
 ## Open questions, collected
 
-Rules (see `RULES.md`): **one left.** OPEN 12 — when trumps are led and you can
-follow, must you beat what is on the table? The page never says. The engine
-plays it the usual Bulgarian way, yes while an opponent holds the trick, and
-`BelotTrickTest.openTwelveFollowingTrumps` names the assumption.
+Rules (see `RULES.md`): **none left.** The last, 12 — must you go higher when
+trumps are led? — was answered at the table: yes, always, whoever holds the
+trick (качване). It changed the engine: the obligation used to apply only while
+an opponent held the trick. `BelotTrickTest.Raising`.
 
 The other sixteen are answered against the Bulgarian text of the rules page,
 quoted where the answer is written down. Two of them changed the engine:
 
 - **13** — a trump too low to win is no longer compulsory. "В случай че няма
   по-висок коз, може да изиграе произволна карта": nobody is made to waste a
-  trump on a trick already lost. Note this is the opposite of the reading in
-  OPEN 12, and deliberately so — you must beat what you can beat, and you are
-  free when you cannot.
+  trump on a trick already lost. Note this is the opposite of the answer to
+  12, and deliberately so — you must beat what you can beat, and you are free
+  when you cannot.
 - **5** — a card was being counted in both a four and a sequence. "Ако една и
   съща карта участва едновременно в каре и поредица, играчът избира кое от
   двете да обяви", so four nines and 7 8 9 of spades are now one declaration,

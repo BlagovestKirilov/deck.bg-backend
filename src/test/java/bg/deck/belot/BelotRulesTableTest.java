@@ -239,14 +239,20 @@ class BelotRulesTableTest {
     @DisplayName("§6 — the obligations, and where they stop")
     class Obligations {
 
-        /** ANSWERED (OPEN 4). */
+        /**
+         * ANSWERED (OPEN 4), and corrected by ANSWERED 12.
+         *
+         * <p>A partner winning the trick frees you from having to trump when you
+         * cannot follow; that is what "ако взятката до момента принадлежи на
+         * противника" is the condition of, and it stands. It does not free you
+         * from raising when you can follow a suit played by the trump order:
+         * that is качване, and it holds whoever is winning. This test used to
+         * say the opposite, from reading the one condition as covering both.
+         */
         @Test
-        @DisplayName("in all trumps, a partner winning the trick lifts every obligation")
-        void allTrumpsObligationWhenPartnerIsWinning() {
-            // North leads the ace of spades; South, his partner, is winning.
-            // South is under no obligation to beat it: "ако взятката до
-            // момента принадлежи на противника" is the whole of the
-            // condition, and here it does not.
+        @DisplayName("in all trumps, you raise the led suit even over your partner")
+        void allTrumpsRaisesEvenOverAPartner() {
+            // North leads the ace of spades; South is North's partner.
             Trick trick = new Trick(List.of(
                     new Play(Seat.NORTH, new Card(Suit.SPADES, Rank.ACE))));
 
@@ -254,13 +260,14 @@ class BelotRulesTableTest {
                     new Card(Suit.SPADES, Rank.JACK),
                     new Card(Suit.SPADES, Rank.SEVEN));
 
-            assertEquals(hand, LegalMoves.of(hand, trick, Seat.SOUTH, Contract.ALL_TRUMPS),
-                    "the partner of the seat holding the trick may play either spade");
+            assertEquals(List.of(new Card(Suit.SPADES, Rank.JACK)),
+                    LegalMoves.of(hand, trick, Seat.SOUTH, Contract.ALL_TRUMPS),
+                    "the jack beats the ace in all trumps, so the jack, partner or not");
         }
 
-        /** ANSWERED (OPEN 4), the other half: an opponent holding it binds you. */
+        /** ANSWERED (OPEN 4): an opponent holding it binds you too, of course. */
         @Test
-        @DisplayName("but an opponent winning it makes you beat the led suit if you can")
+        @DisplayName("and an opponent winning it makes you beat the led suit just the same")
         void allTrumpsObligationWhenAnOpponentIsWinning() {
             Trick trick = new Trick(List.of(
                     new Play(Seat.NORTH, new Card(Suit.SPADES, Rank.ACE))));

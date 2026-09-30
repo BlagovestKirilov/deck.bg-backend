@@ -4,10 +4,13 @@ import bg.deck.belot.engine.BidAction;
 import bg.deck.belot.engine.Contract;
 import bg.deck.belot.engine.Card;
 import bg.deck.belot.engine.Dealing;
+import bg.deck.belot.engine.Declaration;
+import bg.deck.belot.engine.DeclarationKind;
 import bg.deck.belot.engine.Seat;
 import bg.deck.belot.model.BelotDeal;
 import bg.deck.belot.model.BelotGame;
 import bg.deck.belot.model.BelotSeat;
+import bg.deck.belot.model.response.BelotDeclarationView;
 import bg.deck.belot.model.response.BelotStateResponse;
 import bg.deck.belot.repository.BelotDealRepository;
 import bg.deck.belot.service.BelotDealService;
@@ -40,8 +43,10 @@ import java.util.UUID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -81,6 +86,10 @@ class BelotViewTest {
 
     @BeforeEach
     void aDealInProgress() {
+        seatTheTable();
+    }
+
+    private void seatTheTable() {
         table = new BelotGame();
         // The database hands out ids, and there is no database here — but the
         // push is addressed by table id, so the table needs one.
@@ -205,5 +214,76 @@ class BelotViewTest {
                 "the four cards stay out: a player must see the trick they played into");
         assertNotNull(view.play().wonBy(), "and who took it");
         assertEquals(1, view.play().trickNo(), "it is still the first trick until the next is led");
+    }
+    /** A fresh look for this player, however many they have been sent already. */
+    private BelotStateResponse viewNowFor(String username) {
+        clearInvocations(sockets);
+        return viewSentTo(username);
+    }
+
+    /** What the table has heard from one seat, as that seat's views show it. */
+    private List<BelotDeclarationView> heardFrom(Seat seat) {
+        BelotStateResponse view = viewNowFor(PLAYERS.getFirst());
+        if (view.declarations() == null) {
+            return List.of();
+        }
+        return view.declarations().shown().stream().filter(heard -> heard.seat() == seat).toList();
+    }
+
+    @Test
+    @DisplayName("hears an announcement as its player plays their first card, and only what was said")
+    void anAnnouncementIsHeardWithTheFirstCard() {
+        // A hand in which the player leading the first trick holds a sequence
+        // or a carré. The leader, because theirs is the announcement that has
+        // the most of the trick still to wait through: announced by the last
+        // of the four, it would be heard once the trick is over either way.
+        // Deals are random, so deal until the leader has one.
+        Seat announcer = null;
+        for (int attempt = 0; attempt < 200 && announcer == null; attempt++) {
+            if (attempt > 0) {
+                seatTheTable();
+            }
+            Seat bidder = deal.bidding().toAct();
+            dealService.bid(deal, BidAction.bid(bidder, Contract.SPADES));
+            for (int i = 0; i < 3; i++) {
+                bidder = bidder.next();
+                dealService.bid(deal, BidAction.pass(bidder));
+            }
+
+            Seat leader = playService.toAct(deal);
+            List<Declaration> held = playService.declarationsBySeat(table, deal).get(leader);
+            if (held != null && held.stream().anyMatch(each -> each.kind() != DeclarationKind.BELOTE)) {
+                announcer = leader;
+            }
+        }
+        assertNotNull(announcer, "two hundred deals and no leader with a sequence or carré");
+
+        // Round the first trick, one card at a time.
+        boolean announcerHasPlayed = false;
+        for (int card = 0; card < 4; card++) {
+            Seat seat = playService.toAct(deal);
+
+            if (!announcerHasPlayed) {
+                assertTrue(heardFrom(announcer).stream().noneMatch(each -> each.kind() != DeclarationKind.BELOTE),
+                        announcer + " has said nothing yet, so the table has heard nothing");
+            }
+
+            playService.play(table, deal, seat, playService.legalFor(table, deal, seat).getFirst());
+            if (seat == announcer) {
+                announcerHasPlayed = true;
+                List<BelotDeclarationView> heard = heardFrom(announcer).stream()
+                        .filter(each -> each.kind() != DeclarationKind.BELOTE)
+                        .toList();
+
+                assertFalse(heard.isEmpty(),
+                        "the other three hear it with " + announcer + "'s first card, not once the trick is over");
+                heard.forEach(each -> {
+                    assertNull(each.suit(), "the suit is not said: it would name cards still in the hand");
+                    assertNull(each.topRank(), "nor the card it runs up to");
+                    assertEquals(0, each.points(), "and whose is worth more is settled when the hand is over");
+                });
+            }
+        }
+        assertTrue(announcerHasPlayed, "every seat plays into the first trick");
     }
 }

@@ -6,14 +6,12 @@ import java.util.Optional;
 /**
  * What a seat is allowed to play, given what is already on the table.
  *
- * <p>The rules, from RULES §6: follow the led suit if you hold it; if you do
- * not and <em>an opponent</em> is winning the trick, you must trump, and
- * overtrump if an opponent has already trumped. When your own partner holds the
- * trick there is no obligation at all — "ако взятката до момента принадлежи на
- * противника" is the whole of the condition.
- *
- * <p>One branch the rules page does not settle is marked below as OPEN 12 and
- * implemented the usual Bulgarian way; {@code BelotTrickTest} names it.
+ * <p>The rules, from RULES §6: follow the led suit if you hold it, and when
+ * that suit is played by the trump order, go higher than what is on the table
+ * if you can — качване, whoever holds the trick. If you cannot follow and
+ * <em>an opponent</em> is winning, you must trump, and overtrump if an opponent
+ * has already trumped; when your own partner holds it you are free — "ако
+ * взятката до момента принадлежи на противника" is the whole of that condition.
  */
 public final class LegalMoves {
 
@@ -32,11 +30,17 @@ public final class LegalMoves {
                 .orElse(false);
 
         if (!followers.isEmpty()) {
-            // OPEN 12 — when the led suit is the one played by the trump order,
-            // the usual rule is that you must beat what is on the table if you
-            // can. Applied here only while an opponent holds the trick, for the
-            // same reason the trumping obligation is.
-            if (contract.isTrump(led.get()) && opponentHoldsIt) {
+            // ANSWERED (OPEN 12) — качване. When trumps are led you must go
+            // higher than what is on the table if you can, and it does not
+            // matter who is holding the trick: your partner's queen of trumps is
+            // raised with your king just as an opponent's is. It used to apply
+            // only while an opponent held the trick, borrowed from the trumping
+            // rule below, and that let a seven of trumps go under a partner's
+            // queen with the jack, the ace and the king all in the hand.
+            //
+            // In all trumps every suit is played by the trump order, so every
+            // suit is raised. In no trumps none is: you follow, and that is all.
+            if (contract.isTrump(led.get())) {
                 List<Card> better = beating(followers, trick, contract);
                 return better.isEmpty() ? followers : better;
             }

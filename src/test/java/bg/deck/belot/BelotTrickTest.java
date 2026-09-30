@@ -194,12 +194,19 @@ class BelotTrickTest {
     }
 
     @Nested
-    @DisplayName("the two branches the rules page does not spell out")
-    class Assumptions {
+    @DisplayName("raising in trumps, and when you need not")
+    class Raising {
 
+        /**
+         * ANSWERED (OPEN 12) — качване.
+         *
+         * <p>When trumps are led you must go higher if you can. The rules page
+         * never said so; the answer came from the table, which is where the
+         * rule is played.
+         */
         @Test
-        @DisplayName("OPEN 12 — following a led trump, you must beat what is there")
-        void openTwelveFollowingTrumps() {
+        @DisplayName("following a led trump, you must beat what is there")
+        void aLedTrumpIsRaised() {
             List<Card> hand = List.of(
                     card(Rank.NINE, Suit.SPADES),
                     card(Rank.SEVEN, Suit.SPADES),
@@ -209,16 +216,79 @@ class BelotTrickTest {
             assertEquals(
                     List.of(card(Rank.NINE, Suit.SPADES)),
                     LegalMoves.of(hand, played, Seat.WEST, Contract.SPADES),
-                    "assumed: the seven is not allowed while the nine beats the queen. "
-                            + "If the answer is that any trump may follow, this expects both spades.");
+                    "the seven is not allowed while the nine beats the queen");
+        }
+
+        @Test
+        @DisplayName("and your partner's trump is raised just as an opponent's is")
+        void aPartnersTrumpIsRaisedToo() {
+            // The hand that found it: partner leads the queen of trumps, you hold
+            // the jack, the ace, the king and the seven, and the seven was on
+            // offer because the trick was your own side's.
+            List<Card> hand = List.of(
+                    card(Rank.JACK, Suit.SPADES),
+                    card(Rank.ACE, Suit.SPADES),
+                    card(Rank.KING, Suit.SPADES),
+                    card(Rank.SEVEN, Suit.SPADES),
+                    card(Rank.KING, Suit.HEARTS));
+            Trick played = trick(
+                    play(Seat.NORTH, Rank.QUEEN, Suit.SPADES),
+                    play(Seat.WEST, Rank.QUEEN, Suit.DIAMONDS));
+
+            assertEquals(
+                    List.of(card(Rank.JACK, Suit.SPADES), card(Rank.ACE, Suit.SPADES), card(Rank.KING, Suit.SPADES)),
+                    LegalMoves.of(hand, played, Seat.SOUTH, Contract.SPADES),
+                    "north is south's partner and still the seven may not go under the queen");
+        }
+
+        @Test
+        @DisplayName("in all trumps every suit is raised")
+        void allTrumpsRaisesEverySuit() {
+            List<Card> hand = List.of(
+                    card(Rank.NINE, Suit.HEARTS),
+                    card(Rank.SEVEN, Suit.HEARTS),
+                    card(Rank.JACK, Suit.CLUBS));
+            Trick played = trick(play(Seat.NORTH, Rank.ACE, Suit.HEARTS));
+
+            assertEquals(List.of(card(Rank.NINE, Suit.HEARTS)),
+                    LegalMoves.of(hand, played, Seat.WEST, Contract.ALL_TRUMPS),
+                    "hearts are played by the trump order in all trumps, and the nine beats the ace");
+        }
+
+        @Test
+        @DisplayName("in no trumps you follow, and need not go higher")
+        void noTrumpsOnlyFollows() {
+            List<Card> hand = List.of(
+                    card(Rank.ACE, Suit.HEARTS),
+                    card(Rank.SEVEN, Suit.HEARTS),
+                    card(Rank.JACK, Suit.CLUBS));
+            Trick played = trick(play(Seat.NORTH, Rank.KING, Suit.HEARTS));
+
+            assertEquals(List.of(card(Rank.ACE, Suit.HEARTS), card(Rank.SEVEN, Suit.HEARTS)),
+                    LegalMoves.of(hand, played, Seat.WEST, Contract.NO_TRUMPS),
+                    "no suit is played by the trump order, so the seven may go under the king");
+        }
+
+        @Test
+        @DisplayName("and holding nothing higher, any trump of the suit may follow")
+        void nothingHigherFollowsFreely() {
+            List<Card> hand = List.of(
+                    card(Rank.EIGHT, Suit.SPADES),
+                    card(Rank.SEVEN, Suit.SPADES),
+                    card(Rank.ACE, Suit.HEARTS));
+            Trick played = trick(play(Seat.NORTH, Rank.JACK, Suit.SPADES));
+
+            assertEquals(List.of(card(Rank.EIGHT, Suit.SPADES), card(Rank.SEVEN, Suit.SPADES)),
+                    LegalMoves.of(hand, played, Seat.WEST, Contract.SPADES),
+                    "nothing beats the jack, so you follow with either and keep the ace");
         }
 
         /**
          * ANSWERED (OPEN 13) — no longer an assumption.
          *
          * <p>"В случай че няма по-висок коз, може да изиграе произволна
-         * карта." Kept here beside OPEN 12 because the two are the same
-         * question asked twice, and the answers went different ways.
+         * карта." Kept here beside the raising rule because the two are the
+         * same question asked twice, and the answers went different ways.
          */
         @Test
         @DisplayName("holding only trumps too low to win, you may discard instead")

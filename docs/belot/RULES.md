@@ -90,7 +90,9 @@ doubled, the last trick included.
 
 ## 6. Playing a trick
 
-- **Follow the led suit if you can.**
+- **Follow the led suit if you can.** When that suit is played by the trump
+  order — the trump suit, or any suit in all trumps — you must also **go higher**
+  than what is on the table if you can (качване), whoever holds the trick.
 - If you cannot follow **and the trick currently belongs to an opponent**, you
   must trump (цака).
 - If an opponent has already trumped, you must **overtrump** if able.
@@ -98,23 +100,28 @@ doubled, the last trick included.
   the rule applies only "ако взятката до момента принадлежи на противника".
 - In **no trumps**, only following suit is required; there is nothing to trump with.
 
-> **ANSWERED 4 — no. A partner winning the trick lifts every obligation, in all
-> trumps as anywhere else.** The page states the condition once and does not
-> qualify it by contract: "ако играчът не притежава карта от искания цвят и
-> взятката до момента принадлежи на противника, трябва да играе коз". An
-> opponent holding it still binds you. `BelotRulesTableTest.Obligations`.
+> **ANSWERED 4 — a partner winning the trick frees you from trumping, not from
+> raising.** The page states the condition once, for the case where you cannot
+> follow: "ако играчът не притежава карта от искания цвят и взятката до момента
+> принадлежи на противника, трябва да играе коз". So with your partner winning
+> you need not trump, in any contract. This answer first read the same
+> condition as lifting *every* obligation, raising included, so in all trumps
+> you could play under your partner's card in the led suit; 12 corrected that —
+> качване holds whoever is winning. `BelotRulesTableTest.Obligations`.
 
-> **❓ OPEN 12 — When the led suit is the one played by the trump order and you
-> can follow, must you play a card that beats what is on the table?** The page
-> is silent. The engine plays it the usual Bulgarian way — yes, while an
-> opponent holds the trick — and `BelotTrickTest.openTwelveFollowingTrumps`
-> states the assumption and what the other answer would expect instead. The
-> only question left in this document.
+> **ANSWERED 12 — yes, always: качване.** When the led suit is played by the
+> trump order and you can follow, you must play higher than what is on the
+> table if you hold something higher — whoever is holding the trick, your
+> partner included. The page is silent; the answer came from the table. In all
+> trumps that is every suit; in no trumps it is none, and you only follow. The
+> engine first had it only while an opponent held the trick, borrowed from the
+> trumping rule, which let a seven of trumps go under a partner's queen with the
+> jack, ace and king in the hand. `BelotTrickTest.Raising`.
 >
 > **ANSWERED 13 — you may discard.** "В случай че няма по-висок коз, може да
 > изиграе произволна карта." Nobody is made to waste a trump on a trick already
-> lost. Note this is the opposite of the answer to OPEN 12: you must beat what
-> you can beat, and you are free when you cannot.
+> lost. Note this is the opposite of the answer to 12: you must beat what you
+> can beat, and you are free when you cannot.
 > `BelotTrickTest.undertrumpingIsNotForced`.
 
 ## 7. Declarations (анонси)

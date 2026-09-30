@@ -5,6 +5,8 @@ import bg.deck.belot.engine.Bidding;
 import bg.deck.belot.engine.Card;
 import bg.deck.belot.engine.Dealing;
 import bg.deck.belot.engine.Declaration;
+import bg.deck.belot.engine.DeclarationKind;
+import bg.deck.belot.engine.Rank;
 import bg.deck.belot.engine.Seat;
 import bg.deck.belot.engine.Team;
 import bg.deck.belot.engine.Trick;
@@ -12,6 +14,7 @@ import bg.deck.belot.model.BelotDeal;
 import bg.deck.belot.model.BelotDealStatus;
 import bg.deck.belot.model.BelotGame;
 import bg.deck.belot.model.BelotGameStatus;
+import bg.deck.belot.model.BelotPlay;
 import bg.deck.belot.model.BelotSeat;
 import bg.deck.belot.model.request.BelotBidRequest;
 import bg.deck.belot.model.request.BelotPlayRequest;
@@ -39,7 +42,9 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
  * What a player asks of belot: sit down, look at the table, say something.
@@ -441,28 +446,40 @@ public class BelotService {
     }
 
     /**
-     * What the table announced, once the first trick is complete.
+     * What the table has announced so far.
      *
-     * <p>Not before: at a table these are called out as the first trick is
-     * played, and sending them sooner would tell three people what is in
-     * somebody’s hand before they have played a card of it.
+     * <p>Each announcement appears at the moment it is made at a table, and not
+     * before. A sequence or a carré is called out with the player's first card,
+     * so it shows as soon as that player has played into the first trick —
+     * the other three hear it then, not once the trick is over, which was when
+     * this used to send them. Belote is said when the king or the queen of it
+     * is laid down, so it shows once one of the two has been played; saying it
+     * with the first card would tell the table two cards of a hand that has not
+     * shown either.
+     *
+     * <p>While the hand is on only the kind goes out. Which of two terces is
+     * the better one is settled once the cards are down, and the suit and top
+     * card it is worked out from would name cards still in somebody's hand.
      */
     private BelotDeclarationsView declarationsFor(BelotGame table, BelotDeal deal) {
-        boolean firstTrickDone = deal.getPlays().size() >= Seat.values().length;
-        if (deal.getContract() == null || !firstTrickDone) {
+        List<BelotPlay> plays = deal.getPlays();
+        if (deal.getContract() == null || plays.isEmpty()) {
             return null;
         }
 
         Map<Seat, List<Declaration>> bySeat = belotPlayService.declarationsBySeat(table, deal);
-
-        // While the hand is on, each seat has said what it holds and nothing
-        // else. Which of two terces is the better one is not known at the
-        // table until the cards are down, and sending the answer early would
-        // also send the cards it was worked out from.
         boolean settled = deal.getStatus() != BelotDealStatus.PLAYING;
+
+        int firstTrick = plays.getFirst().getTrickNo();
+        Set<Seat> playedIntoFirstTrick = plays.stream()
+                .filter(play -> play.getTrickNo() == firstTrick)
+                .map(BelotPlay::getSeat)
+                .collect(Collectors.toSet());
 
         List<BelotDeclarationView> shown = bySeat.entrySet().stream()
                 .flatMap(held -> held.getValue().stream()
+                        .filter(declaration -> settled
+                                || hasBeenSaid(held.getKey(), declaration, playedIntoFirstTrick, plays))
                         .map(declaration -> settled
                                 ? BelotDeclarationView.of(held.getKey(), declaration)
                                 : BelotDeclarationView.called(held.getKey(), declaration)))
@@ -475,5 +492,16 @@ public class BelotService {
         return new BelotDeclarationsView(shown,
                 belotPlayService.declarationPoints(bySeat, Team.NORTH_SOUTH),
                 belotPlayService.declarationPoints(bySeat, Team.EAST_WEST));
+    }
+
+    /** Whether this seat has reached the point at which it says this out loud. */
+    private static boolean hasBeenSaid(Seat seat, Declaration declaration,
+                                       Set<Seat> playedIntoFirstTrick, List<BelotPlay> plays) {
+        if (declaration.kind() == DeclarationKind.BELOTE) {
+            return plays.stream().anyMatch(play -> play.getSeat() == seat
+                    && play.getSuit() == declaration.suit()
+                    && (play.getRank() == Rank.KING || play.getRank() == Rank.QUEEN));
+        }
+        return playedIntoFirstTrick.contains(seat);
     }
 }
