@@ -15,8 +15,10 @@ import java.time.Instant;
  * <p>When it passes, the table acts for that seat — a pass while the bidding
  * is on, the first legal card once it is not. Nobody forfeits for being slow.
  *
- * @param seat     who the table is waiting for
- * @param deadline when it stops waiting
+ * @param seat      who the table is waiting for
+ * @param startedAt when it started waiting — with the deadline, how much of
+ *                  the turn is gone, which is what a draining bar shows
+ * @param deadline  when it stops waiting
  */
-public record BelotTurnView(Seat seat, Instant deadline) {
+public record BelotTurnView(Seat seat, Instant startedAt, Instant deadline) {
 }

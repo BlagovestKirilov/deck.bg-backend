@@ -137,6 +137,26 @@ public class BelotDealService {
         belotDealRepository.save(deal);
     }
 
+    /**
+     * Says пас for every seat in turn that has nothing else it may say.
+     *
+     * <p>Over a recontra on всичко коз, say, the only call left to the others
+     * is пас, and making three people press it — or wait out their clock —
+     * for a call that was never theirs to choose is the table standing still
+     * for nothing. It gives nothing away: what a seat may call depends on
+     * the bidding, which everybody has heard, and not on its cards.
+     */
+    @Transactional
+    public void passWhereThereIsNoChoice(BelotDeal deal) {
+        while (deal.getStatus() == BelotDealStatus.BIDDING) {
+            List<BidAction> legal = deal.bidding().legalActions();
+            if (legal.size() != 1) {
+                return;
+            }
+            bid(deal, legal.getFirst());
+        }
+    }
+
     /** Every hand at this table, oldest first. */
     @Transactional(readOnly = true)
     public List<BelotDeal> history(BelotGame game) {

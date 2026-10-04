@@ -119,6 +119,7 @@ public class BelotService {
             // offering a button it should not have.
             throw new IllegalMoveException(e.getMessage(), e);
         }
+        belotDealService.passWhereThereIsNoChoice(deal);
 
         // Nobody wanted it: the next seat deals, and the table is told once.
         if (deal.getStatus() == BelotDealStatus.THROWN_IN) {
@@ -269,6 +270,7 @@ public class BelotService {
         if (!belotTurnService.actForAbsentPlayer(table, deal)) {
             return false;
         }
+        belotDealService.passWhereThereIsNoChoice(deal);
 
         // A thrown-in or finished hand is followed by the next one, exactly
         // as it is when a player does the acting.
@@ -422,7 +424,7 @@ public class BelotService {
         if (toAct.isEmpty()) {
             return null;
         }
-        return new BelotTurnView(toAct.get(), belotTurnService.deadline(deal).orElse(null));
+        return new BelotTurnView(toAct.get(), deal.getTurnStartedAt(), belotTurnService.deadline(deal).orElse(null));
     }
 
     /**

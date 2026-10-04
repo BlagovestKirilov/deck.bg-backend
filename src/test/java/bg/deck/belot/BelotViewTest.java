@@ -26,6 +26,9 @@ import bg.deck.belot.service.BelotTableService;
 import bg.deck.belot.service.BelotTurnService;
 import bg.deck.service.AvailabilityService;
 import bg.deck.service.WebSocketService;
+import bg.deck.belot.engine.BidKind;
+import bg.deck.belot.model.BelotDealStatus;
+import bg.deck.belot.model.request.BelotBidRequest;
 import bg.deck.belot.model.request.BelotPlayRequest;
 import bg.deck.exception.IllegalMoveException;
 import org.junit.jupiter.api.BeforeEach;
@@ -221,6 +224,31 @@ class BelotViewTest {
                 "the four cards stay out: a player must see the trick they played into");
         assertNotNull(view.play().wonBy(), "and who took it");
         assertEquals(1, view.play().trickNo(), "it is still the first trick until the next is led");
+    }
+
+    @Test
+    @DisplayName("says пас for a seat that has nothing else it may say")
+    void aSeatWithNoChoiceIsPassedFor() {
+        Seat first = deal.bidding().toAct();
+        belot.bid(nameAt(first), new BelotBidRequest(BidKind.BID, Contract.ALL_TRUMPS));
+        Seat second = deal.bidding().toAct();
+        belot.bid(nameAt(second), new BelotBidRequest(BidKind.CONTRA, null));
+        Seat third = deal.bidding().toAct();
+        belot.bid(nameAt(third), new BelotBidRequest(BidKind.RECONTRA, null));
+
+        // Over a recontra on всичко коз there is no call left but пас, for
+        // anybody: the other three are passed for and the hand is played.
+        assertEquals(BelotDealStatus.PLAYING, deal.getStatus(),
+                "nobody had anything left to say: " + deal.getBids().size() + " calls");
+        assertEquals(6, deal.getBids().size(), "three calls made and three passes said for them");
+    }
+
+    private String nameAt(Seat seat) {
+        return table.getSeats().stream()
+                .filter(taken -> taken.getSeat() == seat)
+                .map(BelotSeat::getUsername)
+                .findFirst()
+                .orElseThrow();
     }
 
     @Test
