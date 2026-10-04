@@ -1,8 +1,8 @@
 package bg.deck.belot.model;
 
-import bg.deck.enums.Rank;
-import bg.deck.model.base.BaseEntity;
-import bg.deck.util.RankLadder;
+import bg.deck.common.enums.Rank;
+import bg.deck.common.model.base.BaseEntity;
+import bg.deck.common.util.RankLadder;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;

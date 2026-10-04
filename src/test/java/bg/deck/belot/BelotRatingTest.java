@@ -1,9 +1,9 @@
 package bg.deck.belot;
 
 import bg.deck.belot.engine.TeamElo;
-import bg.deck.constant.RankingConstants;
-import bg.deck.enums.Rank;
-import bg.deck.util.RankLadder;
+import bg.deck.common.constant.RankingConstants;
+import bg.deck.common.enums.Rank;
+import bg.deck.common.util.RankLadder;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;

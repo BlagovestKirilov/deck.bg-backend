@@ -10,7 +10,7 @@ import bg.deck.belot.engine.TrickResolver;
 import bg.deck.belot.engine.Contract;
 import bg.deck.belot.engine.Doubling;
 import bg.deck.belot.engine.Seat;
-import bg.deck.model.base.BaseEntity;
+import bg.deck.common.model.base.BaseEntity;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

@@ -1,7 +1,7 @@
 package bg.deck.tabla;
 
-import bg.deck.service.TablaDiceService;
-import bg.deck.model.tabla.Dice;
+import bg.deck.tabla.service.TablaDiceService;
+import bg.deck.tabla.engine.Dice;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 

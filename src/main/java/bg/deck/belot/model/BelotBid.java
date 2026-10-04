@@ -4,7 +4,7 @@ import bg.deck.belot.engine.BidAction;
 import bg.deck.belot.engine.BidKind;
 import bg.deck.belot.engine.Contract;
 import bg.deck.belot.engine.Seat;
-import bg.deck.model.base.BaseEntity;
+import bg.deck.common.model.base.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;

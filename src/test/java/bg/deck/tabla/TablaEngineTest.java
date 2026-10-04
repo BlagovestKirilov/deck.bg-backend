@@ -1,13 +1,13 @@
 package bg.deck.tabla;
 
-import bg.deck.model.tabla.BackgammonRules;
-import bg.deck.model.tabla.BoardState;
-import bg.deck.model.tabla.ComboHop;
-import bg.deck.model.tabla.Dice;
-import bg.deck.enums.GameResultKind;
-import bg.deck.model.tabla.Hop;
-import bg.deck.model.tabla.MoverView;
-import bg.deck.enums.Side;
+import bg.deck.tabla.engine.BackgammonRules;
+import bg.deck.tabla.engine.BoardState;
+import bg.deck.tabla.engine.ComboHop;
+import bg.deck.tabla.engine.Dice;
+import bg.deck.tabla.enums.GameResultKind;
+import bg.deck.tabla.engine.Hop;
+import bg.deck.tabla.engine.MoverView;
+import bg.deck.tabla.enums.Side;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;

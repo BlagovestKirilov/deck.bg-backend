@@ -6,7 +6,7 @@ import bg.deck.belot.model.BelotGameStatus;
 import bg.deck.belot.model.BelotMatchmaking;
 import bg.deck.belot.model.BelotSeat;
 import bg.deck.belot.repository.BelotGameRepository;
-import bg.deck.constant.Constants;
+import bg.deck.common.constant.Constants;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.dao.DataIntegrityViolationException;

@@ -26,7 +26,7 @@ A check to run before every belot commit:
 
 ```bash
 grep -rn "schema = \"belot\"" --include=*.java src/main/java | wc -l   # every belot entity
-grep -rn "bg.deck.model.User\b" --include=*.java src/main/java/bg/deck/belot   # must be empty
+grep -rn "bg.deck.common.model.User\b" --include=*.java src/main/java/bg/deck/belot   # must be empty
 ```
 
 ## Three landmines, already found

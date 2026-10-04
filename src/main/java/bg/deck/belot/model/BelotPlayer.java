@@ -1,6 +1,6 @@
 package bg.deck.belot.model;
 
-import bg.deck.model.base.BaseEntity;
+import bg.deck.common.model.base.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;

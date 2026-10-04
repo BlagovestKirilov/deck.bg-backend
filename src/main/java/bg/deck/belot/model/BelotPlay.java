@@ -5,7 +5,7 @@ import bg.deck.belot.engine.Play;
 import bg.deck.belot.engine.Rank;
 import bg.deck.belot.engine.Seat;
 import bg.deck.belot.engine.Suit;
-import bg.deck.model.base.BaseEntity;
+import bg.deck.common.model.base.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;

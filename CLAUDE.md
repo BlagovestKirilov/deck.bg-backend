@@ -1,11 +1,27 @@
 # SantaseService — how the layers are arranged
 
-`bg.deck`: `controller`, `service`, `scheduler`, `repository`, `model`,
-`security`, `config`, `constant`, `enums`, `exception`, `util`.
+Four packages: one per game, and one for what all of them use. Only
+`SantaseServiceApplication` sits at `bg.deck` itself — Spring finds beans and
+entities from the application class's package down, so it has to be above
+all four.
 
-`bg.deck.belot` is a package apart, with its own `controller`, `service`,
-`scheduler`, `repository`, `model`, `config` and `engine` — see **The belot**
-**seam** below before writing anything in it.
+- `bg.deck.santase` — `controller`, `service`, `model` (`dto`, `request`,
+  `response`), `enums`, `exception`, `util`: the cards, the santase state and
+  its own errors.
+- `bg.deck.tabla` — `controller`, `service`, `model` (`dto`, `request`,
+  `response`), `engine` (the backgammon rules), `enums`, `exception`.
+- `bg.deck.belot` — a package apart, with its own `controller`, `service`,
+  `scheduler`, `repository`, `model`, `config` and `engine` — see **The belot**
+  **seam** below before writing anything in it.
+- `bg.deck.common`: `controller`, `service`, `scheduler`, `repository`,
+  `model`, `security`, `config`, `constant`, `enums`, `exception`, `util` —
+  accounts, auth, email, availability, ranking, the websocket transport, and
+  the game core santase and tabla both stand on: `Game`, `Player`,
+  `TurnClock`, `GameUtilService`, `GameInactivityService` and every
+  repository. A game package may use `common`; `common` reaches
+  into santase and tabla only where that core already did (`Game` holds both
+  states, `GameUtilService` deals santase cards), which is history rather
+  than a pattern to repeat.
 
 ## One repository, one service
 
@@ -181,8 +197,8 @@ rules keep that option open, and breaking any of them closes it quietly.
 The checks, before a belot commit:
 
 ```bash
-grep -rn "bg.deck.model.User" --include=*.java src/main/java/bg/deck/belot   # empty
-grep -rn "bg.deck.belot" --include=*.java src/main/java/bg/deck/service         # empty
+grep -rn "bg.deck.common.model.User\b" --include=*.java src/main/java/bg/deck/belot   # empty
+grep -rn "bg.deck.belot" --include=*.java src/main/java/bg/deck/common               # empty
 ```
 
 Three things that look reasonable and are not:

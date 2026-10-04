@@ -10,7 +10,7 @@ import bg.deck.belot.service.BelotMatchmakingService;
 import bg.deck.belot.service.BelotSeedService;
 import bg.deck.belot.service.BelotStatsService;
 import bg.deck.belot.service.BelotTableService;
-import bg.deck.constant.Constants;
+import bg.deck.common.constant.Constants;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

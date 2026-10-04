@@ -1,15 +1,15 @@
 package bg.deck.tabla;
 
-import bg.deck.model.Game;
-import bg.deck.model.Player;
-import bg.deck.model.TablaGameState;
-import bg.deck.model.User;
-import bg.deck.service.GameUtilService;
-import bg.deck.service.RankingService;
-import bg.deck.service.TablaDiceService;
-import bg.deck.service.TablaUtilService;
-import bg.deck.service.WebSocketService;
-import bg.deck.model.tabla.BoardState;
+import bg.deck.common.model.Game;
+import bg.deck.common.model.Player;
+import bg.deck.tabla.model.TablaGameState;
+import bg.deck.common.model.User;
+import bg.deck.common.service.GameUtilService;
+import bg.deck.common.service.RankingService;
+import bg.deck.tabla.service.TablaDiceService;
+import bg.deck.tabla.service.TablaUtilService;
+import bg.deck.common.service.WebSocketService;
+import bg.deck.tabla.engine.BoardState;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -75,7 +75,7 @@ class TablaBlockedTimeoutTest {
 
     private static void setId(Game game, UUID id) {
         try {
-            var field = Class.forName("bg.deck.model.base.BaseEntity").getDeclaredField("id");
+            var field = Class.forName("bg.deck.common.model.base.BaseEntity").getDeclaredField("id");
             field.setAccessible(true);
             field.set(game, id);
         } catch (ReflectiveOperationException e) {

@@ -30,10 +30,10 @@ import bg.deck.belot.model.response.BelotSeatView;
 import bg.deck.belot.model.response.BelotStateResponse;
 import bg.deck.belot.model.response.BelotTrickView;
 import bg.deck.belot.model.response.BelotTurnView;
-import bg.deck.enums.GameType;
-import bg.deck.exception.IllegalMoveException;
-import bg.deck.service.AvailabilityService;
-import bg.deck.service.WebSocketService;
+import bg.deck.common.enums.GameType;
+import bg.deck.common.exception.IllegalMoveException;
+import bg.deck.common.service.AvailabilityService;
+import bg.deck.common.service.WebSocketService;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;

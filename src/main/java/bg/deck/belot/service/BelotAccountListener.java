@@ -1,6 +1,6 @@
 package bg.deck.belot.service;
 
-import bg.deck.model.event.UserDeleted;
+import bg.deck.common.model.event.UserDeleted;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Component;
