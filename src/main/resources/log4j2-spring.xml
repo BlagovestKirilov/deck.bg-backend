@@ -16,8 +16,8 @@
         </Console>
 
         <RollingFile name="RollingFile"
-                     fileName="${LOG_PATH}/santase.service.log"
-                     filePattern="${LOG_PATH}/santase.service-%d{yyyy-MM-dd}.log"
+                     fileName="${LOG_PATH}/deck-backend.log"
+                     filePattern="${LOG_PATH}/deck-backend-%d{yyyy-MM-dd}.log"
                      immediateFlush="true">
             <PatternLayout pattern="${LOG_PATTERN}"/>
 
@@ -26,8 +26,11 @@
             </Policies>
 
             <DefaultRolloverStrategy>
+                <!-- The files were named santase.service before the rename. Matching
+                     that name too lets the ones already on the server age out
+                     like any other, instead of staying forever. -->
                 <Delete basePath="${LOG_PATH}" maxDepth="1">
-                    <IfFileName glob="santase.service-*.log" />
+                    <IfFileName regex="deck-backend-.*\.log|santase\.service.*\.log" />
                     <IfLastModified age="7d" />
                 </Delete>
             </DefaultRolloverStrategy>
