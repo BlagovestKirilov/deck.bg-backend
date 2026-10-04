@@ -9,13 +9,15 @@
         <relativePath/>
     </parent>
     <groupId>bg.deck</groupId>
-    <artifactId>SantaseService</artifactId>
+    <artifactId>deck-backend</artifactId>
     <version>1.0.0</version>
-    <name>SantaseService</name>
-    <description>SantaseService</description>
+    <name>deck-backend</name>
+    <description>Backend of deck.bg: santase, tabla and belot</description>
     <properties>
         <java.version>25</java.version>
         <shedlock.version>7.10.1</shedlock.version>
+        <mapstruct.version>1.6.3</mapstruct.version>
+        <jjwt.version>0.13.0</jjwt.version>
         <DB_URL_SANTASE>${env.DB_URL_SANTASE}</DB_URL_SANTASE>
         <DB_USERNAME>${env.DB_USERNAME}</DB_USERNAME>
         <DB_PASSWORD>${env.DB_PASSWORD}</DB_PASSWORD>
@@ -78,7 +80,7 @@
         <dependency>
             <groupId>org.mapstruct</groupId>
             <artifactId>mapstruct</artifactId>
-            <version>1.6.3</version>
+            <version>${mapstruct.version}</version>
         </dependency>
 
         <dependency>
@@ -96,20 +98,20 @@
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
             <artifactId>jjwt-api</artifactId>
-            <version>0.12.7</version>
+            <version>${jjwt.version}</version>
         </dependency>
 
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
             <artifactId>jjwt-impl</artifactId>
-            <version>0.12.7</version>
+            <version>${jjwt.version}</version>
             <scope>runtime</scope>
         </dependency>
 
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
             <artifactId>jjwt-jackson</artifactId>
-            <version>0.12.7</version>
+            <version>${jjwt.version}</version>
             <scope>runtime</scope>
         </dependency>
 
@@ -184,7 +186,7 @@
                         <path>
                             <groupId>org.mapstruct</groupId>
                             <artifactId>mapstruct-processor</artifactId>
-                            <version>1.6.3</version>
+                            <version>${mapstruct.version}</version>
                         </path>
                     </annotationProcessorPaths>
                 </configuration>
@@ -206,7 +208,7 @@
             <plugin>
                 <groupId>org.liquibase</groupId>
                 <artifactId>liquibase-maven-plugin</artifactId>
-                <version>5.0.1</version>
+                <version>${liquibase.version}</version>
                 <configuration>
                     <changeLogFile>
                         src/main/resources/db/changelog/db.changelog-master.yaml

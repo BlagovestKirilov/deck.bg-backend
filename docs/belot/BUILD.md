@@ -1,6 +1,6 @@
 # Belot — the build, step by step
 
-Belot lives **inside SantaseService**, in its own database schema, with no
+Belot lives **inside deck-backend**, in its own database schema, with no
 foreign key to anything in `public`. That is the whole design: one deployment to
 run, one codebase to fix, and a seam clean enough that pulling belot out into its
 own service later is mechanical rather than archaeological.

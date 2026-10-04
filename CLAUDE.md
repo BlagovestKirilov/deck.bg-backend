@@ -1,7 +1,7 @@
-# SantaseService — how the layers are arranged
+# deck-backend — how the layers are arranged
 
 Four packages: one per game, and one for what all of them use. Only
-`SantaseServiceApplication` sits at `bg.deck` itself — Spring finds beans and
+`DeckApplication` sits at `bg.deck` itself — Spring finds beans and
 entities from the application class's package down, so it has to be above
 all four.
 

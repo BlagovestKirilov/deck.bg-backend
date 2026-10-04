@@ -21,10 +21,10 @@ import org.springframework.scheduling.annotation.EnableAsync;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 @EnableAsync
 @SpringBootApplication(exclude = UserDetailsServiceAutoConfiguration.class)
-public class SantaseServiceApplication {
+public class DeckApplication {
 
     static void main(String[] args) {
-        SpringApplication.run(SantaseServiceApplication.class, args);
+        SpringApplication.run(DeckApplication.class, args);
     }
 
 }
