@@ -15,6 +15,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * The turn clock: whose turn it is, how long is left of it, and what the table
@@ -41,7 +42,8 @@ public class BelotTurnService {
     /** Whose turn it is, whether the deal is being bid for or played. */
     public Optional<Seat> toAct(BelotDeal deal) {
         return switch (deal.getStatus()) {
-            case BIDDING -> Optional.of(deal.bidding().toAct());
+            // Before anybody bids, the deck is cut — and it is the cutter's turn.
+            case BIDDING -> Optional.of(deal.isAwaitingCut() ? deal.cutter() : deal.bidding().toAct());
             case PLAYING -> Optional.of(belotPlayService.toAct(deal));
             // Nobody is to act on a hand that is over, given up on included.
             case THROWN_IN, FINISHED, ABANDONED -> Optional.empty();
@@ -58,7 +60,28 @@ public class BelotTurnService {
         if (toAct(deal).isEmpty() || deal.getTurnStartedAt() == null) {
             return Optional.empty();
         }
-        return Optional.of(deal.getTurnStartedAt().plus(belotProperties.turnTimeout()));
+        return Optional.of(deal.getTurnStartedAt().plus(
+                deal.isAwaitingCut() ? belotProperties.cutTimeout() : belotProperties.turnTimeout()));
+    }
+
+    /**
+     * The shortest time anything at a table waits before it is acted on —
+     * what the sweep looks back over to find every turn that may have run out.
+     */
+    public Duration shortestWait() {
+        return belotProperties.cutTimeout().compareTo(belotProperties.turnTimeout()) < 0
+                ? belotProperties.cutTimeout()
+                : belotProperties.turnTimeout();
+    }
+
+    /** From the cut to the first bid: the deal being shown. */
+    public Duration dealPause() {
+        return belotProperties.dealPause();
+    }
+
+    /** From the last card of a hand to the cut: the trick taken and the count shown. */
+    public Duration handPause() {
+        return belotProperties.handPause();
     }
 
     /**
@@ -99,6 +122,15 @@ public class BelotTurnService {
             return false;
         }
         Seat absent = seat.get();
+
+        if (deal.isAwaitingCut()) {
+            // Anywhere in the middle half of the deck, as a hand that has not
+            // chosen would cut it.
+            int at = ThreadLocalRandom.current().nextInt(8, 25);
+            belotDealService.cut(deal, at, Instant.now().plus(belotProperties.dealPause()));
+            log.info("Belot: {} did not cut at table {}, cut at {} for them", absent, game.getId(), at);
+            return true;
+        }
 
         if (deal.getStatus() == BelotDealStatus.BIDDING) {
             // A pass is the one call that is always legal and never commits

@@ -1,6 +1,7 @@
 package bg.deck.belot.controller;
 
 import bg.deck.belot.model.request.BelotBidRequest;
+import bg.deck.belot.model.request.BelotCutRequest;
 import bg.deck.belot.model.request.BelotPlayRequest;
 import bg.deck.belot.model.response.BelotProfileResponse;
 import bg.deck.belot.service.BelotPlayerService;
@@ -52,6 +53,13 @@ public class BelotController {
     @PostMapping("/bid")
     public ResponseEntity<Void> bid(@Valid @RequestBody BelotBidRequest request) {
         belotService.bid(AuthenticatedUser.username(), request);
+        return ResponseEntity.accepted().build();
+    }
+
+    /** Cut the deck, when this player is the one on the dealer's left. */
+    @PostMapping("/cut")
+    public ResponseEntity<Void> cut(@Valid @RequestBody BelotCutRequest request) {
+        belotService.cut(AuthenticatedUser.username(), request);
         return ResponseEntity.accepted().build();
     }
 

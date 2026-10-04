@@ -59,6 +59,14 @@ deck:
     # a lead inside it would pull the trick off every other screen before
     # anyone saw who took it. Matches .belot__trick.is-collected.
     trick-pause: PT1.6S
+    # How long the player cutting has to touch the deck before it is cut for
+    # them, and how long after the cut the deal takes to show before the
+    # bidding clock starts.
+    cut-timeout: PT8S
+    deal-pause: PT3S
+    # After a hand is played out, the last trick is shown being taken and the
+    # count is put up; the cut clock waits for both.
+    hand-pause: PT11S
 
 jwt:
   secret-key: ${JWT_SECRET}

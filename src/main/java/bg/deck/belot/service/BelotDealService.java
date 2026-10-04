@@ -138,6 +138,33 @@ public class BelotDealService {
     }
 
     /**
+     * Holds a freshly dealt hand for the cut: nobody bids until the player on
+     * the dealer's left has cut, and their clock for it starts at {@code from}.
+     */
+    @Transactional
+    public void awaitCut(BelotDeal deal, Instant from) {
+        deal.setCutAt(null);
+        deal.setTurnStartedAt(from);
+        belotDealRepository.save(deal);
+    }
+
+    /**
+     * The deck is cut, here; the bidding clock starts at {@code biddingFrom},
+     * once the deal has had time to be shown.
+     *
+     * @throws IllegalArgumentException if the deck is not waiting to be cut
+     */
+    @Transactional
+    public void cut(BelotDeal deal, int at, Instant biddingFrom) {
+        if (!deal.isAwaitingCut()) {
+            throw new IllegalArgumentException("Deal " + deal.getId() + " is not waiting to be cut");
+        }
+        deal.setCutAt(at);
+        deal.setTurnStartedAt(biddingFrom);
+        belotDealRepository.save(deal);
+    }
+
+    /**
      * Says пас for every seat in turn that has nothing else it may say.
      *
      * <p>Over a recontra on всичко коз, say, the only call left to the others

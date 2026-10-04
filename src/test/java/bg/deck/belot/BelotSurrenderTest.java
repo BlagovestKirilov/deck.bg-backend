@@ -10,6 +10,7 @@ import bg.deck.belot.model.BelotDealStatus;
 import bg.deck.belot.model.BelotGame;
 import bg.deck.belot.model.BelotGameStatus;
 import bg.deck.belot.model.request.BelotBidRequest;
+import bg.deck.belot.model.request.BelotCutRequest;
 import bg.deck.belot.repository.BelotPlayerStatsRepository;
 import bg.deck.belot.service.BelotDealService;
 import bg.deck.belot.service.BelotMatchmakingService;
@@ -79,7 +80,20 @@ class BelotSurrenderTest {
 
     private BelotGame seatFour() {
         PLAYERS.forEach(belot::search);
-        return tables.tableOf(PLAYERS.getFirst()).orElseThrow();
+        BelotGame table = tables.tableOf(PLAYERS.getFirst()).orElseThrow();
+        cut(table);
+        return table;
+    }
+
+    /** The player on the dealer's left cuts, which opens the bidding. */
+    private void cut(BelotGame table) {
+        BelotDeal dealt = deals.current(table).orElseThrow();
+        String cutter = table.getSeats().stream()
+                .filter(taken -> taken.getSeat() == dealt.cutter())
+                .findFirst()
+                .orElseThrow()
+                .getUsername();
+        belot.cut(cutter, new BelotCutRequest(16));
     }
 
     @Test

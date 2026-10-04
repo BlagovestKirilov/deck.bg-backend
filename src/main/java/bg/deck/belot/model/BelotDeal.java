@@ -109,6 +109,14 @@ public class BelotDeal extends BaseEntity {
     @Column(name = "turn_started_at")
     private Instant turnStartedAt;
 
+    /**
+     * Where the deck was cut, counted from the top; null while it is waiting
+     * to be cut, when nobody may bid. Purely the picture of a cut — the hand
+     * was dealt from the seed before it — and 0 for a deal made without one.
+     */
+    @Column(name = "cut_at")
+    private Integer cutAt = 0;
+
     @OrderBy("ordinal ASC")
     @OneToMany(mappedBy = "deal", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<BelotBid> bids = new ArrayList<>();
@@ -225,5 +233,16 @@ public class BelotDeal extends BaseEntity {
         return last.plays().size() == Seat.values().length
                 ? TrickResolver.winning(last, contract).map(Play::seat)
                 : Optional.empty();
+    }
+
+    /** Waiting for the player on the dealer's left to cut, before any bid. */
+    public boolean isAwaitingCut() {
+        return status == BelotDealStatus.BIDDING && cutAt == null;
+    }
+
+    /** The player who cuts: the one on the dealer's left, who plays just before him. */
+    public Seat cutter() {
+        Seat[] seats = Seat.values();
+        return seats[(dealerSeat.ordinal() + seats.length - 1) % seats.length];
     }
 }

@@ -17,6 +17,7 @@ import bg.deck.belot.model.BelotGameStatus;
 import bg.deck.belot.model.BelotPlay;
 import bg.deck.belot.model.BelotSeat;
 import bg.deck.belot.model.request.BelotBidRequest;
+import bg.deck.belot.model.request.BelotCutRequest;
 import bg.deck.belot.model.request.BelotPlayRequest;
 import bg.deck.belot.model.response.BelotBidView;
 import bg.deck.belot.model.response.BelotBiddingView;
@@ -39,6 +40,7 @@ import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -86,7 +88,7 @@ public class BelotService {
 
         BelotGame table = belotTableService.join(username);
         if (table.isFull() && belotDealService.current(table).isEmpty()) {
-            belotDealService.dealNext(table);
+            dealNext(table, Duration.ZERO);
         }
 
         tellEveryone(table);
@@ -110,6 +112,9 @@ public class BelotService {
         BelotSeat seat = seatFor(table, username);
         BelotDeal deal = belotDealService.current(table).orElseThrow(
                 () -> new IllegalMoveException("No deal in progress at table " + table.getId()));
+        if (deal.isAwaitingCut()) {
+            throw new IllegalMoveException("The deck has not been cut yet at table " + table.getId());
+        }
 
         try {
             belotDealService.bid(deal, new BidAction(seat.getSeat(), request.kind(), request.contract()));
@@ -123,10 +128,44 @@ public class BelotService {
 
         // Nobody wanted it: the next seat deals, and the table is told once.
         if (deal.getStatus() == BelotDealStatus.THROWN_IN) {
-            belotDealService.dealNext(table);
+            dealNext(table, Duration.ZERO);
         }
 
         tellEveryone(table);
+    }
+
+    /**
+     * The player on the dealer's left cuts the deck.
+     *
+     * <p>Only the picture of a cut — the hand was dealt from the seed before
+     * it, so where the deck is cut changes no card. It is kept on the deal so
+     * that every screen shows the same cut at the same moment, and the bidding
+     * waits for it.
+     */
+    @Transactional
+    public void cut(String username, BelotCutRequest request) {
+        BelotGame table = tableFor(username);
+        BelotSeat seat = seatFor(table, username);
+        BelotDeal deal = belotDealService.current(table).orElseThrow(
+                () -> new IllegalMoveException("No deal in progress at table " + table.getId()));
+        if (!deal.isAwaitingCut()) {
+            throw new IllegalMoveException("Nothing to cut at table " + table.getId());
+        }
+        if (deal.cutter() != seat.getSeat()) {
+            throw new IllegalMoveException(seat.getSeat() + " does not cut at table " + table.getId());
+        }
+
+        belotDealService.cut(deal, request.at(), Instant.now().plus(belotTurnService.dealPause()));
+        tellEveryone(table);
+    }
+
+    /**
+     * Deals the next hand and holds it for the cut, whose clock starts once
+     * {@code pause} is over — the count of the hand before, if there was one.
+     */
+    private void dealNext(BelotGame table, Duration pause) {
+        BelotDeal next = belotDealService.dealNext(table);
+        belotDealService.awaitCut(next, Instant.now().plus(pause));
     }
 
     /**
@@ -156,7 +195,7 @@ public class BelotService {
 
         if (deal.getStatus() == BelotDealStatus.FINISHED
                 && table.getStatus() != BelotGameStatus.FINISHED) {
-            belotDealService.dealNext(table);
+            dealNext(table, belotTurnService.handPause());
         }
 
         tellEveryone(table);
@@ -219,7 +258,7 @@ public class BelotService {
      * @see bg.deck.belot.scheduler.BelotTurnScheduler for why the loop is not here
      */
     public List<UUID> dealsOutOfTime() {
-        return belotDealService.waitingSince(Instant.now().minus(belotTurnService.turnTimeout()))
+        return belotDealService.waitingSince(Instant.now().minus(belotTurnService.shortestWait()))
                 .stream()
                 .map(BelotDeal::getId)
                 .toList();
@@ -274,10 +313,11 @@ public class BelotService {
 
         // A thrown-in or finished hand is followed by the next one, exactly
         // as it is when a player does the acting.
-        if (deal.getStatus() == BelotDealStatus.THROWN_IN
-                || (deal.getStatus() == BelotDealStatus.FINISHED
-                    && table.getStatus() != BelotGameStatus.FINISHED)) {
-            belotDealService.dealNext(table);
+        if (deal.getStatus() == BelotDealStatus.THROWN_IN) {
+            dealNext(table, Duration.ZERO);
+        } else if (deal.getStatus() == BelotDealStatus.FINISHED
+                && table.getStatus() != BelotGameStatus.FINISHED) {
+            dealNext(table, belotTurnService.handPause());
         }
 
         tellEveryone(table);
@@ -331,6 +371,7 @@ public class BelotService {
                 deal.map(current -> declarationsFor(table, current)).orElse(null),
                 sheetOf(table, history),
                 lastTrickOf(history),
+                deal.isPresent() ? deal.get().getCutAt() : Integer.valueOf(0),
                 table.getNorthSouthScore(),
                 table.getEastWestScore(),
                 table.getHangingPoints());

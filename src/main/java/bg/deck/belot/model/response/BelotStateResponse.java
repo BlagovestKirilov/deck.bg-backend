@@ -38,6 +38,8 @@ import java.util.UUID;
  *                        finishes a hand also deals the next one, so the
  *                        table never sees that trick in {@code play}; this is
  *                        how it gets to see the last card fall
+ * @param cutAt           where the hand being bid for was cut; null while
+ *                        it is waiting to be cut, and nobody may bid
  * @param northSouthScore the score sheet
  * @param eastWestScore   the score sheet
  * @param hangingPoints   points from a level deal, waiting on the next one
@@ -59,6 +61,7 @@ public record BelotStateResponse(
         BelotDeclarationsView declarations,
         List<BelotDealRow> sheet,
         BelotTrickView lastTrick,
+        Integer cutAt,
         int northSouthScore,
         int eastWestScore,
         int hangingPoints

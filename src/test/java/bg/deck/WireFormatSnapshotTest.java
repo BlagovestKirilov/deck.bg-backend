@@ -12,6 +12,7 @@ import bg.deck.belot.engine.Team;
 import bg.deck.belot.model.BelotDealStatus;
 import bg.deck.belot.model.BelotGameStatus;
 import bg.deck.belot.model.request.BelotBidRequest;
+import bg.deck.belot.model.request.BelotCutRequest;
 import bg.deck.belot.model.request.BelotPlayRequest;
 import bg.deck.belot.model.response.BelotBidView;
 import bg.deck.belot.engine.DeclarationKind;
@@ -186,6 +187,7 @@ class WireFormatSnapshotTest {
                                 new BelotPlayedCard(Seat.WEST, new Card(Suit.HEARTS, Rank.TEN)),
                                 new BelotPlayedCard(Seat.SOUTH, new Card(Suit.HEARTS, Rank.KING))),
                         Seat.EAST),
+                12,
                 91, 64, 0));
 
         out.put("SearchGameResponse.waiting", SearchGameResponse.waiting());
@@ -264,6 +266,7 @@ class WireFormatSnapshotTest {
         read(out, UserDeletionRequest.class, "{\"password\":\"secret12\"}");
         read(out, BelotBidRequest.class, "{\"kind\":\"BID\",\"contract\":\"ALL_TRUMPS\"}");
         read(out, BelotPlayRequest.class, "{\"card\":{\"suit\":\"SPADES\",\"rank\":\"ACE\"}}");
+        read(out, BelotCutRequest.class, "{\"at\":12}");
 
         return out;
     }

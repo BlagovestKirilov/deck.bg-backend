@@ -1,0 +1,23 @@
+databaseChangeLog:
+  # Where the deck was cut, and whether it has been yet.
+  #
+  # Each hand is cut by the player on the dealer's left before it is bid for,
+  # and every screen at the table has to see the same cut at the same moment,
+  # so it is kept on the deal. Null means the deck is waiting to be cut and
+  # nobody may bid yet. The cut changes no card: the hand was dealt from the
+  # seed before it.
+  #
+  # Additive: one nullable column. Every deal already in the table is marked
+  # as cut, so a hand being played when this runs carries on as it was.
+  - changeSet:
+      id: 030-belot-deal-cut
+      author: Blagovest Kirilov
+      comment: Where a belot deal was cut
+      changes:
+        - sql:
+            dbms: postgresql
+            splitStatements: false
+            sql: |
+              ALTER TABLE belot.deal ADD COLUMN IF NOT EXISTS cut_at SMALLINT;
+
+              UPDATE belot.deal SET cut_at = 0 WHERE cut_at IS NULL;

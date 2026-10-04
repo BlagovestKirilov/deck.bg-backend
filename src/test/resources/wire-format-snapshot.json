@@ -184,6 +184,7 @@
       } ],
       "wonBy" : "EAST"
     },
+    "cutAt" : 12,
     "northSouthScore" : 91,
     "eastWestScore" : 64,
     "hangingPoints" : 0
@@ -444,5 +445,12 @@
     },
     "violationsWhenFull" : "[]",
     "violationsWhenEmpty" : "[card:NotNull]"
+  },
+  "BelotCutRequest" : {
+    "readsBack" : {
+      "at" : 12
+    },
+    "violationsWhenFull" : "[]",
+    "violationsWhenEmpty" : "[at:NotNull]"
   }
 }

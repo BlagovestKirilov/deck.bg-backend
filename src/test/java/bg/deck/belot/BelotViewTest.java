@@ -29,6 +29,7 @@ import bg.deck.service.WebSocketService;
 import bg.deck.belot.engine.BidKind;
 import bg.deck.belot.model.BelotDealStatus;
 import bg.deck.belot.model.request.BelotBidRequest;
+import bg.deck.belot.model.request.BelotCutRequest;
 import bg.deck.belot.model.request.BelotPlayRequest;
 import bg.deck.exception.IllegalMoveException;
 import org.junit.jupiter.api.BeforeEach;
@@ -80,7 +81,7 @@ class BelotViewTest {
     private final BelotPlayService playService = new BelotPlayService(dealService, statsService);
     private final BelotTurnService turnService = new BelotTurnService(dealService, playService,
             new BelotProperties(Duration.ofSeconds(45), Duration.ofSeconds(10), Duration.ofMinutes(1),
-                    Duration.ofMillis(1600)));
+                    Duration.ofMillis(1600), Duration.ofSeconds(8), Duration.ZERO, Duration.ZERO));
 
     private final BelotTableService tables = mock(BelotTableService.class);
     private final BelotPlayerService players = mock(BelotPlayerService.class);
@@ -224,6 +225,46 @@ class BelotViewTest {
                 "the four cards stay out: a player must see the trick they played into");
         assertNotNull(view.play().wonBy(), "and who took it");
         assertEquals(1, view.play().trickNo(), "it is still the first trick until the next is led");
+    }
+
+    @Test
+    @DisplayName("holds the bidding until the player on the dealer's left has cut")
+    void nobodyBidsBeforeTheCut() {
+        belotDealServiceAwaitsCut();
+        Seat first = deal.bidding().toAct();
+
+        assertThrows(IllegalMoveException.class,
+                () -> belot.bid(nameAt(first), new BelotBidRequest(BidKind.PASS, null)),
+                "the deck has not been cut");
+        assertEquals(deal.cutter(), turnService.toAct(deal).orElseThrow(), "it is the cutter's turn");
+        assertNull(viewNowFor(PLAYERS.getFirst()).cutAt(), "and every screen is told it is waiting for the cut");
+
+        Seat notTheCutter = deal.cutter().next();
+        assertThrows(IllegalMoveException.class,
+                () -> belot.cut(nameAt(notTheCutter), new BelotCutRequest(12)),
+                "only the player on the dealer's left cuts");
+
+        belot.cut(nameAt(deal.cutter()), new BelotCutRequest(12));
+        assertEquals(12, viewNowFor(PLAYERS.getFirst()).cutAt(), "every screen is told where it was cut");
+        belot.bid(nameAt(first), new BelotBidRequest(BidKind.PASS, null));
+        assertEquals(1, deal.getBids().size(), "and the bidding opens");
+    }
+
+    @Test
+    @DisplayName("cuts for the player on the dealer's left when they let the clock run out")
+    void anUncutDeckIsCutForThem() {
+        belotDealServiceAwaitsCut();
+        deal.setTurnStartedAt(Instant.now().minusSeconds(9));
+
+        belot.timeUp("gosho");
+
+        assertNotNull(deal.getCutAt(), "the deck was cut for them");
+        assertTrue(deal.getBids().isEmpty(), "and nobody was passed for: the bidding has only just opened");
+    }
+
+    /** As the table holds every hand it deals for real. */
+    private void belotDealServiceAwaitsCut() {
+        dealService.awaitCut(deal, Instant.now());
     }
 
     @Test
