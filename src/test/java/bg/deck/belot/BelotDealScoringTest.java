@@ -110,21 +110,29 @@ class BelotDealScoringTest {
     class Doubled {
 
         @Test
-        @DisplayName("doubles what each side records")
+        @DisplayName("made, the callers take everything, doubled")
         void doubled() {
             DealOutcome outcome = DealScorer.score(90, 72, 2, 0);
 
-            assertEquals(18, outcome.recorded().caller());
-            assertEquals(14, outcome.recorded().opponents());
+            assertEquals(32, outcome.recorded().caller(), "162 is 16, doubled");
+            assertEquals(0, outcome.recorded().opponents(), "and the others record nothing");
         }
 
         @Test
-        @DisplayName("quadruples it after a recontra")
+        @DisplayName("and quadrupled after a recontra")
         void quadrupled() {
             DealOutcome outcome = DealScorer.score(90, 72, 4, 0);
 
-            assertEquals(36, outcome.recorded().caller());
-            assertEquals(28, outcome.recorded().opponents());
+            assertEquals(64, outcome.recorded().caller());
+            assertEquals(0, outcome.recorded().opponents());
+        }
+
+        @Test
+        @DisplayName("made and doubled, the callers collect what was hanging as well")
+        void doubledCollectsTheHanging() {
+            DealOutcome outcome = DealScorer.score(90, 72, 2, 8);
+
+            assertEquals(40, outcome.recorded().caller(), "32 for the deal and the 8 that was waiting");
         }
 
         @Test
@@ -156,22 +164,22 @@ class BelotDealScoringTest {
         @DisplayName("the doubling is of what goes on the sheet, not of the card points")
         void theDoublingComesAfterTheRounding() {
             // "Резултатът се удвоява" — the result is what is written down, so
-            // the rounding happens first and the doubling is applied to it. 85
-            // rounds down to 8 and doubles to 16; doubling the points first
-            // would give 170, which rounds to 17.
-            DealOutcome plainDeal = DealScorer.score(85, 77, 1, 0);
-            DealOutcome doubled = DealScorer.score(85, 77, 2, 0);
+            // the rounding happens first and the doubling is applied to it. A
+            // deal of 155 rounds down to 15 and doubles to 30; doubling the
+            // points first would give 310, which rounds to 31.
+            DealOutcome plainDeal = DealScorer.score(70, 85, 1, 0);
+            DealOutcome doubled = DealScorer.score(70, 85, 2, 0);
 
-            assertEquals(8, plainDeal.recorded().caller());
-            assertEquals(16, doubled.recorded().caller(),
-                    "twice the eight on the sheet, not the rounding of twice the points");
+            assertEquals(15, plainDeal.recorded().opponents());
+            assertEquals(30, doubled.recorded().opponents(),
+                    "twice the fifteen on the sheet, not the rounding of twice the points");
         }
 
         /** ANSWERED (OPEN 16), the other multiplier. */
         @Test
         @DisplayName("a recontra quadruples the same number")
         void recontraQuadruplesIt() {
-            assertEquals(32, DealScorer.score(85, 77, 4, 0).recorded().caller());
+            assertEquals(60, DealScorer.score(70, 85, 4, 0).recorded().opponents());
         }
     }
 

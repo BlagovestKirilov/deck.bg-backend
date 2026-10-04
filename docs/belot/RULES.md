@@ -153,9 +153,13 @@ Rules:
 > в каре и поредица (терца, кварта, квинта), играчът избира кое от двете да
 > обяви" — four nines and 7 8 9 of spades share the nine of spades, and only one
 > of them may have it. Declarations here are read off the hand rather than
-> announced, so the choice is made the way a player would make it: the most
-> valuable first, and anything needing a card already spoken for is dropped.
-> `Declarations.chosen`, `BelotRulesTableTest.aCardCountsOnce`.
+> announced, so the choice is made for the player, the way they would want
+> it: every choice of fours is tried, the sequences are read again from the
+> cards left over, and the richest result is kept. Four tens and 7 8 9 10 of
+> spades is the four and a terz of 7 8 9; four tens and 8 9 10 J is the four
+> alone (100 over 50). The king and queen of trumps stay a belote whatever
+> else they are in. `Declarations.chosen`, `BelotRulesTableTest.aCardCountsOnce`,
+> `theRestOfASequenceStillCounts`, `theRichestSplitIsChosen`.
 >
 > **ANSWERED 6 — yes, always.** A belote is two named cards of the trump suit
 > and is not in the contest at all. `BelotRulesTableTest.beloteIsIndependent`.
@@ -185,8 +189,10 @@ Rules:
 - **Hanging (висящи)** — the two sides tie. The contracting team records
   nothing; its points **carry to whoever wins the next deal**. The opponents
   record theirs.
-- **Contra / recontra** double or quadruple everything, bonuses included. Points
-  that hang while doubled carry forward still doubled.
+- **Contra / recontra** double or quadruple everything, bonuses included, and
+  make the deal **all or nothing**: whichever side wins it records both sides'
+  points together, multiplied, and the other side records nothing. Points that
+  hang while doubled carry forward still doubled.
 
 > **ANSWERED — the two scores are rounded together, so the sheet adds up.**
 > Each goes to its nearest ten with a **five going down** (85 is 8). If the two
@@ -217,7 +223,9 @@ Rules:
 > **ANSWERED 16 — the doubling is of what goes on the sheet.** "Резултатът се
 > удвоява" — the result is the number recorded, so the rounding happens first
 > and the multiplier is applied to it. 85 rounds to 8 and doubles to 16, where
-> doubling the points first would give 170 and round to 17.
+> doubling the points first would give 170 and round to 17. Doubled, a made
+> deal goes the same way a failed one does: the whole 162 is rounded to 16
+> and the callers record 32, the others nothing.
 > `BelotDealScoringTest.Doubling`.
 >
 > **ANSWERED 17 — whoever records the deal takes what was hanging.** When the

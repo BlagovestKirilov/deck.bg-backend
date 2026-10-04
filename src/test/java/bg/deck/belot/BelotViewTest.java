@@ -11,7 +11,9 @@ import bg.deck.belot.model.BelotDeal;
 import bg.deck.belot.model.BelotGame;
 import bg.deck.belot.model.BelotSeat;
 import bg.deck.belot.model.response.BelotDeclarationView;
+import bg.deck.belot.model.response.BelotPlayedCard;
 import bg.deck.belot.model.response.BelotStateResponse;
+import bg.deck.belot.model.response.BelotTrickView;
 import bg.deck.belot.repository.BelotDealRepository;
 import bg.deck.belot.service.BelotDealService;
 import bg.deck.belot.config.BelotProperties;
@@ -24,6 +26,8 @@ import bg.deck.belot.service.BelotTableService;
 import bg.deck.belot.service.BelotTurnService;
 import bg.deck.service.AvailabilityService;
 import bg.deck.service.WebSocketService;
+import bg.deck.belot.model.request.BelotPlayRequest;
+import bg.deck.exception.IllegalMoveException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -33,6 +37,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.time.Duration;
+import java.time.Instant;
 
 import java.util.List;
 import java.util.Map;
@@ -44,6 +49,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.clearInvocations;
@@ -70,7 +76,8 @@ class BelotViewTest {
     private final BelotStatsService statsService = mock(BelotStatsService.class);
     private final BelotPlayService playService = new BelotPlayService(dealService, statsService);
     private final BelotTurnService turnService = new BelotTurnService(dealService, playService,
-            new BelotProperties(Duration.ofSeconds(45), Duration.ofSeconds(10), Duration.ofMinutes(1)));
+            new BelotProperties(Duration.ofSeconds(45), Duration.ofSeconds(10), Duration.ofMinutes(1),
+                    Duration.ofMillis(1600)));
 
     private final BelotTableService tables = mock(BelotTableService.class);
     private final BelotPlayerService players = mock(BelotPlayerService.class);
@@ -214,6 +221,83 @@ class BelotViewTest {
                 "the four cards stay out: a player must see the trick they played into");
         assertNotNull(view.play().wonBy(), "and who took it");
         assertEquals(1, view.play().trickNo(), "it is still the first trick until the next is led");
+    }
+
+    @Test
+    @DisplayName("acts for a seat as soon as a screen says its clock ran out, and not before")
+    void aClockAtNoughtIsActedOnAtOnce() {
+        deal.setTurnStartedAt(Instant.now());
+        belot.timeUp("gosho");
+        assertTrue(deal.getBids().isEmpty(), "the server's clock has not run out, so nothing is done");
+
+        deal.setTurnStartedAt(Instant.now().minusSeconds(46));
+        belot.timeUp("gosho");
+        assertEquals(1, deal.getBids().size(), "the seat that ran out is passed for, without waiting for the sweep");
+    }
+
+    @Test
+    @DisplayName("refuses the next lead while the last trick is still being taken")
+    void theNextLeadWaitsForTheTrickToBeTaken() {
+        Seat bidder = deal.bidding().toAct();
+        dealService.bid(deal, BidAction.bid(bidder, Contract.SPADES));
+        for (int i = 0; i < 3; i++) {
+            bidder = bidder.next();
+            dealService.bid(deal, BidAction.pass(bidder));
+        }
+        for (int card = 0; card < 4; card++) {
+            Seat seat = playService.toAct(deal);
+            playService.play(table, deal, seat, playService.legalFor(table, deal, seat).getFirst());
+        }
+
+        Seat leader = playService.toAct(deal);
+        String leading = table.getSeats().stream()
+                .filter(seat -> seat.getSeat() == leader)
+                .map(BelotSeat::getUsername)
+                .findFirst()
+                .orElseThrow();
+        Card lead = playService.legalFor(table, deal, leader).getFirst();
+
+        assertThrows(IllegalMoveException.class,
+                () -> belot.play(leading, new BelotPlayRequest(lead)),
+                "nobody has seen who took the trick yet");
+        assertEquals(4, deal.getPlays().size(), "and nothing was played");
+
+        // Once the trick has been swept, the same lead goes through.
+        deal.setTurnStartedAt(Instant.now().minusSeconds(2));
+        belot.play(leading, new BelotPlayRequest(lead));
+        assertEquals(5, deal.getPlays().size());
+    }
+
+    @Test
+    @DisplayName("shows the last trick of a hand, which the next deal would otherwise hide")
+    void theLastTrickOfAHandIsSeen() {
+        Seat bidder = deal.bidding().toAct();
+        dealService.bid(deal, BidAction.bid(bidder, Contract.SPADES));
+        for (int i = 0; i < 3; i++) {
+            bidder = bidder.next();
+            dealService.bid(deal, BidAction.pass(bidder));
+        }
+        when(deals.findByGameOrderByDealNumberAsc(table)).thenReturn(List.of(deal));
+
+        for (int card = 0; card < 31; card++) {
+            Seat seat = playService.toAct(deal);
+            playService.play(table, deal, seat, playService.legalFor(table, deal, seat).getFirst());
+        }
+        assertNull(viewNowFor("petko91").lastTrick(), "nothing to show while the hand is still on");
+
+        Seat last = playService.toAct(deal);
+        playService.play(table, deal, last, playService.legalFor(table, deal, last).getFirst());
+
+        BelotTrickView shown = viewNowFor("petko91").lastTrick();
+        assertNotNull(shown, "the card that ends the hand is seen to fall");
+        assertEquals(deal.getDealNumber(), shown.dealNumber());
+        assertEquals(deal.tricks().getLast().plays().stream()
+                        .map(play -> new BelotPlayedCard(play.seat(), play.card()))
+                        .toList(),
+                shown.cards(), "all four of the last trick, in the order they fell");
+        assertEquals(deal.lastTrickWinner().orElseThrow(), shown.wonBy(), "and who took it");
+        assertEquals(List.of(), viewNowFor("petko91").yourHand(),
+                "a hand that is over leaves nothing in front of anybody");
     }
     /** A fresh look for this player, however many they have been sent already. */
     private BelotStateResponse viewNowFor(String username) {

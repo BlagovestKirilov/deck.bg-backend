@@ -6,7 +6,8 @@ package bg.deck.belot.engine;
  * <p>Three ways it ends, decided by nothing more than which side took more:
  *
  * <ul>
- *   <li><b>made</b> — the callers took more, and each side records its own;</li>
+ *   <li><b>made</b> — the callers took more, and each side records its own —
+ *       unless the deal was doubled, when the callers take the lot;</li>
  *   <li><b>вътре</b> — the others took more, and record <em>everything</em>,
  *       both sides' points together, while the callers record nothing;</li>
  *   <li><b>висящи</b> — level. The callers record nothing and their points wait
@@ -16,6 +17,10 @@ package bg.deck.belot.engine;
  * <p>The points passed in are the finished ones: cards, declarations, the last
  * trick and capot. A contra doubles what goes on the sheet, and points left
  * hanging carry forward already doubled.
+ *
+ * <p>A doubled deal is all or nothing: whoever wins it records both sides'
+ * points together, doubled or quadrupled, and the losers record nothing.
+ * That is what a contra is a bet on.
  */
 public final class DealScorer {
 
@@ -38,8 +43,20 @@ public final class DealScorer {
         return hanging(callerPoints, opponentPoints, multiplier, carriedIn);
     }
 
-    /** Each side records what it took, and the hanging points go to the winner. */
+    /**
+     * Each side records what it took, and the hanging points go to the winner.
+     *
+     * <p>Doubled, the callers take everything instead — the mirror of a
+     * doubled deal going вътре — rounded as one number, then multiplied.
+     */
     private static DealOutcome made(int callerPoints, int opponentPoints, int multiplier, int carriedIn) {
+        if (multiplier > 1) {
+            int everything = DealRounding.nearest(callerPoints + opponentPoints);
+            return new DealOutcome(
+                    DealResult.MADE,
+                    new RecordedScore(everything * multiplier + carriedIn, 0),
+                    0);
+        }
         RecordedScore recorded = DealRounding.split(callerPoints, opponentPoints);
         return new DealOutcome(
                 DealResult.MADE,

@@ -63,6 +63,18 @@ public class BelotController {
     }
 
     /**
+     * This player's clock has reached nought — act for whoever is out of time.
+     *
+     * <p>Only a nudge: the server checks its own deadline, and does nothing
+     * if the turn has not run out.
+     */
+    @PostMapping("/timeout")
+    public ResponseEntity<Void> timeout() {
+        belotService.timeUp(AuthenticatedUser.username());
+        return ResponseEntity.accepted().build();
+    }
+
+    /**
      * Give up the game. It is given up for the pair, not for one seat.
      *
      * <p>No body: the seat comes from the token, as everywhere else here.

@@ -27,6 +27,7 @@ import bg.deck.belot.model.response.BelotPlayView;
 import bg.deck.belot.model.response.BelotPlayedCard;
 import bg.deck.belot.model.response.BelotSeatView;
 import bg.deck.belot.model.response.BelotStateResponse;
+import bg.deck.belot.model.response.BelotTrickView;
 import bg.deck.belot.model.response.BelotTurnView;
 import bg.deck.enums.GameType;
 import bg.deck.exception.IllegalMoveException;
@@ -142,6 +143,9 @@ public class BelotService {
         BelotSeat seat = seatFor(table, username);
         BelotDeal deal = belotDealService.current(table).orElseThrow(
                 () -> new IllegalMoveException("No deal in progress at table " + table.getId()));
+        if (belotTurnService.isTakingTrick(deal, Instant.now())) {
+            throw new IllegalMoveException("The last trick is still being taken at table " + table.getId());
+        }
 
         try {
             belotPlayService.play(table, deal, seat.getSeat(), request.card());
@@ -237,12 +241,30 @@ public class BelotService {
         // Read again, in this transaction. The one the sweep is holding was
         // loaded in another that has since closed, and a detached deal cannot
         // load the bids or the plays that deciding anything needs.
-        Optional<BelotDeal> found = belotDealService.byId(dealId);
-        if (found.isEmpty()) {
-            return false;
-        }
+        return belotDealService.byId(dealId).map(this::actOn).orElse(false);
+    }
 
-        BelotDeal deal = found.get();
+    /**
+     * A screen at this player's table says the clock has reached nought.
+     *
+     * <p>The sweep would get there too, but only on its next pass: a player
+     * watching a clock stand at 0 for a second or two reads it as the table
+     * having stopped. So every screen at the table says so the moment its
+     * clock runs out, and the first to arrive is acted on. The rest find the
+     * turn already taken and do nothing — and should two arrive together,
+     * the second is refused by the unique place every bid and card has.
+     *
+     * <p>Nothing is taken on the screen's word: the deadline is the server's,
+     * and a turn that has not run out is left alone.
+     */
+    @Transactional
+    public void timeUp(String username) {
+        belotTableService.tableOf(username)
+                .flatMap(belotDealService::current)
+                .ifPresent(this::actOn);
+    }
+
+    private boolean actOn(BelotDeal deal) {
         BelotGame table = deal.getGame();
         if (!belotTurnService.actForAbsentPlayer(table, deal)) {
             return false;
@@ -272,13 +294,19 @@ public class BelotService {
     private BelotStateResponse viewFor(BelotGame table, String username) {
         Seat seat = table.seatOf(username).map(BelotSeat::getSeat).orElse(null);
         Optional<BelotDeal> deal = belotDealService.current(table);
+        List<BelotDeal> history = belotDealService.history(table);
 
         List<Card> hand = List.of();
         if (deal.isPresent() && seat != null) {
-            // Five while the bidding is on, then what is left of the eight.
-            hand = deal.get().getStatus() == BelotDealStatus.PLAYING
-                    ? belotPlayService.handOf(table, deal.get(), seat)
-                    : belotDealService.visibleHand(table, deal.get(), seat);
+            // Five while the bidding is on, then what is left of the eight —
+            // and nothing once the hand is over. A finished deal still has
+            // the eight it was dealt, and sending those back put a full hand
+            // in front of a player whose game had just ended.
+            hand = switch (deal.get().getStatus()) {
+                case BIDDING -> belotDealService.visibleHand(table, deal.get(), seat);
+                case PLAYING -> belotPlayService.handOf(table, deal.get(), seat);
+                case THROWN_IN, FINISHED, ABANDONED -> List.of();
+            };
         }
 
         return new BelotStateResponse(
@@ -299,7 +327,8 @@ public class BelotService {
                 deal.map(current -> playFor(table, current, seat)).orElse(null),
                 deal.map(this::turnFor).orElse(null),
                 deal.map(current -> declarationsFor(table, current)).orElse(null),
-                sheetOf(table),
+                sheetOf(table, history),
+                lastTrickOf(history),
                 table.getNorthSouthScore(),
                 table.getEastWestScore(),
                 table.getHangingPoints());
@@ -404,11 +433,31 @@ public class BelotService {
      * request to keep them in step with the running total would cost more
      * than it saves.
      */
-    private List<BelotDealRow> sheetOf(BelotGame table) {
-        return belotDealService.history(table).stream()
+    private List<BelotDealRow> sheetOf(BelotGame table, List<BelotDeal> history) {
+        return history.stream()
                 .filter(played -> played.getResult() != null)
                 .map(played -> rowFor(table, played))
                 .toList();
+    }
+
+    /**
+     * The last trick of the newest counted hand, if it was played to the end.
+     *
+     * <p>A thrown-in hand is counted too, but nothing was played in it, so
+     * there is no trick to show.
+     */
+    private BelotTrickView lastTrickOf(List<BelotDeal> history) {
+        return history.stream()
+                .filter(played -> played.getResult() != null)
+                .reduce((older, newer) -> newer)
+                .filter(BelotDeal::isPlayedOut)
+                .map(played -> new BelotTrickView(
+                        played.getDealNumber(),
+                        played.tricks().getLast().plays().stream()
+                                .map(play -> new BelotPlayedCard(play.seat(), play.card()))
+                                .toList(),
+                        played.lastTrickWinner().orElse(null)))
+                .orElse(null);
     }
 
     /**

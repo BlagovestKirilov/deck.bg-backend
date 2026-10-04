@@ -61,6 +61,23 @@ public class BelotTurnService {
         return Optional.of(deal.getTurnStartedAt().plus(belotProperties.turnTimeout()));
     }
 
+    /**
+     * Whether the trick just finished is still being taken.
+     *
+     * <p>The fourth card starts the leader's turn, but every screen at the
+     * table is still showing that trick being swept to whoever took it. A
+     * lead before that is over replaces the trick on all four screens with
+     * the next one, and nobody sees who took it — so it is refused, however
+     * fast the leader clicks.
+     */
+    public boolean isTakingTrick(BelotDeal deal, Instant now) {
+        return deal.getStatus() == BelotDealStatus.PLAYING
+                && deal.currentTrick().isEmpty()
+                && !deal.getPlays().isEmpty()
+                && deal.getTurnStartedAt() != null
+                && now.isBefore(deal.getTurnStartedAt().plus(belotProperties.trickPause()));
+    }
+
     public boolean hasRunOut(BelotDeal deal, Instant now) {
         return deadline(deal).filter(now::isAfter).isPresent();
     }

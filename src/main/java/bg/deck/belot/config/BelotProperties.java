@@ -14,11 +14,15 @@ import java.time.Duration;
  * @param turnTimeout how long a seat may think before the table acts for them
  * @param turnSweep   how often the tables are checked for a seat that has run out
  * @param sweepDelay  how long after startup the first check happens
+ * @param trickPause  how long a finished trick stays on the table before the
+ *                    next may be led — the time the table takes to show it
+ *                    being swept to whoever took it
  */
 @ConfigurationProperties(prefix = "deck.belot")
 public record BelotProperties(
-        @DefaultValue("PT45S") Duration turnTimeout,
-        @DefaultValue("PT10S") Duration turnSweep,
-        @DefaultValue("PT1M") Duration sweepDelay
+        @DefaultValue("PT30S") Duration turnTimeout,
+        @DefaultValue("PT1S") Duration turnSweep,
+        @DefaultValue("PT1M") Duration sweepDelay,
+        @DefaultValue("PT1.6S") Duration trickPause
 ) {
 }

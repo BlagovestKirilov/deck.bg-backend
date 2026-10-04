@@ -154,6 +154,35 @@
       "opponentScore" : 52,
       "result" : "INSIDE"
     } ],
+    "lastTrick" : {
+      "dealNumber" : 2,
+      "cards" : [ {
+        "seat" : "EAST",
+        "card" : {
+          "suit" : "HEARTS",
+          "rank" : "ACE"
+        }
+      }, {
+        "seat" : "NORTH",
+        "card" : {
+          "suit" : "HEARTS",
+          "rank" : "SEVEN"
+        }
+      }, {
+        "seat" : "WEST",
+        "card" : {
+          "suit" : "HEARTS",
+          "rank" : "TEN"
+        }
+      }, {
+        "seat" : "SOUTH",
+        "card" : {
+          "suit" : "HEARTS",
+          "rank" : "KING"
+        }
+      } ],
+      "wonBy" : "EAST"
+    },
     "northSouthScore" : 91,
     "eastWestScore" : 64,
     "hangingPoints" : 0

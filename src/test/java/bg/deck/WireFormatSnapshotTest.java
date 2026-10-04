@@ -25,6 +25,7 @@ import bg.deck.belot.model.response.BelotPlayedCard;
 import bg.deck.belot.model.response.BelotSeatView;
 import bg.deck.belot.model.response.BelotTurnView;
 import bg.deck.belot.model.response.BelotStateResponse;
+import bg.deck.belot.model.response.BelotTrickView;
 import bg.deck.model.dto.CardDTO;
 import bg.deck.model.request.CardRequest;
 import bg.deck.model.request.ChangeForgottenPasswordRequest;
@@ -178,6 +179,12 @@ class WireFormatSnapshotTest {
                         Doubling.NONE, 97, 65, 20, 0, 10, 6, DealResult.MADE),
                         new BelotDealRow(2, Contract.NO_TRUMPS, Seat.EAST, Team.EAST_WEST,
                                 Doubling.CONTRA, 120, 140, 0, 50, 0, 52, DealResult.INSIDE)),
+                new BelotTrickView(2,
+                        List.of(new BelotPlayedCard(Seat.EAST, new Card(Suit.HEARTS, Rank.ACE)),
+                                new BelotPlayedCard(Seat.NORTH, new Card(Suit.HEARTS, Rank.SEVEN)),
+                                new BelotPlayedCard(Seat.WEST, new Card(Suit.HEARTS, Rank.TEN)),
+                                new BelotPlayedCard(Seat.SOUTH, new Card(Suit.HEARTS, Rank.KING))),
+                        Seat.EAST),
                 91, 64, 0));
 
         out.put("SearchGameResponse.waiting", SearchGameResponse.waiting());

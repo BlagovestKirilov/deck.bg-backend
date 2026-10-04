@@ -33,6 +33,11 @@ import java.util.UUID;
  * @param declarations    what the table announced this deal, once the first
  *                        trick is complete; null before that
  * @param sheet           every hand counted so far, oldest first
+ * @param lastTrick       the last trick of the newest hand on the sheet, or
+ *                        null if that hand was not played out. The card that
+ *                        finishes a hand also deals the next one, so the
+ *                        table never sees that trick in {@code play}; this is
+ *                        how it gets to see the last card fall
  * @param northSouthScore the score sheet
  * @param eastWestScore   the score sheet
  * @param hangingPoints   points from a level deal, waiting on the next one
@@ -53,6 +58,7 @@ public record BelotStateResponse(
         BelotTurnView turn,
         BelotDeclarationsView declarations,
         List<BelotDealRow> sheet,
+        BelotTrickView lastTrick,
         int northSouthScore,
         int eastWestScore,
         int hangingPoints

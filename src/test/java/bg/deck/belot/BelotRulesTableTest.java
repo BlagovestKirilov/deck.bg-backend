@@ -379,6 +379,97 @@ class BelotRulesTableTest {
                     "150 for the nines and 20 for the terz: " + held);
         }
 
+        @Test
+        @DisplayName("what a four leaves of a sequence is read again")
+        void theRestOfASequenceStillCounts() {
+            // Four tens, and 7 8 9 10 of spades. The ten of spades goes to the
+            // four; 7 8 9 is still three in a row and is still a terz.
+            List<Card> hand = List.of(
+                    new Card(Suit.SPADES, Rank.TEN),
+                    new Card(Suit.HEARTS, Rank.TEN),
+                    new Card(Suit.DIAMONDS, Rank.TEN),
+                    new Card(Suit.CLUBS, Rank.TEN),
+                    new Card(Suit.SPADES, Rank.SEVEN),
+                    new Card(Suit.SPADES, Rank.EIGHT),
+                    new Card(Suit.SPADES, Rank.NINE));
+
+            List<Declaration> held = Declarations.in(hand, Contract.HEARTS);
+
+            assertEquals(List.of(DeclarationKind.CARRE, DeclarationKind.TERZ),
+                    held.stream().map(Declaration::kind).toList(), "the four and a terz: " + held);
+            assertEquals(Rank.NINE, held.get(1).topRank(), "7 8 9, without the ten");
+        }
+
+        @Test
+        @DisplayName("a four and a 50 on the same card: the four, which is worth more")
+        void theFourBeatsTheQuarteItShares() {
+            // Four tens, and 8 9 10 J of spades: 100 against 50, one of the two.
+            List<Card> hand = List.of(
+                    new Card(Suit.SPADES, Rank.TEN),
+                    new Card(Suit.HEARTS, Rank.TEN),
+                    new Card(Suit.DIAMONDS, Rank.TEN),
+                    new Card(Suit.CLUBS, Rank.TEN),
+                    new Card(Suit.SPADES, Rank.EIGHT),
+                    new Card(Suit.SPADES, Rank.NINE),
+                    new Card(Suit.SPADES, Rank.JACK));
+
+            List<Declaration> held = Declarations.in(hand, Contract.HEARTS);
+
+            assertEquals(List.of(DeclarationKind.CARRE), held.stream().map(Declaration::kind).toList(),
+                    "never both: " + held);
+        }
+
+        @Test
+        @DisplayName("the split worth most is chosen, even when the bigger sequence has to go")
+        void theRichestSplitIsChosen() {
+            // Four tens, and 9 10 J Q K of spades. The quinte alone is 100; the
+            // four (100) leaves J Q K, a terz: 120, so that is the choice.
+            List<Card> hand = List.of(
+                    new Card(Suit.SPADES, Rank.TEN),
+                    new Card(Suit.HEARTS, Rank.TEN),
+                    new Card(Suit.DIAMONDS, Rank.TEN),
+                    new Card(Suit.CLUBS, Rank.TEN),
+                    new Card(Suit.SPADES, Rank.NINE),
+                    new Card(Suit.SPADES, Rank.JACK),
+                    new Card(Suit.SPADES, Rank.QUEEN),
+                    new Card(Suit.SPADES, Rank.KING));
+
+            List<Declaration> held = Declarations.in(hand, Contract.HEARTS);
+
+            assertEquals(120, held.stream().mapToInt(Declaration::points).sum(), "100 and 20: " + held);
+        }
+
+        @Test
+        @DisplayName("a king and queen in a four are still a belote")
+        void aBeloteInsideAFour() {
+            List<Card> hand = List.of(
+                    new Card(Suit.SPADES, Rank.KING),
+                    new Card(Suit.HEARTS, Rank.KING),
+                    new Card(Suit.DIAMONDS, Rank.KING),
+                    new Card(Suit.CLUBS, Rank.KING),
+                    new Card(Suit.HEARTS, Rank.QUEEN));
+
+            List<DeclarationKind> held = Declarations.in(hand, Contract.HEARTS).stream()
+                    .map(Declaration::kind).toList();
+
+            assertEquals(List.of(DeclarationKind.CARRE, DeclarationKind.BELOTE), held);
+        }
+
+        @Test
+        @DisplayName("two terzes in two suits both count")
+        void twoTerzesBothCount() {
+            List<Card> hand = List.of(
+                    new Card(Suit.SPADES, Rank.SEVEN),
+                    new Card(Suit.SPADES, Rank.EIGHT),
+                    new Card(Suit.SPADES, Rank.NINE),
+                    new Card(Suit.HEARTS, Rank.SEVEN),
+                    new Card(Suit.HEARTS, Rank.EIGHT),
+                    new Card(Suit.HEARTS, Rank.NINE));
+
+            assertEquals(40, Declarations.in(hand, Contract.CLUBS).stream()
+                    .mapToInt(Declaration::points).sum(), "20 and 20");
+        }
+
         /** ANSWERED (OPEN 6). */
         @Test
         @DisplayName("a belote scores whoever holds the best sequence")

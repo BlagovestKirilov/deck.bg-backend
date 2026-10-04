@@ -7,7 +7,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 /**
  * What a hand holds worth declaring. RULES §7.
@@ -38,7 +37,7 @@ public final class Declarations {
             return List.of();
         }
 
-        List<Declaration> found = new ArrayList<>(chosen(sequences(hand), carres(hand)));
+        List<Declaration> found = new ArrayList<>(chosen(hand));
         // A belote is not in the contest: it is two named cards of the trump
         // suit and it always scores, so it never gives way to anything.
         found.addAll(belotes(hand, contract));
@@ -49,29 +48,50 @@ public final class Declarations {
      * Sequences and fours, with no card counted twice.
      *
      * <p>"Ако една и съща карта участва едновременно в каре и поредица,
-     * играчът избира кое от двете да обяви" — four nines and 7 8 9 of spades
-     * share the nine of spades, and only one of them may have it.
+     * играчът избира кое от двете да обяви" — four tens and 8 9 10 J of spades
+     * share the ten of spades, and only one of them may have it.
      *
      * <p>Declarations here are read off the hand rather than announced, so
-     * there is nobody to do the choosing. The choice is made the way a player
-     * would make it: take the most valuable first, and drop whatever needs a
-     * card already spoken for. Ties go to the four, which is the rarer thing
-     * to hold.
+     * there is nobody to do the choosing. It is made for the player, and made
+     * the way they would want it: every choice of fours is tried, the
+     * sequences are read again from the cards the fours leave, and the
+     * richest result is kept. Reading them again is what a player does at the
+     * table — four tens and 7 8 9 10 of spades is the four and a terz of
+     * 7 8 9, not the four alone. Ties go to the hand with more fours, which
+     * are the rarer thing to hold.
+     *
+     * <p>A belote is not part of this: the king and queen of trumps count as a
+     * belote whatever else they are in.
      */
-    private static List<Declaration> chosen(List<Declaration> sequences, List<Declaration> carres) {
-        List<Declaration> byWorth = Stream.concat(carres.stream(), sequences.stream())
-                .sorted(Comparator.comparingInt(Declaration::points).reversed())
-                .toList();
+    private static List<Declaration> chosen(List<Card> hand) {
+        List<Declaration> carres = carres(hand);
 
-        Set<Card> spokenFor = new HashSet<>();
-        List<Declaration> kept = new ArrayList<>();
-        for (Declaration declaration : byWorth) {
-            if (declaration.cards().stream().noneMatch(spokenFor::contains)) {
-                spokenFor.addAll(declaration.cards());
-                kept.add(declaration);
+        List<Declaration> best = List.of();
+        int bestPoints = -1;
+        int bestCarres = -1;
+        // At most two fours fit in eight cards, so at most four choices.
+        for (int taken = 0; taken < 1 << carres.size(); taken++) {
+            List<Declaration> option = new ArrayList<>();
+            Set<Card> spokenFor = new HashSet<>();
+            for (int i = 0; i < carres.size(); i++) {
+                if ((taken & 1 << i) != 0) {
+                    option.add(carres.get(i));
+                    spokenFor.addAll(carres.get(i).cards());
+                }
+            }
+            int fours = option.size();
+            option.addAll(sequences(hand.stream().filter(card -> !spokenFor.contains(card)).toList()));
+
+            int points = option.stream().mapToInt(Declaration::points).sum();
+            if (points > bestPoints || (points == bestPoints && fours > bestCarres)) {
+                best = option;
+                bestPoints = points;
+                bestCarres = fours;
             }
         }
-        return kept;
+        return best.stream()
+                .sorted(Comparator.comparingInt(Declaration::points).reversed())
+                .toList();
     }
 
     /** The longest run of three or more in each suit. */

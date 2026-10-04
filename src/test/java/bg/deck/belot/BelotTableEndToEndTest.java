@@ -59,6 +59,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
         BelotTurnService.class, BelotPlayerService.class, BelotSeedService.class, BelotStatsService.class})
 @TestPropertySource(properties = {
         "spring.liquibase.enabled=false",
+        // Played back to back here, with no screen to wait for.
+        "deck.belot.trick-pause=PT0S",
         "spring.jpa.hibernate.ddl-auto=create-drop",
         "spring.datasource.url=jdbc:h2:mem:belotendtoend;INIT=CREATE SCHEMA IF NOT EXISTS belot",
         "spring.datasource.username=sa",
