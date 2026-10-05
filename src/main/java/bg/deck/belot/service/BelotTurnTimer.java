@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
@@ -114,6 +115,10 @@ public class BelotTurnTimer {
             if (belotService.actFor(clock.dealId())) {
                 return;
             }
+        } catch (DataIntegrityViolationException alreadyTaken) {
+            // A screen reported the same deadline and acted first: the unique
+            // place of every bid and card refused this second go. Ordinary.
+            log.debug("Belot: the turn at table {} was already taken", clock.tableId());
         } catch (RuntimeException e) {
             // Somebody moved at the same moment, or something worse. Either
             // way the clock is read again below.

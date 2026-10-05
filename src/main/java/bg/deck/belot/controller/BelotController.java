@@ -11,6 +11,7 @@ import bg.deck.common.util.AuthenticatedUser;
 import bg.deck.common.util.RankLadder;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -75,10 +76,20 @@ public class BelotController {
      *
      * <p>Only a nudge: the server checks its own deadline, and does nothing
      * if the turn has not run out.
+     *
+     * <p>Four screens and the server's own timer all report the same
+     * deadline, so two of them acting on one turn at once is ordinary. The
+     * second is refused by the unique place every bid and card has, and that
+     * refusal is the answer "already done" — not a failure worth a 500 and a
+     * stack trace in the log.
      */
     @PostMapping("/timeout")
     public ResponseEntity<Void> timeout() {
-        belotService.timeUp(AuthenticatedUser.username());
+        try {
+            belotService.timeUp(AuthenticatedUser.username());
+        } catch (DataIntegrityViolationException alreadyTaken) {
+            // Somebody else acted for that seat a moment earlier.
+        }
         return ResponseEntity.accepted().build();
     }
 
