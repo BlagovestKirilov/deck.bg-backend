@@ -132,12 +132,22 @@ forgive.
 - [x] Per-player views — one `BelotStateResponse` per seat on `/topic/belot/{gameId}/{username}`, carrying that seat’s hand and the calls it may make. `BelotViewTest` checks no other seat’s cards appear in it.
 - [x] Provably fair dealing: the hash is committed when the table opens and travels in every view; hands are derived from seed + deal number and stored nowhere. The reveal at the end comes with the game’s finish.
 - [x] Inactivity: own timer (`BelotTurnTimer` — one per table, set to the deadline after each change commits, acting on a virtual thread; set again for every live table at startup), own timeout
-      (`deck.belot.turn-timeout`, 45s). **Answered: neither.** A dropped player
-      does not forfeit — their partner did nothing wrong — and the table does not
-      pause, or one person could hold three hostage. The table takes the least
-      consequential legal action for them: a pass while bidding, the first legal
-      card while playing. The deadline is sent to the client as a moment, so the
-      clock a player watches is the clock they are judged by.
+      (`deck.belot.turn-timeout`, 30s). The table does not pause, or one person
+      could hold three hostage: it takes the least consequential legal action
+      for whoever ran out — a pass while bidding, the first legal card while
+      playing — and counts it against them (`belot.seat.missed_turns`, migration
+      031). **The third time in a game their pair forfeits,** as at the santase
+      and tabla tables, so a table nobody is playing at any more ends rather than
+      playing itself for ever. A missed cut is not counted: the deck is cut for
+      them and no card changes. The other pair takes an ordinary win, and so does
+      the **partner** — they did nothing wrong; the table still tells them they
+      lost, and that it counts as a win. Whoever let it run out loses **twice the
+      rating**, still one loss on their record. In their last ten seconds the
+      player gets santase's "time is running out" card, without its Continue,
+      with how many misses are left, and the result says why the game ended
+      (`forfeit`, `forfeitedBy`). `BelotForfeitTest`. The deadline is sent to the
+      client as a moment, so the clock a player watches is the clock they are
+      judged by.
 - [x] Reconnect: `GET /belot/state` re-sends that seat’s whole view — hand, trick on the table, bidding so far, and the turn deadline — and the client asks for it when a tab comes back. Was: `GET /belot/state` already re-sends one seat’s view; what is missing is the play in progress, which does not exist yet.
 - [x] The play itself: `belot.play` holds one row per card; tricks, hands and whose turn it is are rebuilt from it. `POST /belot/play` enforces the turn and `LegalMoves`; the last card scores the deal onto the sheet and deals the next hand.
 - [x] Declarations are detected from the hands rather than announced — they are in the cards, and the cards are in the seed. **Simplification worth revisiting:** at a real table an unannounced declaration does not count.

@@ -12,6 +12,7 @@ import bg.deck.belot.engine.Team;
 import bg.deck.belot.engine.Trick;
 import bg.deck.belot.model.BelotDeal;
 import bg.deck.belot.model.BelotDealStatus;
+import bg.deck.belot.model.BelotForfeit;
 import bg.deck.belot.model.BelotGame;
 import bg.deck.belot.model.BelotGameStatus;
 import bg.deck.belot.model.BelotPlay;
@@ -66,6 +67,14 @@ public class BelotService {
 
     /** The catalogue code. Not a {@code GameType}: belot keeps out of that enum. */
     public static final String BELOT = "BELOT";
+
+    /**
+     * How many times a player's time may run out in one game. At the third
+     * their pair gives the game up, as at the santase and tabla tables — and
+     * a table nobody is playing at any more ends, rather than playing itself
+     * for ever.
+     */
+    public static final int MISSED_TURNS_TO_FORFEIT = 3;
 
     private final BelotTableService belotTableService;
     private final BelotDealService belotDealService;
@@ -226,8 +235,19 @@ public class BelotService {
 
         BelotGame table = seated.get();
         BelotSeat seat = seatFor(table, username);
-        belotDealService.current(table).ifPresent(belotDealService::abandon);
-        belotTableService.concede(table, seat);
+        forfeit(table, seat, BelotForfeit.SURRENDER);
+    }
+
+    /**
+     * The game goes to the other pair: the hand in progress is given up on,
+     * the result is written for all four, and the table is told.
+     */
+    private void forfeit(BelotGame table, BelotSeat seat, BelotForfeit how) {
+        belotDealService.current(table)
+                .filter(deal -> deal.getStatus() == BelotDealStatus.BIDDING
+                        || deal.getStatus() == BelotDealStatus.PLAYING)
+                .ifPresent(belotDealService::abandon);
+        belotTableService.concede(table, seat, how);
         belotStatsService.record(table);
 
         tellEveryone(table);
@@ -243,6 +263,13 @@ public class BelotService {
     private BelotGame tableFor(String username) {
         return belotTableService.tableOf(username).orElseThrow(
                 () -> new IllegalMoveException(username + " is not at a belot table"));
+    }
+
+    private BelotSeat seatAt(BelotGame table, Seat seat) {
+        return table.getSeats().stream()
+                .filter(taken -> taken.getSeat() == seat)
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException("No " + seat + " at table " + table.getId()));
     }
 
     private BelotSeat seatFor(BelotGame table, String username) {
@@ -307,9 +334,22 @@ public class BelotService {
 
     private boolean actOn(BelotDeal deal) {
         BelotGame table = deal.getGame();
+        // Read before acting: acting moves the turn on.
+        Optional<Seat> absent = belotTurnService.toAct(deal);
+        boolean cutting = deal.isAwaitingCut();
         if (!belotTurnService.actForAbsentPlayer(table, deal)) {
             return false;
         }
+
+        // A missed cut is not counted. The deck is cut for them and no card
+        // changes, so it is not a turn the table lost; a bid or a card is.
+        // Nor is a turn that ended the game: there is nothing left to give up.
+        if (absent.isPresent() && !cutting && table.getStatus() != BelotGameStatus.FINISHED
+                && belotTableService.missedTurn(table, absent.get()) >= MISSED_TURNS_TO_FORFEIT) {
+            forfeit(table, seatAt(table, absent.get()), BelotForfeit.INACTIVITY);
+            return true;
+        }
+
         belotDealService.passWhereThereIsNoChoice(deal);
 
         // A thrown-in or finished hand is followed by the next one, exactly
@@ -370,10 +410,12 @@ public class BelotService {
                 table.getId(),
                 table.getStatus(),
                 table.getWinnerTeam(),
+                table.getForfeit(),
+                table.getForfeitedBy(),
                 table.getServerSeedHash(),
                 table.getSeats().stream()
                         .map(taken -> new BelotSeatView(taken.getSeat(), taken.team(),
-                                taken.getUsername(), cardsLeft(deal, taken.getSeat())))
+                                taken.getUsername(), cardsLeft(deal, taken.getSeat()), taken.getMissedTurns()))
                         .toList(),
                 seat,
                 deal.map(BelotDeal::getDealNumber).orElse(null),

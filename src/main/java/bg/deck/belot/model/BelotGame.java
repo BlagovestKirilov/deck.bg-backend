@@ -57,6 +57,15 @@ public class BelotGame extends BaseEntity {
     @Column(name = "winner_team", length = 20)
     private Team winnerTeam;
 
+    /** How the game ended early, if it did: given up, or left to run out. */
+    @Enumerated(EnumType.STRING)
+    @Column(length = 12)
+    private BelotForfeit forfeit;
+
+    /** Whose doing the forfeit was. Null for a game played to its end. */
+    @Column(name = "forfeited_by", length = 20)
+    private String forfeitedBy;
+
     @Column(name = "server_seed", nullable = false)
     private byte[] serverSeed;
 

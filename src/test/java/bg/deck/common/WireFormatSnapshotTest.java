@@ -10,6 +10,7 @@ import bg.deck.belot.engine.Seat;
 import bg.deck.belot.engine.Suit;
 import bg.deck.belot.engine.Team;
 import bg.deck.belot.model.BelotDealStatus;
+import bg.deck.belot.model.BelotForfeit;
 import bg.deck.belot.model.BelotGameStatus;
 import bg.deck.belot.model.request.BelotBidRequest;
 import bg.deck.belot.model.request.BelotCutRequest;
@@ -142,11 +143,13 @@ class WireFormatSnapshotTest {
                 ID,
                 BelotGameStatus.PLAYING,
                 null,
+                BelotForfeit.INACTIVITY,
+                "ivan",
                 "0f5c1b6c9b4b4d2f8a1e6d3c2b7a9e8f0a1b2c3d4e5f60718293a4b5c6d7e8f9",
-                List.of(new BelotSeatView(Seat.NORTH, Team.NORTH_SOUTH, "petko91", 5),
-                        new BelotSeatView(Seat.WEST, Team.EAST_WEST, "ninja2011", 5),
-                        new BelotSeatView(Seat.SOUTH, Team.NORTH_SOUTH, "gosho", 5),
-                        new BelotSeatView(Seat.EAST, Team.EAST_WEST, "ivan", 5)),
+                List.of(new BelotSeatView(Seat.NORTH, Team.NORTH_SOUTH, "petko91", 5, 0),
+                        new BelotSeatView(Seat.WEST, Team.EAST_WEST, "ninja2011", 5, 1),
+                        new BelotSeatView(Seat.SOUTH, Team.NORTH_SOUTH, "gosho", 5, 0),
+                        new BelotSeatView(Seat.EAST, Team.EAST_WEST, "ivan", 5, 3)),
                 Seat.NORTH,
                 3,
                 Seat.WEST,

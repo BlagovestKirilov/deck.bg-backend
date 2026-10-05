@@ -1,6 +1,7 @@
 package bg.deck.belot.service;
 
 import bg.deck.belot.engine.Seat;
+import bg.deck.belot.model.BelotForfeit;
 import bg.deck.belot.model.BelotGame;
 import bg.deck.belot.model.BelotGameStatus;
 import bg.deck.belot.model.BelotMatchmaking;
@@ -141,14 +142,33 @@ public class BelotTableService {
      * is invented to make it look like one — what is recorded is who won.
      */
     @Transactional
-    public void concede(BelotGame game, BelotSeat seat) {
+    public void concede(BelotGame game, BelotSeat seat, BelotForfeit how) {
         game.setWinnerTeam(seat.team().opponent());
         game.setStatus(BelotGameStatus.FINISHED);
+        game.setForfeit(how);
+        game.setForfeitedBy(seat.getUsername());
         belotGameRepository.save(game);
 
-        log.info("Belot: {} conceded table {}, so it goes to {} ({}-{})",
-                seat.getUsername(), game.getId(), game.getWinnerTeam(),
-                game.getNorthSouthScore(), game.getEastWestScore());
+        log.info("Belot: {} {} table {}, so it goes to {} ({}-{})",
+                seat.getUsername(), how == BelotForfeit.INACTIVITY ? "ran out of time three times at" : "conceded",
+                game.getId(), game.getWinnerTeam(), game.getNorthSouthScore(), game.getEastWestScore());
+    }
+
+    /**
+     * One more turn the table had to take for this seat.
+     *
+     * @return how many that makes, over the whole game
+     */
+    @Transactional
+    public int missedTurn(BelotGame game, Seat seat) {
+        BelotSeat missed = game.getSeats().stream()
+                .filter(taken -> taken.getSeat() == seat)
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException("No " + seat + " at table " + game.getId()));
+        int missedTurns = missed.missTurn();
+        belotGameRepository.save(game);
+        log.info("Belot: {} at table {} has now missed {} turn(s)", missed.getUsername(), game.getId(), missedTurns);
+        return missedTurns;
     }
 
     /**
@@ -171,6 +191,10 @@ public class BelotTableService {
                     seat.setUsername(Constants.DELETED_PLAYER);
                     renamed++;
                 }
+            }
+            // A game they forfeited names them a second time.
+            if (username.equals(game.getForfeitedBy())) {
+                game.setForfeitedBy(Constants.DELETED_PLAYER);
             }
             belotGameRepository.save(game);
         }

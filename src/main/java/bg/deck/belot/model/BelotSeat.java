@@ -38,6 +38,13 @@ public class BelotSeat extends BaseEntity {
     @Column(nullable = false, length = 20)
     private String username;
 
+    /**
+     * Turns the table had to take for this player because their time ran
+     * out, over the whole game. The third gives the game away.
+     */
+    @Column(name = "missed_turns", nullable = false)
+    private int missedTurns;
+
     public BelotSeat(Seat seat, String username) {
         this.seat = seat;
         this.username = username;
@@ -45,5 +52,10 @@ public class BelotSeat extends BaseEntity {
 
     public Team team() {
         return Team.of(seat);
+    }
+
+    /** One more turn the table took for them. @return how many that makes */
+    public int missTurn() {
+        return ++missedTurns;
     }
 }

@@ -12,7 +12,9 @@ import bg.deck.belot.engine.Team;
  * @param seat      where it is
  * @param team      which pair it belongs to
  * @param username  who is sitting there
- * @param cardsLeft how many cards they are still holding
+ * @param cardsLeft   how many cards they are still holding
+ * @param missedTurns how many times the table has had to play for them this
+ *                    game; the third gives the game away
  */
-public record BelotSeatView(Seat seat, Team team, String username, int cardsLeft) {
+public record BelotSeatView(Seat seat, Team team, String username, int cardsLeft, int missedTurns) {
 }

@@ -29,27 +29,33 @@
     "gameId" : "11111111-2222-3333-4444-555555555555",
     "status" : "PLAYING",
     "winnerTeam" : null,
+    "forfeit" : "INACTIVITY",
+    "forfeitedBy" : "ivan",
     "serverSeedHash" : "0f5c1b6c9b4b4d2f8a1e6d3c2b7a9e8f0a1b2c3d4e5f60718293a4b5c6d7e8f9",
     "seats" : [ {
       "seat" : "NORTH",
       "team" : "NORTH_SOUTH",
       "username" : "petko91",
-      "cardsLeft" : 5
+      "cardsLeft" : 5,
+      "missedTurns" : 0
     }, {
       "seat" : "WEST",
       "team" : "EAST_WEST",
       "username" : "ninja2011",
-      "cardsLeft" : 5
+      "cardsLeft" : 5,
+      "missedTurns" : 1
     }, {
       "seat" : "SOUTH",
       "team" : "NORTH_SOUTH",
       "username" : "gosho",
-      "cardsLeft" : 5
+      "cardsLeft" : 5,
+      "missedTurns" : 0
     }, {
       "seat" : "EAST",
       "team" : "EAST_WEST",
       "username" : "ivan",
-      "cardsLeft" : 5
+      "cardsLeft" : 5,
+      "missedTurns" : 3
     } ],
     "yourSeat" : "NORTH",
     "dealNumber" : 3,
