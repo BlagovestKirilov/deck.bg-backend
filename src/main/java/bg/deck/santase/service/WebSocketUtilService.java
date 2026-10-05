@@ -47,6 +47,21 @@ public class WebSocketUtilService {
         }
     }
 
+    /**
+     * Both cards of a trick on the table, and whose it is. Sent before the
+     * trick is taken, so both screens can ring the winning card while the
+     * two are still out.
+     */
+    public void updateGameStateWithTrickTaker(Game game, String takenBy) {
+        for (Player player : List.of(game.getFirstPlayer(), game.getSecondPlayer())) {
+            GameStateResponse response = buildBaseGameStateResponse(game, player.getUsername())
+                    .toBuilder()
+                    .trickTakenBy(takenBy)
+                    .build();
+            webSocketService.notifyGameUpdate(game.getId().toString(), player.getUsername(), response);
+        }
+    }
+
     public void updateGameStateWithTrickWinner(Game game, String trickWinner) {
         List<Player> players = List.of(game.getFirstPlayer(), game.getSecondPlayer());
 
@@ -75,6 +90,8 @@ public class WebSocketUtilService {
         Player opponentPlayer = game.getOpponent(player);
 
         GameState state = game.getState();
+        boolean opponentsClock = game.getWinner() == null && state.isInTurn(opponentPlayer)
+                && state.getNextMoveTime() != null;
 
         CardDTO playedCard = cardMapper.toDTO(player.getPlayedCard());
 
@@ -103,6 +120,8 @@ public class WebSocketUtilService {
                 .inactivityCount(player.getInactivityCount())
                 .nextMoveTimeInSeconds(state.isInTurn(player) ?
                         Math.toIntExact(Duration.between(Instant.now(), state.getNextMoveTime()).getSeconds()) : null)
+                .opponentTurnStartedAt(opponentsClock ? state.turnStartedAt() : null)
+                .opponentDeadline(opponentsClock ? state.getNextMoveTime() : null)
                 .build();
     }
 }

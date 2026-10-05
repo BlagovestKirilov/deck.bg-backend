@@ -24,6 +24,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.InOrder;
 
 import java.util.ArrayList;
 import java.util.UUID;
@@ -37,6 +38,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.inOrder;
 
 @ExtendWith(MockitoExtension.class)
 class SantaseServiceTest {
@@ -153,10 +155,15 @@ class SantaseServiceTest {
 
             when(gameUtilService.getUsername()).thenReturn(p1Name);
             when(gameUtilService.findGameByUsername(p1Name)).thenReturn(game);
+            when(gameUtilService.determineWinner(game)).thenReturn(p1); // the ten beats the king
 
             santaseService.playCard(new CardRequest(p1Card.getId()));
 
-            verify(gameUtilService).evaluateTrick(game);
+            // Both screens are told whose the trick is while its two cards are
+            // still out, and only then is it taken.
+            InOrder order = inOrder(webSocketUtilService, gameUtilService);
+            order.verify(webSocketUtilService).updateGameStateWithTrickTaker(game, p1Name);
+            order.verify(gameUtilService).evaluateTrick(game);
         }
 
         @Test

@@ -140,7 +140,8 @@ public class SantaseService {
             log.info(LogConstants.PLAY_CARD_TRICK_EVALUATING,
                     game.getFirstPlayer().getPlayedCard(), game.getSecondPlayer().getPlayedCard());
 
-            webSocketUtilService.updateGameState(game);
+            webSocketUtilService.updateGameStateWithTrickTaker(game,
+                    gameUtilService.determineWinner(game).getUsername());
             gameUtilService.evaluateTrick(game);
         } else {
             log.info(LogConstants.PLAY_CARD_SUCCESS, username, cardForRemoval.getId());
@@ -355,6 +356,7 @@ public class SantaseService {
         gameInactivityService.updateNextMoveTime(game);
     }
 
+    @Transactional
     public void extendNextMoveTime() {
         String username = gameUtilService.getUsername();
         Game game = gameUtilService.findGameByUsername(username);
@@ -372,5 +374,9 @@ public class SantaseService {
 
         gameUtilService.saveGame(game);
         gameInactivityService.updateNextMoveTime(game);
+        // The opponent is watching this clock burn down: a fresh budget
+        // has to reach their screen, or the bar sits empty while the player
+        // it belongs to still has twenty seconds.
+        webSocketUtilService.updateGameState(game, game.getOpponent(player).getUsername());
     }
 }

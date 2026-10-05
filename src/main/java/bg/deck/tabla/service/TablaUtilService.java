@@ -353,6 +353,8 @@ public class TablaUtilService {
     public TablaStateResponse buildState(Game game, String username) {
         Player player = game.getPlayerByUsername(username);
         TablaGameState state = game.getTablaState();
+        boolean opponentsClock = game.getWinner() == null && state.getNextMoveTime() != null
+                && mustAct(game, game.getOpponent(player));
 
         Side side = sideOf(game, player);
         Side other = side.opponent();
@@ -421,6 +423,8 @@ public class TablaUtilService {
                         ? Math.toIntExact(Math.max(0,
                                 Duration.between(Instant.now(), state.getNextMoveTime()).getSeconds()))
                         : null)
+                .opponentTurnStartedAt(opponentsClock ? state.turnStartedAt() : null)
+                .opponentDeadline(opponentsClock ? state.getNextMoveTime() : null)
                 .serverSeedHash(game.getServerSeedHash())
                 // The seed is what makes past rolls verifiable, so it must stay
                 // secret until there are no future rolls left to predict.

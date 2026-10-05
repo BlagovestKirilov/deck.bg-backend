@@ -377,7 +377,12 @@ public class GameUtilService {
                 && game.getSecondPlayer().getHand().isEmpty();
     }
 
-    protected Player determineWinner(Game game) {
+    /**
+     * Who takes the trick now on the table. Reads the two cards and changes
+     * nothing, so it can be asked before the trick is taken — for the screens
+     * to show the winning card while both are still out.
+     */
+    public Player determineWinner(Game game) {
         GameState state = game.getState();
         Card firstPlayerCard = game.getFirstPlayer().getPlayedCard();
         Card secondPlayerCard = game.getSecondPlayer().getPlayedCard();

@@ -7,6 +7,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Builder;
 
+import java.time.Instant;
 import java.util.List;
 
 /**
@@ -64,6 +65,12 @@ public record TablaStateResponse(
 
         int inactivityCount,
         Integer nextMoveTimeInSeconds,
+        /**
+         * The opponent's clock while they must act — their turn, or their die
+         * still to throw in the opening: when it began and when it runs out.
+         */
+        Instant opponentTurnStartedAt,
+        Instant opponentDeadline,
 
         /** Nobody has started yet: both players are throwing one die each. */
         boolean openingPhase,

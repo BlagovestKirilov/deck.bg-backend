@@ -41,6 +41,15 @@ public interface TurnClock {
 
     Instant getNextMoveTime();
 
+    /**
+     * When the turn now running began: a whole budget before its deadline.
+     * After a "Continue" that is the moment it was pressed, since that gives
+     * a fresh budget. Null when there is no deadline.
+     */
+    default Instant turnStartedAt() {
+        return getNextMoveTime() == null ? null : getNextMoveTime().minusSeconds(turnSeconds());
+    }
+
     /** Pushes the deadline out by a fresh {@link #TURN_SECONDS}. */
     void extendNextMoveTime();
 

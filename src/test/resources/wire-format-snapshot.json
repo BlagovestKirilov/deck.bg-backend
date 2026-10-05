@@ -248,13 +248,16 @@
     "isClosed" : true,
     "winnerUsername" : "petko91",
     "trickWinnerUsername" : "petko91",
+    "trickTakenBy" : "ninja2011",
     "surrenderPlayerUsername" : "ninja2011",
     "trickFirstPlayerScore" : 66,
     "trickSecondPlayerScore" : 40,
     "bonus" : 20,
     "opponentPlayerBonus" : 40,
     "inactivityCount" : 1,
-    "nextMoveTimeInSeconds" : 18
+    "nextMoveTimeInSeconds" : 18,
+    "opponentTurnStartedAt" : "2026-09-27T10:15:00Z",
+    "opponentDeadline" : "2026-09-27T10:15:33Z"
   },
   "HopDTO" : {
     "from" : 24,
@@ -322,6 +325,8 @@
     "resultKind" : "GAMMON",
     "inactivityCount" : 1,
     "nextMoveTimeInSeconds" : 40,
+    "opponentTurnStartedAt" : "2026-09-27T10:15:00Z",
+    "opponentDeadline" : "2026-09-27T10:15:58Z",
     "openingPhase" : true,
     "openingThrows" : [ {
       "mine" : 5,

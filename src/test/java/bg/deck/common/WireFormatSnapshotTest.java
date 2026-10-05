@@ -203,9 +203,11 @@ class WireFormatSnapshotTest {
                 .firstPlayerUsername("petko91").firstPlayerResult(3)
                 .secondPlayerUsername("ninja2011").secondPlayerResult(2)
                 .isOnTurn(true).isClosed(true)
-                .winnerUsername("petko91").trickWinnerUsername("petko91").surrenderPlayerUsername("ninja2011")
+                .winnerUsername("petko91").trickWinnerUsername("petko91").trickTakenBy("ninja2011").surrenderPlayerUsername("ninja2011")
                 .trickFirstPlayerScore(66).trickSecondPlayerScore(40)
                 .bonus(20).opponentPlayerBonus(40).inactivityCount(1).nextMoveTimeInSeconds(18)
+                .opponentTurnStartedAt(Instant.parse("2026-09-27T10:15:00Z"))
+                .opponentDeadline(Instant.parse("2026-09-27T10:15:33Z"))
                 .build());
 
         HopDTO hop = new HopDTO(24, 18, 6, true, false, false);
@@ -224,6 +226,8 @@ class WireFormatSnapshotTest {
                 .legalHops(List.of(hop)).comboHops(List.of(combo)).pendingHops(List.of(hop))
                 .winnerUsername("petko91").surrenderPlayerUsername("ninja2011").resultKind("GAMMON")
                 .inactivityCount(1).nextMoveTimeInSeconds(40)
+                .opponentTurnStartedAt(Instant.parse("2026-09-27T10:15:00Z"))
+                .opponentDeadline(Instant.parse("2026-09-27T10:15:58Z"))
                 .openingPhase(true).openingThrows(List.of(opening)).openingMine(5).openingOpponent(2)
                 .serverSeedHash("abc").serverSeed("def")
                 .build());
