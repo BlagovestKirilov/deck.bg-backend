@@ -21,7 +21,7 @@ import java.util.Map;
  * legally can" and "use the higher die if you can only play one" — are not
  * encoded as per-move heuristics. They fall out of a full-turn search
  * ({@link #maxUsed}) plus an extendability check on every partial move
- * ({@link #isPartialLegal}).
+ * ({@link #legalTurnHops}).
  */
 public final class BackgammonRules {
 
@@ -328,12 +328,6 @@ public final class BackgammonRules {
             out.set(seen, combo);
             taken.put(key, takes);
         }
-    }
-
-    /** Whether a specific hop is a legal choice right now. */
-    public static boolean isPartialLegal(BoardState board, Side side, Hop hop, int[] remainingDice,
-                                         int usedSoFar, int maxDiceUsable) {
-        return legalTurnHops(board, side, remainingDice, usedSoFar, maxDiceUsable).contains(hop);
     }
 
     /* ------------------------------------------------------------------

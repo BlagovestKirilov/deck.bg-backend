@@ -352,7 +352,6 @@ public class TablaUtilService {
     /** The position from one player's point of view, with their legal moves. */
     public TablaStateResponse buildState(Game game, String username) {
         Player player = game.getPlayerByUsername(username);
-        Player opponent = game.getOpponent(player);
         TablaGameState state = game.getTablaState();
 
         Side side = sideOf(game, player);

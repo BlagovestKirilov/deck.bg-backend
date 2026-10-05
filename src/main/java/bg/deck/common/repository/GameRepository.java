@@ -10,15 +10,6 @@ import java.util.List;
 import java.util.UUID;
 
 public interface GameRepository extends JpaRepository<Game, UUID> {
-    @Query("""
-                 SELECT game FROM Game game
-                 WHERE (game.firstPlayer.user.username = :username
-                    OR game.secondPlayer.user.username = :username)
-                 AND game.winner IS NULL
-                 ORDER BY game.createdAt DESC
-            """)
-    List<Game> findActiveGamesByUsername(@Param("username") String username);
-
     /**
      * Active game of one specific type. Without the type filter a табла search
      * would be refused while a Santase game is still running.

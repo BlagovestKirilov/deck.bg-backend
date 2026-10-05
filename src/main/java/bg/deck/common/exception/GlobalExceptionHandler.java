@@ -67,8 +67,7 @@ public class GlobalExceptionHandler {
      * would turn an ordinary double-tap into a 500.
      */
     @ExceptionHandler(org.springframework.orm.ObjectOptimisticLockingFailureException.class)
-    public ResponseEntity<ErrorResponse> handleOptimisticLock(
-            org.springframework.orm.ObjectOptimisticLockingFailureException ex, HttpServletRequest request) {
+    public ResponseEntity<ErrorResponse> handleOptimisticLock(HttpServletRequest request) {
         log.warn("Concurrent modification on {}", request.getRequestURI());
         return buildResponse(HttpStatus.CONFLICT, "Ходът вече беше отигран.", request.getRequestURI());
     }

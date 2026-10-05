@@ -97,14 +97,4 @@ public final class MoverView {
         }
         return true;
     }
-
-    /** Highest occupied point in the mover's home board, or 0 when home is empty. */
-    public int highestOccupiedHomePoint() {
-        for (int p = HOME_HIGH; p >= 1; p--) {
-            if (at(p) > 0) {
-                return p;
-            }
-        }
-        return 0;
-    }
 }

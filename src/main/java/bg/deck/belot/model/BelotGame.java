@@ -85,10 +85,6 @@ public class BelotGame extends BaseEntity {
         seats.add(seat);
     }
 
-    public int scoreOf(Team team) {
-        return team == Team.NORTH_SOUTH ? northSouthScore : eastWestScore;
-    }
-
     public void addScore(Team team, int points) {
         if (team == Team.NORTH_SOUTH) {
             northSouthScore += points;
