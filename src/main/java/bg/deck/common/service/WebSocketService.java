@@ -5,7 +5,6 @@ import bg.deck.common.model.response.SearchGameResponse;
 import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -17,6 +16,18 @@ import static bg.deck.common.constant.Constants.NOTIFY_GAME_DESTINATION;
 import static bg.deck.common.constant.Constants.NOTIFY_GAME_SEARCH_DESTINATION;
 import static bg.deck.common.constant.Constants.NOTIFY_SEARCH_BY_GAME_DESTINATION;
 
+/**
+ * Sends each player what changed, a message at a time and in order.
+ *
+ * <p>Not {@code @Async}. Every send already leaves the caller at once: it
+ * takes a slot in that player's queue and is handed to a virtual thread,
+ * which turns the state into JSON and sends it. {@code @Async} on top found
+ * no executor to use, so Spring started a new platform thread for every call
+ * — four for every belot move — and two updates for one player then raced
+ * each other to the queue, so the older could take the earlier slot and
+ * reach the screen last. Called directly, the queue keeps the order the
+ * table changed in.
+ */
 @RequiredArgsConstructor
 @Service
 public class WebSocketService {
@@ -30,20 +41,17 @@ public class WebSocketService {
      * The game topic is keyed by game id, so both games share it safely and no
      * client-side change is needed for the destination.
      */
-    @Async
     public void notifyGameUpdate(String gameId, String username, Object gameState) {
         String destination = String.format(NOTIFY_GAME_DESTINATION, gameId, username);
         enqueueMessage(username, () -> messagingTemplate.convertAndSend(destination, gameState));
     }
 
     /** One seat’s view of a belot table. Never the table’s view: it holds a hand. */
-    @Async
     public void notifyBelotUpdate(String username, Object state) {
         String destination = String.format(NOTIFY_BELOT_DESTINATION, username);
         enqueueMessage(username, () -> messagingTemplate.convertAndSend(destination, state));
     }
 
-    @Async
     public void notifyGameSearch(String username, SearchGameResponse searchGameResponse) {
         String destination = String.format(NOTIFY_GAME_SEARCH_DESTINATION, username);
         enqueueMessage(username, () -> messagingTemplate.convertAndSend(destination, searchGameResponse));
@@ -54,7 +62,6 @@ public class WebSocketService {
      * legacy un-scoped one as well so a client running the old build during a
      * rolling deploy still receives its match.
      */
-    @Async
     public void notifyGameSearch(String username, GameType gameType, SearchGameResponse response) {
         String scoped = String.format(NOTIFY_SEARCH_BY_GAME_DESTINATION,
                 gameType.name().toLowerCase(), username);
