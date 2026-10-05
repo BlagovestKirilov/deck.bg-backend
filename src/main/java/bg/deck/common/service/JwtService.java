@@ -28,14 +28,14 @@ public class JwtService {
         Map<String, Object> claims = new HashMap<>();
         claims.put(ROLE, user.getRole().name());
         claims.put(USERNAME, user.getUsername());
-        return buildToken(claims, user, jwtProperties.getExpiration());
+        return buildToken(claims, user, jwtProperties.expiration());
     }
 
     public String generateRefreshToken(User user) {
         Map<String, Object> claims = new HashMap<>();
         claims.put(ROLE, user.getRole().name());
         claims.put(USERNAME, user.getUsername());
-        return buildToken(claims, user, jwtProperties.getRefreshExpiration());
+        return buildToken(claims, user, jwtProperties.refreshExpiration());
     }
 
     private String buildToken(Map<String, Object> claims, User user, long expiration) {
@@ -49,7 +49,7 @@ public class JwtService {
     }
 
     private SecretKey getSignInKey() {
-        byte[] keyBytes = Decoders.BASE64.decode(jwtProperties.getSecretKey());
+        byte[] keyBytes = Decoders.BASE64.decode(jwtProperties.secretKey());
         return Keys.hmacShaKeyFor(keyBytes);
     }
 

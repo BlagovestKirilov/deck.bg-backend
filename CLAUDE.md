@@ -167,7 +167,11 @@ Two things that hide an unused import:
 class.**
 
 - Records: `EmailProperties`, `SchedulingProperties`, `JobSchedule` — read once
-  at startup, never written to.
+  at startup, never written to. `JwtProperties` (in `security`) and
+  `BelotProperties` (in `belot/config`) are records for the same reason,
+  registered by `SecurityConfig` and `BelotConfig`. `JwtProperties` overrides
+  `toString()`: a record prints every component, and its key must never
+  reach a log.
 - Classes: `Config`, `SchedulingConfig`, `ExecutorConfig`, `DevCorsConfig`,
   `WebSocketConfig`, `WebSocketEventListener`, `TemplateLoader`.
 
