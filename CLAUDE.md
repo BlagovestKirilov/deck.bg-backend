@@ -11,7 +11,7 @@ all four.
 - `bg.deck.tabla` — `controller`, `service`, `model` (`dto`, `request`,
   `response`), `engine` (the backgammon rules), `enums`, `exception`.
 - `bg.deck.belot` — a package apart, with its own `controller`, `service`,
-  `scheduler`, `repository`, `model`, `config` and `engine` — see **The belot**
+  `repository`, `model`, `config` and `engine` — see **The belot**
   **seam** below before writing anything in it.
 - `bg.deck.common`: `controller`, `service`, `scheduler`, `repository`,
   `model`, `security`, `config`, `constant`, `enums`, `exception`, `util` —
@@ -214,7 +214,11 @@ Three things that look reasonable and are not:
 - **Do not widen `Game`.** Two seats, one state column per game type. Belot
   needs four seats and two teams, and has its own tables.
 - **Do not reuse `GameInactivityService`.** It branches on `GameType` and works
-  on `Game`. Belot has `BelotTurnScheduler`, built on the same pattern.
+  on `Game`. Belot has `BelotTurnTimer`, built on the same pattern: one
+  timer per table, set to the deadline the table was just sent, firing on a
+  virtual thread. `BelotService` publishes the clock (`BelotTurnClock`) from
+  the one place every change ends — `tellEveryone` — and the timer sets it
+  once that change commits. No sweep, no ShedLock row.
 
 A fourth thing is true of the rating, and it is a choice rather than a rule:
 **a belot result moves both partners equally.** `TeamElo` rates a pair as the

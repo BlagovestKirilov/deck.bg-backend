@@ -34,11 +34,9 @@ import org.springframework.context.annotation.Import;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
-import java.time.Instant;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -135,17 +133,13 @@ class BelotSurrenderTest {
         BelotGame table = seatFour();
         BelotDeal deal = deals.current(table).orElseThrow();
 
-        // Wind the clock back past any plausible timeout, so the only reason
-        // the sweep could skip this deal is the concession.
-        deal.setTurnStartedAt(Instant.now().minusSeconds(3600));
-        deals.save(deal);
-
-        assertFalse(deals.waitingSince(Instant.now()).isEmpty(), "the sweep would have taken it");
+        assertTrue(belot.clockOf(deal.getId()).isPresent(), "the clock is running before the concession");
 
         belot.surrender("petko91");
 
-        assertTrue(deals.waitingSince(Instant.now()).isEmpty(),
+        assertTrue(belot.clockOf(deal.getId()).isEmpty(),
                 "a hand given up on is not a hand somebody is late for");
+        assertTrue(deals.inProgress().isEmpty(), "nor one the timers are set again for after a restart");
     }
 
     @Test

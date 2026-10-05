@@ -48,12 +48,6 @@ deck:
   belot:
     # How long a seat may think before the table acts for them.
     turn-timeout: PT30S
-    # How often the tables are checked for a seat that has run out. Every
-    # second, because this is how late the table acts after the clock a
-    # player is watching reaches 0: at ten seconds it sat on 0 for up to ten.
-    # The check is one indexed read (belot_deal_turn_idx) and a ShedLock row.
-    turn-sweep: PT1S
-    sweep-delay: PT1M
     # How long a finished trick stays out before the next can be led. The
     # client shows it held and then swept to whoever took it in this time;
     # a lead inside it would pull the trick off every other screen before

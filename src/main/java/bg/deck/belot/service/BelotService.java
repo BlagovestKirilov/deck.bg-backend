@@ -16,6 +16,7 @@ import bg.deck.belot.model.BelotGame;
 import bg.deck.belot.model.BelotGameStatus;
 import bg.deck.belot.model.BelotPlay;
 import bg.deck.belot.model.BelotSeat;
+import bg.deck.belot.model.event.BelotTurnClock;
 import bg.deck.belot.model.request.BelotBidRequest;
 import bg.deck.belot.model.request.BelotCutRequest;
 import bg.deck.belot.model.request.BelotPlayRequest;
@@ -37,6 +38,7 @@ import bg.deck.common.service.WebSocketService;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -73,6 +75,7 @@ public class BelotService {
     private final BelotStatsService belotStatsService;
     private final AvailabilityService availabilityService;
     private final WebSocketService webSocketService;
+    private final ApplicationEventPublisher eventPublisher;
 
     /**
      * Sits a player down, and deals if that filled the table.
@@ -247,50 +250,48 @@ public class BelotService {
                 () -> new IllegalStateException(username + " has no seat at table " + table.getId()));
     }
 
-    /**
-     * The deals somebody has been sitting on for longer than a turn lasts.
-     *
-     * <p>Read here and acted on one at a time by the sweep, each in a
-     * transaction of its own: a table whose deal has moved on since it was
-     * read should cost the others nothing, and a failure on one is not a
-     * reason to leave the rest waiting.
-     *
-     * @see bg.deck.belot.scheduler.BelotTurnScheduler for why the loop is not here
-     */
-    public List<UUID> dealsOutOfTime() {
-        return belotDealService.waitingSince(Instant.now().minus(belotTurnService.shortestWait()))
-                .stream()
-                .map(BelotDeal::getId)
+    /** The clock of every table with a turn on, for setting the timers again after a restart. */
+    @Transactional(readOnly = true)
+    public List<BelotTurnClock> liveClocks() {
+        return belotDealService.inProgress().stream()
+                .map(this::clockFor)
+                .filter(BelotTurnClock::isRunning)
                 .toList();
+    }
+
+    /** Where this deal's clock stands now, read fresh — empty when nobody is to act. */
+    @Transactional(readOnly = true)
+    public Optional<BelotTurnClock> clockOf(UUID dealId) {
+        return belotDealService.byId(dealId)
+                .map(this::clockFor)
+                .filter(BelotTurnClock::isRunning);
     }
 
     /**
      * Acts for the seat at this deal whose time is up, and tells its table.
      *
-     * <p>Must be called from another bean. Its transaction is what loads the
-     * bids and the plays, and the sweep that used to call it from inside this
-     * class got no transaction at all — every table with an absent player
-     * threw on the first lazy collection, the sweep logged a warning nobody
-     * was reading, and the table sat there for ever. Which is what a player
-     * saw: a clock reaching zero and nothing happening.
+     * <p>Must be called from another bean — {@link BelotTurnTimer} does. Its
+     * transaction is what loads the bids and the plays, and a caller inside
+     * this class gets no transaction at all: every table with an absent
+     * player threw on the first lazy collection, and the table sat there for
+     * ever. Which is what a player saw: a clock reaching zero and nothing
+     * happening.
      *
      * @return whether there was anything to do
      */
     @Transactional
     public boolean actFor(UUID dealId) {
-        // Read again, in this transaction. The one the sweep is holding was
-        // loaded in another that has since closed, and a detached deal cannot
-        // load the bids or the plays that deciding anything needs.
+        // Read in this transaction: a detached deal cannot load the bids or
+        // the plays that deciding anything needs.
         return belotDealService.byId(dealId).map(this::actOn).orElse(false);
     }
 
     /**
      * A screen at this player's table says the clock has reached nought.
      *
-     * <p>The sweep would get there too, but only on its next pass: a player
-     * watching a clock stand at 0 for a second or two reads it as the table
-     * having stopped. So every screen at the table says so the moment its
-     * clock runs out, and the first to arrive is acted on. The rest find the
+     * <p>{@link BelotTurnTimer} gets there too, a moment after the deadline.
+     * The screens are kept as well: whichever arrives first is acted on,
+     * so a table never waits on one of them alone. The rest find the
      * turn already taken and do nothing — and should two arrive together,
      * the second is refused by the unique place every bid and card has.
      *
@@ -324,8 +325,22 @@ public class BelotService {
         return true;
     }
 
+    /**
+     * Tells all four what happened, and sets the turn clock to match.
+     *
+     * <p>Every change to a table ends here, so this is the one place the
+     * clock is published from: whatever moved the table, its timer follows.
+     */
     private void tellEveryone(BelotGame table) {
         table.getSeats().forEach(seat -> tell(table, seat.getUsername()));
+        eventPublisher.publishEvent(belotDealService.current(table)
+                .map(this::clockFor)
+                .orElseGet(() -> new BelotTurnClock(table.getId(), null, null)));
+    }
+
+    private BelotTurnClock clockFor(BelotDeal deal) {
+        return new BelotTurnClock(deal.getGame().getId(), deal.getId(),
+                belotTurnService.deadline(deal).orElse(null));
     }
 
     private void tell(BelotGame table, String username) {

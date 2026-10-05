@@ -131,7 +131,7 @@ forgive.
 - [x] Turn order counter-clockwise; the deal moves one seat along each hand, thrown-in hands included.
 - [x] Per-player views — one `BelotStateResponse` per seat on `/topic/belot/{gameId}/{username}`, carrying that seat’s hand and the calls it may make. `BelotViewTest` checks no other seat’s cards appear in it.
 - [x] Provably fair dealing: the hash is committed when the table opens and travels in every view; hands are derived from seed + deal number and stored nowhere. The reveal at the end comes with the game’s finish.
-- [x] Inactivity: own scheduler (`BelotTurnScheduler`, ShedLock), own timeout
+- [x] Inactivity: own timer (`BelotTurnTimer` — one per table, set to the deadline after each change commits, acting on a virtual thread; set again for every live table at startup), own timeout
       (`deck.belot.turn-timeout`, 45s). **Answered: neither.** A dropped player
       does not forfeit — their partner did nothing wrong — and the table does not
       pause, or one person could hold three hostage. The table takes the least
@@ -189,7 +189,7 @@ tab and reopening it restores that seat's hand exactly.
       asks. The score stands as it was — a conceded game is not invented as a
       151 — the hand in progress goes ABANDONED rather than THROWN_IN or
       FINISHED (nobody passed, and nothing was counted), and that drops it out
-      of the turn clock's sweep. Idempotent: two partners pressing at once is
+      of the turn clock. Idempotent: two partners pressing at once is
       not an error. `BelotSurrenderTest`.
 - [x] **Account deletion.** `UserUtilService` publishes `UserDeleted` after the deletion commits; `BelotAccountListener` forgets the `belot.player` row and renames every seat that account sat in. Seats are kept, so a finished game can still name four people and nobody loses their record because an opponent left. The event carries a username and nothing else — the same thing that crosses the seam on every request.
 - [x] Rate limiting — two nginx zones, written out in [`DEPLOY.md`](DEPLOY.md):

@@ -80,7 +80,7 @@ class BelotViewTest {
     private final BelotStatsService statsService = mock(BelotStatsService.class);
     private final BelotPlayService playService = new BelotPlayService(dealService, statsService);
     private final BelotTurnService turnService = new BelotTurnService(dealService, playService,
-            new BelotProperties(Duration.ofSeconds(45), Duration.ofSeconds(10), Duration.ofMinutes(1),
+            new BelotProperties(Duration.ofSeconds(45),
                     Duration.ofMillis(1600), Duration.ofSeconds(8), Duration.ZERO, Duration.ZERO));
 
     private final BelotTableService tables = mock(BelotTableService.class);
@@ -90,7 +90,7 @@ class BelotViewTest {
 
     private final BelotService belot =
             new BelotService(tables, dealService, playService, turnService, players, statsService,
-                    availability, sockets);
+                    availability, sockets, event -> { });
 
     private BelotGame table;
     private BelotDeal deal;

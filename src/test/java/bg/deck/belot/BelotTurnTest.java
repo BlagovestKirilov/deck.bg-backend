@@ -50,7 +50,7 @@ class BelotTurnTest {
     private final BelotStatsService statsService = mock(BelotStatsService.class);
     private final BelotPlayService playService = new BelotPlayService(dealService, statsService);
     private final BelotTurnService turns = new BelotTurnService(
-            dealService, playService, new BelotProperties(TIMEOUT, Duration.ofSeconds(10), Duration.ofMinutes(1), Duration.ZERO,
+            dealService, playService, new BelotProperties(TIMEOUT, Duration.ZERO,
                     Duration.ofSeconds(8), Duration.ZERO, Duration.ZERO));
 
     private BelotGame table;

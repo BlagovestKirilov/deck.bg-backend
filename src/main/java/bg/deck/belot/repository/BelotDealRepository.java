@@ -5,16 +5,14 @@ import bg.deck.belot.model.BelotDealStatus;
 import bg.deck.belot.model.BelotGame;
 import org.springframework.data.jpa.repository.JpaRepository;
 
-import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 public interface BelotDealRepository extends JpaRepository<BelotDeal, UUID> {
 
-    /** Deals whose turn started before this moment — candidates for the sweep. */
-    List<BelotDeal> findByStatusInAndTurnStartedAtBefore(
-            List<BelotDealStatus> statuses, Instant startedBefore);
+    /** Deals in any of these states — the ones with a turn on, for the turn timer. */
+    List<BelotDeal> findByStatusIn(List<BelotDealStatus> statuses);
 
     /** Every hand at this table, oldest first — the score sheet. */
     List<BelotDeal> findByGameOrderByDealNumberAsc(BelotGame game);

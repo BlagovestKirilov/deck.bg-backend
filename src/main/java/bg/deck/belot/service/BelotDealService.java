@@ -99,24 +99,22 @@ public class BelotDealService {
     }
 
     /**
-     * Deals that have been waiting on somebody since before {@code since}.
+     * Every deal with a turn on: being bid for or being played.
      *
-     * <p>Only the two statuses that have a turn to wait on: a deal that is
-     * finished or thrown in is nobody’s move.
+     * <p>A deal that is finished, thrown in or given up on is nobody’s move.
      */
     @Transactional(readOnly = true)
-    public List<BelotDeal> waitingSince(Instant since) {
-        return belotDealRepository.findByStatusInAndTurnStartedAtBefore(
-                List.of(BelotDealStatus.BIDDING, BelotDealStatus.PLAYING), since);
+    public List<BelotDeal> inProgress() {
+        return belotDealRepository.findByStatusIn(List.of(BelotDealStatus.BIDDING, BelotDealStatus.PLAYING));
     }
 
     /**
      * One deal, read fresh.
      *
-     * <p>For the sweep, which holds a deal it read in an earlier transaction:
-     * a detached entity cannot load its bids or its plays, so acting on one
-     * has to start by reading it again inside the transaction that will do
-     * the acting.
+     * <p>For the turn timer, which holds a deal's id from an earlier
+     * transaction: a detached entity cannot load its bids or its plays, so
+     * acting on one has to start by reading it again inside the transaction
+     * that will do the acting.
      */
     @Transactional(readOnly = true)
     public Optional<BelotDeal> byId(UUID id) {
@@ -128,7 +126,7 @@ public class BelotDealService {
      *
      * <p>Called when a player concedes the game. The hand is left where it
      * stopped: nothing goes on the sheet for it, and it drops out of
-     * {@link #waitingSince} so the turn clock lets it alone.
+     * {@link #inProgress} so the turn clock lets it alone.
      */
     @Transactional
     public void abandon(BelotDeal deal) {

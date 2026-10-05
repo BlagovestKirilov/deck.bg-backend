@@ -64,16 +64,6 @@ public class BelotTurnService {
                 deal.isAwaitingCut() ? belotProperties.cutTimeout() : belotProperties.turnTimeout()));
     }
 
-    /**
-     * The shortest time anything at a table waits before it is acted on —
-     * what the sweep looks back over to find every turn that may have run out.
-     */
-    public Duration shortestWait() {
-        return belotProperties.cutTimeout().compareTo(belotProperties.turnTimeout()) < 0
-                ? belotProperties.cutTimeout()
-                : belotProperties.turnTimeout();
-    }
-
     /** From the cut to the first bid: the deal being shown. */
     public Duration dealPause() {
         return belotProperties.dealPause();
@@ -112,8 +102,8 @@ public class BelotTurnService {
     /**
      * Acts for the seat whose time is up.
      *
-     * <p>Returns false when there was nothing to do — the deal moved on
-     * between the sweep reading it and this being called, which two instances
+     * <p>Returns false when there was nothing to do — the turn was played
+     * between the timer firing and this being called, which two instances
      * overlapping during a deploy make ordinary rather than exceptional.
      */
     public boolean actForAbsentPlayer(BelotGame game, BelotDeal deal) {
