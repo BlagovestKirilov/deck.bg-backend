@@ -43,11 +43,16 @@ public class BelotController {
         return ResponseEntity.accepted().build();
     }
 
-    /** Send me my view again — a reload, or a socket that dropped. */
+    /**
+     * Send me my view again — a reload, or a socket that dropped. 204 when the
+     * player is at no table: there is nothing on its way, which is how the
+     * screen knows to offer a search rather than wait for a table.
+     */
     @GetMapping("/state")
     public ResponseEntity<Void> state() {
-        belotService.sendState(AuthenticatedUser.username());
-        return ResponseEntity.accepted().build();
+        return belotService.sendState(AuthenticatedUser.username())
+                ? ResponseEntity.accepted().build()
+                : ResponseEntity.noContent().build();
     }
 
     /** Pass, bid, contra or recontra, when the bidding reaches this player. */

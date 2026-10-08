@@ -225,10 +225,11 @@ A fourth thing is true of the rating, and it is a choice rather than a rule:
 average of the two in it and hands the same delta to each. Only the K factor
 is per player, because that is about how settled their own rating is. Do not
 add a contribution term — the reason is written out in `TeamElo` and in
-`docs/belot/BUILD.md`. The one exception is a forfeit by inactivity: whoever let their
-time run out three times in a game (`BelotService.MISSED_TURNS_TO_FORFEIT`)
-loses twice the rating, and it is still one loss on their record, while
-their partner is given the win — `BelotStatsService.record`.
+`docs/belot/BUILD.md`. The one exception is a forfeit — a surrender, or
+letting the time run out three times in a game
+(`BelotService.MISSED_TURNS_TO_FORFEIT`): whoever gave the game away loses
+twice the rating, and it is still one loss on their record, while their
+partner is given the win — `BelotStatsService.record`.
 
 What is shared, deliberately: `JwtAuthenticationFilter`, `SecurityConfig`, the
 STOMP transport, `WebSocketService`, the scheduler and its ShedLock,

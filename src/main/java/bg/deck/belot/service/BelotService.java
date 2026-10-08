@@ -106,10 +106,17 @@ public class BelotService {
         tellEveryone(table);
     }
 
-    /** Sends this player their own view again — a reload, or a reconnect. */
+    /**
+     * Sends this player their own view again — a reload, or a reconnect.
+     *
+     * @return whether they are at a table at all; a player at none has nothing
+     *         to be sent, and the screen offers them the way to find one
+     */
     @Transactional(readOnly = true)
-    public void sendState(String username) {
-        belotTableService.tableOf(username).ifPresent(table -> tell(table, username));
+    public boolean sendState(String username) {
+        Optional<BelotGame> table = belotTableService.tableOf(username);
+        table.ifPresent(seated -> tell(seated, username));
+        return table.isPresent();
     }
 
     /**

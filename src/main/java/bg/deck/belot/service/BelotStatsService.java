@@ -3,7 +3,6 @@ package bg.deck.belot.service;
 import bg.deck.belot.engine.Seat;
 import bg.deck.belot.engine.Team;
 import bg.deck.belot.engine.TeamElo;
-import bg.deck.belot.model.BelotForfeit;
 import bg.deck.belot.model.BelotGame;
 import bg.deck.belot.model.BelotPlayerStats;
 import bg.deck.belot.model.BelotSeat;
@@ -74,18 +73,18 @@ public class BelotStatsService {
         double northSouth = ratingOf(before, Team.NORTH_SOUTH);
         double eastWest = ratingOf(before, Team.EAST_WEST);
 
-        // A game given away by letting the time run out is lost by one player,
-        // not by a pair: their partner did nothing wrong, so it goes on the
-        // partner's record as a win. The table still tells them they lost.
-        boolean leftToRunOut = game.getForfeit() == BelotForfeit.INACTIVITY;
+        // A game given away — conceded, or left to run out — is lost by one
+        // player, not by a pair: their partner did nothing wrong, so it goes on
+        // the partner's record as a win. The table still tells them they lost.
+        boolean forfeited = game.getForfeit() != null;
 
         for (BelotSeat seat : game.getSeats()) {
             BelotPlayerStats stats = before.get(seat.getSeat());
             if (stats == null) {
                 continue;
             }
-            boolean leaver = leftToRunOut && seat.getUsername().equals(game.getForfeitedBy());
-            boolean won = seat.team() == winner || (leftToRunOut && !leaver);
+            boolean leaver = forfeited && seat.getUsername().equals(game.getForfeitedBy());
+            boolean won = seat.team() == winner || (forfeited && !leaver);
             boolean sitsNorthSouth = seat.team() == Team.NORTH_SOUTH;
 
             int delta = TeamElo.delta(
@@ -93,9 +92,8 @@ public class BelotStatsService {
                     sitsNorthSouth ? eastWest : northSouth,
                     won,
                     RankLadder.kFactor(stats.getGames()));
-            // Whoever let their time run out three times lost the game for two:
-            // their rating falls twice as far. It is still one game and one
-            // loss on their record.
+            // Whoever gave the game away lost it for two: their rating falls
+            // twice as far. It is still one game and one loss on their record.
             if (leaver) {
                 delta *= 2;
             }

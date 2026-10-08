@@ -192,11 +192,13 @@ tab and reopening it restores that seat's hand exactly.
 
 # M5 — loose ends that are easy to forget
 
-- [x] **Surrender.** `POST /belot/surrender`, and it gives the game up for the
-      pair. There is no other shape it could have: belot is scored per pair and
-      the sheet has two columns, so a game cannot end for two of the four and
-      go on for the other two. The client says so in those words before it
-      asks. The score stands as it was — a conceded game is not invented as a
+- [x] **Surrender.** `POST /belot/surrender`, and it ends the game for the
+      pair: belot is scored per pair and the sheet has two columns, so a game
+      cannot end for two of the four and go on for the other two. The result is
+      the inactivity forfeit's: the other pair wins, the **partner** is given the
+      win (it was not theirs to give up), and whoever conceded loses **twice the
+      rating**, still one loss. The client says all of that before it asks, and
+      again on the result. The score stands as it was — a conceded game is not invented as a
       151 — the hand in progress goes ABANDONED rather than THROWN_IN or
       FINISHED (nobody passed, and nothing was counted), and that drops it out
       of the turn clock. Idempotent: two partners pressing at once is

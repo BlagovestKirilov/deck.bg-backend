@@ -9,6 +9,7 @@ import bg.deck.belot.model.BelotDeal;
 import bg.deck.belot.model.BelotDealStatus;
 import bg.deck.belot.model.BelotGame;
 import bg.deck.belot.model.BelotGameStatus;
+import bg.deck.belot.model.BelotPlayerStats;
 import bg.deck.belot.model.request.BelotBidRequest;
 import bg.deck.belot.model.request.BelotCutRequest;
 import bg.deck.belot.repository.BelotPlayerStatsRepository;
@@ -43,10 +44,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * Giving up.
  *
  * <p>Belot is scored per pair and the sheet has two columns, so a game cannot
- * end for two of the four and go on for the other two: a concession binds the
- * partner. That is the decision this pins down, along with the two things that
- * have to stop when it happens — the hand in progress and the turn clock over
- * it.
+ * end for two of the four and go on for the other two: a concession ends it
+ * for the partner too. Their record does not take the loss, though — it was
+ * not theirs to give. Whoever conceded loses twice the rating, still one loss,
+ * as when a player lets their time run out three times. That is the decision
+ * this pins down, along with the two things that have to stop when it happens
+ * — the hand in progress and the turn clock over it.
  */
 @DisplayName("Giving up a game")
 @DataJpaTest
@@ -95,8 +98,8 @@ class BelotSurrenderTest {
     }
 
     @Test
-    @DisplayName("the game goes to the other pair, and the partner goes down with them")
-    void thePairGivesUpTogether() {
+    @DisplayName("the game goes to the other pair, and the partner is given the win")
+    void theGameGoesToTheOtherPair() {
         BelotGame table = seatFour();
 
         belot.surrender("petko91");
@@ -108,10 +111,31 @@ class BelotSurrenderTest {
         entityManager.flush();
         entityManager.clear();
 
-        assertEquals(1, records.findByUsername("gosho").orElseThrow().getLosses(),
-                "his partner loses it with him: there is no way for the pair to split a result");
+        BelotPlayerStats partner = records.findByUsername("gosho").orElseThrow();
+        assertEquals(1, partner.getWins(), "his partner did not give it up: it is a win for him");
+        assertEquals(0, partner.getLosses());
         assertEquals(1, records.findByUsername("ninja2011").orElseThrow().getWins());
         assertEquals(1, records.findByUsername("ivan").orElseThrow().getWins());
+    }
+
+    @Test
+    @DisplayName("whoever concedes loses twice the rating, and it is still one loss")
+    void theOneWhoConcedesLosesDouble() {
+        seatFour();
+
+        belot.surrender("petko91");
+
+        entityManager.flush();
+        entityManager.clear();
+
+        // Four new players, all on the starting rating: an ordinary result is
+        // the same size either way, so the concession is exactly twice a win.
+        BelotPlayerStats conceded = records.findByUsername("petko91").orElseThrow();
+        int ordinary = records.findByUsername("ninja2011").orElseThrow().getRating() - BelotPlayerStats.STARTING_RATING;
+        assertEquals(2 * ordinary, BelotPlayerStats.STARTING_RATING - conceded.getRating(),
+                "the rating falls twice as far as an ordinary result moves it");
+        assertEquals(1, conceded.getLosses(), "one game, one loss on the record");
+        assertEquals(0, conceded.getWins());
     }
 
     @Test

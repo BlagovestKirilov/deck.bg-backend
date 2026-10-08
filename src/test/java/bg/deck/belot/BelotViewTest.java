@@ -123,6 +123,13 @@ class BelotViewTest {
         PLAYERS.forEach(player -> when(tables.tableOf(player)).thenReturn(Optional.of(table)));
     }
 
+    @Test
+    @DisplayName("is sent to a player at the table, and a player at none is told there is nothing")
+    void onlyAPlayerAtATableHasAView() {
+        assertTrue(belot.sendState(PLAYERS.getFirst()));
+        assertFalse(belot.sendState("passer-by"), "nobody of that name is sitting anywhere");
+    }
+
     private BelotStateResponse viewSentTo(String username) {
         ArgumentCaptor<Object> state = ArgumentCaptor.forClass(Object.class);
         belot.sendState(username);
