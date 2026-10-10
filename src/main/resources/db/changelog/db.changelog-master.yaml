@@ -87,17 +87,15 @@ databaseChangeLog:
   - include:
       file: db/changelog/changes/031-belot-forfeit.yaml
 
-  # Santase and табла move into schemas of their own, as belot has, in
-  # releases that each stand alone: expand into the new schema, copy, verify,
-  # and only in a later release drop what was copied. Each phase starts with
-  # a tag to roll back to.
+  # Santase and табла move into schemas of their own, as belot has: expand
+  # into the new schema, copy, verify, then drop what was copied. Each phase
+  # starts with a tag, but 042 drops the old tables in the same release, and
+  # nothing rolls back past it.
   #   032-036  the records: santase.player_stats, tabla.player_stats
   #   037-040  the games: santase.game/seat/game_state/hand/deck, tabla.game/seat/game_state
   #   041      belot.deal.cut_at and belot.seat.missed_turns as INTEGER, as
   #            the entities map them (030 and 031 made them SMALLINT).
-  #   042      drops the public tables 034-039 copied from. Not included yet:
-  #            it goes in a later release, once 032-040 have been live long
-  #            enough that nobody will roll them back — see the file.
+  #   042      drops the public tables 034-039 copied from. Irreversible.
   - include:
       file: db/changelog/changes/032-tag-before-stats-split.yaml
 
@@ -127,3 +125,6 @@ databaseChangeLog:
 
   - include:
       file: db/changelog/changes/041-belot-integer-columns.yaml
+
+  - include:
+      file: db/changelog/changes/042-drop-old-game-tables.yaml

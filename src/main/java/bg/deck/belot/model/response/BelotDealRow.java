@@ -1,10 +1,10 @@
 package bg.deck.belot.model.response;
 
-import bg.deck.belot.engine.Contract;
-import bg.deck.belot.engine.DealResult;
-import bg.deck.belot.engine.Doubling;
-import bg.deck.belot.engine.Seat;
-import bg.deck.belot.engine.Team;
+import bg.deck.belot.enums.Contract;
+import bg.deck.belot.enums.DealResult;
+import bg.deck.belot.enums.Doubling;
+import bg.deck.belot.enums.Seat;
+import bg.deck.belot.enums.Team;
 
 /**
  * One line of the score sheet: a hand that has been played and counted.

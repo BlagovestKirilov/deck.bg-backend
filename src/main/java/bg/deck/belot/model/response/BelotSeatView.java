@@ -1,7 +1,7 @@
 package bg.deck.belot.model.response;
 
-import bg.deck.belot.engine.Seat;
-import bg.deck.belot.engine.Team;
+import bg.deck.belot.enums.Seat;
+import bg.deck.belot.enums.Team;
 
 /**
  * One place at the table, as everyone may see it.

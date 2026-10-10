@@ -1,4 +1,4 @@
-package bg.deck.belot.engine;
+package bg.deck.belot.enums;
 
 /**
  * Whether the deal is being played for double or quadruple.

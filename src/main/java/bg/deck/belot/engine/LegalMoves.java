@@ -1,5 +1,8 @@
 package bg.deck.belot.engine;
 
+import bg.deck.belot.enums.Contract;
+import bg.deck.belot.enums.Seat;
+import bg.deck.belot.enums.Suit;
 import java.util.List;
 import java.util.Optional;
 

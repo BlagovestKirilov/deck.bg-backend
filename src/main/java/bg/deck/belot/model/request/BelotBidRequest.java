@@ -1,7 +1,7 @@
 package bg.deck.belot.model.request;
 
-import bg.deck.belot.engine.BidKind;
-import bg.deck.belot.engine.Contract;
+import bg.deck.belot.enums.BidKind;
+import bg.deck.belot.enums.Contract;
 import jakarta.validation.constraints.NotNull;
 
 /**

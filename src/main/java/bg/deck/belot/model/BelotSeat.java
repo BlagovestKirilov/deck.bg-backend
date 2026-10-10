@@ -1,7 +1,7 @@
 package bg.deck.belot.model;
 
-import bg.deck.belot.engine.Seat;
-import bg.deck.belot.engine.Team;
+import bg.deck.belot.enums.Seat;
+import bg.deck.belot.enums.Team;
 import bg.deck.common.model.base.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

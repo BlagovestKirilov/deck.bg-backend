@@ -1,15 +1,16 @@
 package bg.deck.belot.model;
 
+import bg.deck.belot.enums.BelotDealStatus;
 import bg.deck.belot.engine.Bidding;
 import bg.deck.belot.engine.Card;
-import bg.deck.belot.engine.DealResult;
+import bg.deck.belot.enums.DealResult;
 import bg.deck.belot.engine.Dealing;
 import bg.deck.belot.engine.Play;
 import bg.deck.belot.engine.Trick;
 import bg.deck.belot.engine.TrickResolver;
-import bg.deck.belot.engine.Contract;
-import bg.deck.belot.engine.Doubling;
-import bg.deck.belot.engine.Seat;
+import bg.deck.belot.enums.Contract;
+import bg.deck.belot.enums.Doubling;
+import bg.deck.belot.enums.Seat;
 import bg.deck.common.model.base.BaseEntity;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;

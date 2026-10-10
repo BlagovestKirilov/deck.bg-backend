@@ -1,11 +1,11 @@
 package bg.deck.belot.model.response;
 
 import bg.deck.belot.engine.Card;
-import bg.deck.belot.engine.Seat;
-import bg.deck.belot.engine.Team;
-import bg.deck.belot.model.BelotDealStatus;
-import bg.deck.belot.model.BelotForfeit;
-import bg.deck.belot.model.BelotGameStatus;
+import bg.deck.belot.enums.Seat;
+import bg.deck.belot.enums.Team;
+import bg.deck.belot.enums.BelotDealStatus;
+import bg.deck.belot.enums.BelotForfeit;
+import bg.deck.belot.enums.BelotGameStatus;
 
 import java.util.List;
 import java.util.UUID;

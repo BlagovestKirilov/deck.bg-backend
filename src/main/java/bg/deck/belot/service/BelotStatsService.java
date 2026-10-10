@@ -1,7 +1,7 @@
 package bg.deck.belot.service;
 
-import bg.deck.belot.engine.Seat;
-import bg.deck.belot.engine.Team;
+import bg.deck.belot.enums.Seat;
+import bg.deck.belot.enums.Team;
 import bg.deck.belot.engine.TeamElo;
 import bg.deck.belot.model.BelotGame;
 import bg.deck.belot.model.BelotPlayerStats;

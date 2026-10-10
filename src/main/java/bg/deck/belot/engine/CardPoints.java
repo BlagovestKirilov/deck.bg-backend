@@ -1,5 +1,6 @@
 package bg.deck.belot.engine;
 
+import bg.deck.belot.enums.Contract;
 import java.util.Collection;
 
 /**

@@ -1,4 +1,4 @@
-package bg.deck.belot.model;
+package bg.deck.belot.enums;
 
 /** How a game ended before its last hand: given up, or left to run out. */
 public enum BelotForfeit {

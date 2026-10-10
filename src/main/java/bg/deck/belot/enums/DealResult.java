@@ -1,4 +1,4 @@
-package bg.deck.belot.engine;
+package bg.deck.belot.enums;
 
 /** How a deal ended for the team that called the contract. RULES §8. */
 public enum DealResult {

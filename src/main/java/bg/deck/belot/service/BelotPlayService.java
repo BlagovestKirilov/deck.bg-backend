@@ -1,7 +1,7 @@
 package bg.deck.belot.service;
 
 import bg.deck.belot.engine.Card;
-import bg.deck.belot.engine.Contract;
+import bg.deck.belot.enums.Contract;
 import bg.deck.belot.engine.DealOutcome;
 import bg.deck.belot.engine.DealPoints;
 import bg.deck.belot.engine.DealScorer;
@@ -11,14 +11,14 @@ import bg.deck.belot.engine.Declarations;
 import bg.deck.belot.engine.GameScorer;
 import bg.deck.belot.engine.LegalMoves;
 import bg.deck.belot.engine.PlayedDeal;
-import bg.deck.belot.engine.Seat;
-import bg.deck.belot.engine.Team;
+import bg.deck.belot.enums.Seat;
+import bg.deck.belot.enums.Team;
 import bg.deck.belot.engine.Trick;
 import bg.deck.belot.engine.TrickResolver;
 import bg.deck.belot.model.BelotDeal;
-import bg.deck.belot.model.BelotDealStatus;
+import bg.deck.belot.enums.BelotDealStatus;
 import bg.deck.belot.model.BelotGame;
-import bg.deck.belot.model.BelotGameStatus;
+import bg.deck.belot.enums.BelotGameStatus;
 import bg.deck.belot.model.BelotPlay;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;

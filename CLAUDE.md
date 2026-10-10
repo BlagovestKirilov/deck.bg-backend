@@ -18,7 +18,8 @@ all four.
   (`TablaUtilService`), its seats (`TablaSeatService`) and its turn clock
   (`TablaTurnTimer`).
 - `bg.deck.belot` — a package apart, with its own `controller`, `service`,
-  `repository`, `model`, `config` and `engine`.
+  `repository`, `model`, `config`, `engine` and `enums` (every belot enum,
+  from the card's `Suit` to the deal's `BelotDealStatus`).
 - `bg.deck.common`: `controller`, `service`, `scheduler`, `repository`,
   `model`, `security`, `config`, `constant`, `enums`, `exception`, `util` —
   accounts, auth, email, availability, the websocket transport, and what the
@@ -275,10 +276,14 @@ let go of on `UserDeleted`.
 
 The old public tables santase and табла were copied out of (`game`,
 `player`, `game_state`, `tabla_game_state`, `player_hand`, `game_deck`,
-`user_game_stats`) are read by nothing. `042-drop-old-game-tables.yaml`
-drops them and is deliberately not in the master changelog yet: it goes in a
-later release, once 032-040 have been live long enough that nobody will roll
-them back.
+`user_game_stats`) are dropped by `042-drop-old-game-tables.yaml`, in the
+same release that copies them, after a guard checks every game and record
+arrived. Nothing rolls back past 042.
+
+Every profile runs `ddl-auto: validate`: Liquibase alone writes the schema.
+Hibernate's `update` once added `belot.deal.cut_at` as INTEGER on dev
+databases while 030 made it SMALLINT everywhere else, which hid a mismatch
+that would have stopped production starting (fixed by 041).
 
 `docs/belot/RULES.md` holds the rules of the game; `docs/belot/BUILD.md` the
 plan and what is still open; `docs/belot/DEPLOY.md` what belot needs on the

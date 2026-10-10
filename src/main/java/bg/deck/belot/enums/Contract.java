@@ -1,4 +1,4 @@
-package bg.deck.belot.engine;
+package bg.deck.belot.enums;
 
 /**
  * What a deal is played in, in bidding order — each one beats the ones above

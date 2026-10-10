@@ -1,4 +1,4 @@
-package bg.deck.belot.model;
+package bg.deck.belot.enums;
 
 /** Where a deal has got to. */
 public enum BelotDealStatus {

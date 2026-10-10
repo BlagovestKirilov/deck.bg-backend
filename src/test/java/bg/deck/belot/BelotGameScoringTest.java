@@ -2,8 +2,8 @@ package bg.deck.belot;
 
 import bg.deck.belot.engine.GameScorer;
 import bg.deck.belot.engine.GameVerdict;
-import bg.deck.belot.engine.Seat;
-import bg.deck.belot.engine.Team;
+import bg.deck.belot.enums.Seat;
+import bg.deck.belot.enums.Team;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;

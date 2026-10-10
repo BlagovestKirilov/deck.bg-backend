@@ -1,5 +1,7 @@
 package bg.deck.belot.engine;
 
+import bg.deck.belot.enums.DealResult;
+
 /**
  * One deal, settled.
  *

@@ -1,5 +1,9 @@
 package bg.deck.belot.engine;
 
+import bg.deck.belot.enums.BidKind;
+import bg.deck.belot.enums.Contract;
+import bg.deck.belot.enums.Seat;
+
 /**
  * One turn of the bidding.
  *

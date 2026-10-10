@@ -1,7 +1,7 @@
 package bg.deck.belot.model.response;
 
 import bg.deck.belot.engine.Card;
-import bg.deck.belot.engine.Seat;
+import bg.deck.belot.enums.Seat;
 
 /**
  * A card on the table, and who put it there.

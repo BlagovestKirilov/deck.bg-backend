@@ -1,8 +1,8 @@
 package bg.deck.belot.model.response;
 
-import bg.deck.belot.engine.Contract;
-import bg.deck.belot.engine.Doubling;
-import bg.deck.belot.engine.Seat;
+import bg.deck.belot.enums.Contract;
+import bg.deck.belot.enums.Doubling;
+import bg.deck.belot.enums.Seat;
 
 import java.util.List;
 

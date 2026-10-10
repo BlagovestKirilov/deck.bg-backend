@@ -1,5 +1,6 @@
 package bg.deck.belot.engine;
 
+import bg.deck.belot.enums.Team;
 import java.util.Optional;
 
 /**

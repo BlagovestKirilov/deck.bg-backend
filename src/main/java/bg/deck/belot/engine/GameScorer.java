@@ -1,5 +1,7 @@
 package bg.deck.belot.engine;
 
+import bg.deck.belot.enums.Team;
+
 /**
  * Whether the game is over. RULES §9.
  *

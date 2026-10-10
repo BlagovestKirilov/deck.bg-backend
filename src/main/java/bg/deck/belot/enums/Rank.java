@@ -1,4 +1,4 @@
-package bg.deck.belot.engine;
+package bg.deck.belot.enums;
 
 /**
  * A rank, with both of the orders and both of the point tables belot uses.
