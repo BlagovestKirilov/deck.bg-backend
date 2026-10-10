@@ -28,6 +28,11 @@ spring:
   liquibase:
     enabled: true
     change-log: classpath:db/changelog/db.changelog-master.yaml
+    # Pinned rather than taken from the search path, which starts with the
+    # role's own name: a role ever named after one of the schemas the games
+    # now have would send Liquibase looking for its history in the wrong place.
+    default-schema: public
+    liquibase-schema: public
   mail:
     host: ${SANTASE_MAIL_HOST}
     port: ${SANTASE_MAIL_PORT}

@@ -5,8 +5,8 @@ import bg.deck.common.model.Player;
 import bg.deck.tabla.model.TablaGameState;
 import bg.deck.common.model.User;
 import bg.deck.common.service.GameUtilService;
-import bg.deck.common.service.RankingService;
 import bg.deck.tabla.service.TablaDiceService;
+import bg.deck.tabla.service.TablaStatsService;
 import bg.deck.tabla.service.TablaUtilService;
 import bg.deck.common.service.WebSocketService;
 import bg.deck.tabla.engine.BoardState;
@@ -50,7 +50,7 @@ class TablaBlockedTimeoutTest {
         tablaUtilService = new TablaUtilService(
                 gameUtilService,
                 mock(WebSocketService.class),
-                mock(RankingService.class),
+                mock(TablaStatsService.class),
                 mock(TablaDiceService.class));
 
         // A player's name comes from the account behind the seat.

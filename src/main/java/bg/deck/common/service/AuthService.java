@@ -14,9 +14,7 @@ import bg.deck.common.exception.InvalidTokenException;
 import bg.deck.common.exception.UserAlreadyExistsException;
 import bg.deck.common.model.EmailConfirmation;
 import bg.deck.common.model.ForgotPassword;
-import bg.deck.common.enums.GameType;
 import bg.deck.common.model.User;
-import bg.deck.common.model.UserGameStats;
 import bg.deck.common.model.request.ChangeForgottenPasswordRequest;
 import bg.deck.common.model.request.ForgotPasswordEmailRequest;
 import bg.deck.common.model.request.LoginRequest;
@@ -91,12 +89,6 @@ public class AuthService {
         user.setPassword(passwordEncoder.encode(user.getPassword()));
         userAccountService.save(user);
 
-        // Both stats rows are created up front: lazy creation on first game would
-        // need INSERT ... ON CONFLICT handling under concurrency, and one extra
-        // row per user is cheaper than that.
-        user.addStats(UserGameStats.fresh(user, GameType.SANTASE));
-        user.addStats(UserGameStats.fresh(user, GameType.TABLA));
-        userAccountService.save(user);
 
         EmailConfirmation emailConfirmation = emailConfirmationService.issueFor(user);
 

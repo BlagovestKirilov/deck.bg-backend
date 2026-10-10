@@ -22,8 +22,9 @@ public abstract class BaseUser extends BaseEntity {
     private String ipAddress;
 
     /*
-     * A player's record — wins, losses, Elo and rank — lives in
-     * {@link bg.deck.common.model.UserGameStats}, one row per game.
+     * A player's record — wins, losses, Elo and rank — lives with each game,
+     * in its own schema: santase.player_stats, tabla.player_stats,
+     * belot.player_stats.
      * The single santaseWins/santaseLosses/rank/rankRating set that used to sit
      * here could only ever describe one game; changeset 015 drops the columns.
      */

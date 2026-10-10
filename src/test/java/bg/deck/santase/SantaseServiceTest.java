@@ -286,8 +286,8 @@ class SantaseServiceTest {
             santaseService.surrender();
 
             // 3. Assertions: Check if the real logic worked
-            // The winner should be P2 because P1 surrendered (setting it is delegated to GameUtilService)
-            verify(gameUtilService).setGameWinner(game, p2, true);
+            // The winner should be P2 because P1 surrendered (finishing it is delegated to SantaseDealService)
+            verify(santaseDealService).finishGame(game, p2, true);
 
             // Check if hands were cleared as per your service logic
             assertThat(p1.getHand()).isEmpty();

@@ -33,7 +33,6 @@ public class GameUtilService {
     private final PlayerService playerService;
     private final UserAccountService userAccountService;
     private final WebSocketService webSocketService;
-    private final RankingService rankingService;
 
     public Game findGameByUsername(String username, GameType gameType) {
         return gameRepository.findActiveGamesByUsernameAndType(username, gameType)
@@ -79,8 +78,8 @@ public class GameUtilService {
         return playerService.save(Player.builder().user(user).build());
     }
 
+    /** Marks the game won. Writing the result into the players' records is the game's own. */
     public void setGameWinner(Game game, Player winner, boolean opponentSurrendered) {
         game.setWinner(winner, opponentSurrendered);
-        rankingService.updateRankingAfterGame(game);
     }
 }

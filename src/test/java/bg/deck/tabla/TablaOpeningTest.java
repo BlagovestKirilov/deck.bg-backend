@@ -3,14 +3,12 @@ package bg.deck.tabla;
 import bg.deck.common.model.Game;
 import bg.deck.common.model.Player;
 import bg.deck.tabla.model.TablaGameState;
-import bg.deck.common.enums.GameType;
 import bg.deck.common.model.User;
-import bg.deck.common.model.UserGameStats;
 import bg.deck.tabla.model.dto.OpeningThrowDTO;
 import bg.deck.tabla.model.response.TablaStateResponse;
 import bg.deck.common.service.GameUtilService;
-import bg.deck.common.service.RankingService;
 import bg.deck.tabla.service.TablaDiceService;
+import bg.deck.tabla.service.TablaStatsService;
 import bg.deck.tabla.service.TablaUtilService;
 import bg.deck.common.service.WebSocketService;
 import bg.deck.tabla.engine.Dice;
@@ -323,7 +321,7 @@ class TablaOpeningTest {
     }
 
     private TablaUtilService service(TablaDiceService dice) {
-        return new TablaUtilService(gameUtilService, mock(WebSocketService.class), mock(RankingService.class), dice);
+        return new TablaUtilService(gameUtilService, mock(WebSocketService.class), mock(TablaStatsService.class), dice);
     }
 
     /** A seed whose first opening throw is — or is not — a tie, for this game id. */
@@ -340,9 +338,6 @@ class TablaOpeningTest {
     private static Player seat(String username) {
         User user = new User();
         user.setUsername(username);
-        // Every account gets its табла stats row at registration; finishing a
-        // game writes to it.
-        user.addStats(UserGameStats.fresh(user, GameType.TABLA));
         Player player = new Player();
         player.setUser(user);
         // Entities compare by id, and two seats must not be equal.

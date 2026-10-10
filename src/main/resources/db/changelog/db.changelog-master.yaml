@@ -86,3 +86,23 @@ databaseChangeLog:
 
   - include:
       file: db/changelog/changes/031-belot-forfeit.yaml
+
+  # Santase and табла move into schemas of their own, as belot has, in
+  # releases that each stand alone: expand into the new schema, copy, verify,
+  # and only in a later release drop what was copied. Each phase starts with
+  # a tag to roll back to.
+  #   032-036  the records: santase.player_stats, tabla.player_stats
+  - include:
+      file: db/changelog/changes/032-tag-before-stats-split.yaml
+
+  - include:
+      file: db/changelog/changes/033-santase-tabla-schemas.yaml
+
+  - include:
+      file: db/changelog/changes/034-santase-player-stats.yaml
+
+  - include:
+      file: db/changelog/changes/035-tabla-player-stats.yaml
+
+  - include:
+      file: db/changelog/changes/036-user-game-stats-cascade.yaml

@@ -62,7 +62,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
         // Played back to back here, with no screen to wait for.
         "deck.belot.trick-pause=PT0S",
         "spring.jpa.hibernate.ddl-auto=create-drop",
-        "spring.datasource.url=jdbc:h2:mem:belotendtoend;INIT=CREATE SCHEMA IF NOT EXISTS belot",
+        "spring.datasource.url=jdbc:h2:mem:belotendtoend;INIT=CREATE SCHEMA IF NOT EXISTS belot\\\\;CREATE SCHEMA IF NOT EXISTS santase\\\\;CREATE SCHEMA IF NOT EXISTS tabla",
         "spring.datasource.username=sa",
         "spring.datasource.password=",
         "spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.H2Dialect",

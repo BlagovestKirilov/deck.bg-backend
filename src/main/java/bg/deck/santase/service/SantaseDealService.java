@@ -45,6 +45,7 @@ public class SantaseDealService {
     private final GameUtilService gameUtilService;
     private final SantaseGameStateRepository gameStateRepository;
     private final WebSocketUtilService webSocketUtilService;
+    private final SantaseStatsService santaseStatsService;
 
     @Transactional
     public Game startGame(Player firstPlayer, Player secondPlayer) {
@@ -263,9 +264,9 @@ public class SantaseDealService {
 
         if ((firstPlayerResult >= 11 || secondPlayerResult >= 11) && difference >= 2) {
             if (firstPlayerResult > secondPlayerResult) {
-                gameUtilService.setGameWinner(game, game.getFirstPlayer(), false);
+                finishGame(game, game.getFirstPlayer(), false);
             } else {
-                gameUtilService.setGameWinner(game, game.getSecondPlayer(), false);
+                finishGame(game, game.getSecondPlayer(), false);
             }
             log.info(
                     LogConstants.FINISH_GAME,
@@ -391,6 +392,12 @@ public class SantaseDealService {
         return true;
     }
 
+    /** The game is over: the winner set, and the result written into both records. */
+    public void finishGame(Game game, Player winner, boolean opponentSurrendered) {
+        gameUtilService.setGameWinner(game, winner, opponentSurrendered);
+        santaseStatsService.record(game);
+    }
+
     @Transactional
     public void surrenderByInactivity(UUID gameId) {
         Game game = gameUtilService.findGameById(gameId)
@@ -412,7 +419,7 @@ public class SantaseDealService {
         game.getFirstPlayer().setHand(new ArrayList<>());
         game.getSecondPlayer().setHand(new ArrayList<>());
 
-        gameUtilService.setGameWinner(game, opponentPlayer, true);
+        finishGame(game, opponentPlayer, true);
         log.info(
                 LogConstants.FINISH_GAME,
                 game.getId(),

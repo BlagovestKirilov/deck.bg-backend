@@ -3,7 +3,6 @@ package bg.deck.common;
 import bg.deck.common.exception.InvalidCredentialsException;
 import bg.deck.common.exception.InvalidTokenException;
 import bg.deck.common.exception.UserAlreadyExistsException;
-import bg.deck.common.enums.GameType;
 import bg.deck.common.model.User;
 import bg.deck.common.model.request.LoginRequest;
 import bg.deck.common.model.request.RegisterRequest;
@@ -150,9 +149,8 @@ class AuthServiceTest {
             assertEquals("encodedPassword", testUser.getPassword());
             verify(userAccountService, atLeastOnce()).save(testUser);
 
-            // One stats row per game type is created up front.
-            assertNotNull(testUser.statsFor(GameType.SANTASE));
-            assertNotNull(testUser.statsFor(GameType.TABLA));
+            // No game record is made at registration: each game makes its
+            // own, in its own schema, on the player's first result.
 
             // A pending confirmation is stored for the new user and emailed.
             ArgumentCaptor<User> confirmed = ArgumentCaptor.forClass(User.class);

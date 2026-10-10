@@ -1,0 +1,14 @@
+databaseChangeLog:
+  # A named point to roll back to: everything after it moves the santase and
+  # табла records out of public.user_game_stats into each game's own schema.
+  #
+  #   liquibase rollback before-stats-split
+  #
+  # undoes 033-036, copying back whatever was played in the meantime.
+  - changeSet:
+      id: 032-tag-before-stats-split
+      author: Blagovest Kirilov
+      comment: Rollback point before the stats split
+      changes:
+        - tagDatabase:
+            tag: before-stats-split

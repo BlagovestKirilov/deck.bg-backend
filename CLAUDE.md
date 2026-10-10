@@ -44,6 +44,8 @@ that service.**
 | `UserDeletionRepository` | `UserDeletionService` |
 | `GameRepository` | `GameUtilService` |
 | `SantaseGameStateRepository` | `SantaseDealService` |
+| `SantasePlayerStatsRepository` | `SantaseStatsService` |
+| `TablaPlayerStatsRepository` | `TablaStatsService` |
 | `DeletedUserRepository` | `UserUtilService` |
 | `AvailableServiceRepository` | `CacheService` |
 | `BelotPlayerRepository` | `BelotPlayerService` |
@@ -243,8 +245,13 @@ What is shared, deliberately: `JwtAuthenticationFilter`, `SecurityConfig`, the
 STOMP transport, `WebSocketService`, the scheduler and its ShedLock,
 `GlobalExceptionHandler` — so the error shape a client sees is identical — and
 `RankLadder`, the one rating-to-rank ladder, so a Gold badge means the same
-thing on both cards of the profile page. All of it is code; no table is
-shared, which is what the third law is about.
+thing on every card of the profile page. All of it is code; no table is
+shared, which is what the third law is about. Santase and табла keep their
+records the same way, each in its own schema (`santase.player_stats`,
+`tabla.player_stats`, keyed by username, made on the first result), written
+by their own stats service with `Elo` and `BasePlayerStats` from common, and
+let go of on `UserDeleted`; `public.user_game_stats` is read by nothing and
+goes in a later release.
 
 `docs/belot/RULES.md` holds the rules of the game; `docs/belot/BUILD.md` the
 plan and what is still open; `docs/belot/DEPLOY.md` what belot needs on the

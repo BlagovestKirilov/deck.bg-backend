@@ -1,0 +1,91 @@
+databaseChangeLog:
+  # Табла records move out of public.user_game_stats into tabla.player_stats,
+  # keyed by username rather than by a foreign key into public.users.
+  #
+  # Create, copy and verify in one changeset, so one transaction: if the copy
+  # does not match the source row for row, RAISE EXCEPTION rolls the table back
+  # with it and nothing is left half done. No IF NOT EXISTS and no
+  # precondition: a table already there would be copied into blind, and a copy
+  # marked as run with no data in it is the worst way this can fail.
+  #
+  # public.user_game_stats is read, never written. It stays as it is until a
+  # later release drops it, so this one can be rolled back.
+  - changeSet:
+      id: 035-tabla-player-stats
+      author: Blagovest Kirilov
+      comment: Tabla records in the tabla schema
+      changes:
+        - sql:
+            dbms: postgresql
+            splitStatements: false
+            sql: |
+              CREATE TABLE tabla.player_stats (
+                  id         UUID         PRIMARY KEY,
+                  created_at TIMESTAMPTZ  NOT NULL,
+                  updated_at TIMESTAMPTZ  NOT NULL,
+                  username   VARCHAR(20)  NOT NULL UNIQUE,
+                  wins       INTEGER      NOT NULL DEFAULT 0,
+                  losses     INTEGER      NOT NULL DEFAULT 0,
+                  rating     INTEGER      NOT NULL DEFAULT 1500,
+                  rank       VARCHAR(20)  NOT NULL DEFAULT 'UNRANKED',
+                  CONSTRAINT tabla_stats_counts_check CHECK (wins >= 0 AND losses >= 0),
+                  CONSTRAINT tabla_stats_rank_check
+                      CHECK (rank IN ('UNRANKED','BRONZE','SILVER','GOLD','PLATINUM','DIAMOND','LEGEND'))
+              );
+
+              INSERT INTO tabla.player_stats (id, created_at, updated_at, username, wins, losses, rating, rank)
+              SELECT s.id,
+                     COALESCE(s.created_at, now()),
+                     COALESCE(s.updated_at, s.created_at, now()),
+                     u.username, s.wins, s.losses, s.rating, s.rank
+                FROM public.user_game_stats s
+                JOIN public.users u ON u.id = s.user_id
+               WHERE s.game_type = 'TABLA';
+
+              DO $$
+              DECLARE
+                  source_rows bigint;
+                  copied_rows bigint;
+                  differing   bigint;
+              BEGIN
+                  SELECT count(*) INTO source_rows FROM public.user_game_stats WHERE game_type = 'TABLA';
+                  SELECT count(*) INTO copied_rows FROM tabla.player_stats;
+                  IF source_rows <> copied_rows THEN
+                      RAISE EXCEPTION 'tabla.player_stats: copied % of % rows', copied_rows, source_rows;
+                  END IF;
+
+                  SELECT count(*) INTO differing
+                    FROM public.user_game_stats s
+                    JOIN public.users u ON u.id = s.user_id
+                    JOIN tabla.player_stats n ON n.username = u.username
+                   WHERE s.game_type = 'TABLA'
+                     AND (s.id, s.wins, s.losses, s.rating, s.rank)
+                         IS DISTINCT FROM (n.id, n.wins, n.losses, n.rating, n.rank);
+                  IF differing <> 0 THEN
+                      RAISE EXCEPTION 'tabla.player_stats: % rows differ from the source', differing;
+                  END IF;
+              END $$;
+      rollback:
+        - sql:
+            dbms: postgresql
+            splitStatements: false
+            sql: |
+              -- What was played while this release was live goes back into
+              -- the old table before the new one is dropped.
+              UPDATE public.user_game_stats s
+                 SET wins = n.wins, losses = n.losses, rating = n.rating, rank = n.rank,
+                     updated_at = n.updated_at
+                FROM public.users u, tabla.player_stats n
+               WHERE s.user_id = u.id AND n.username = u.username AND s.game_type = 'TABLA';
+
+              -- Accounts registered while this release was live have no old
+              -- row, and the old code requires one.
+              INSERT INTO public.user_game_stats (id, created_at, updated_at, user_id, game_type, wins, losses, rating, rank)
+              SELECT gen_random_uuid(), now(), now(), u.id, 'TABLA',
+                     COALESCE(n.wins, 0), COALESCE(n.losses, 0), COALESCE(n.rating, 1500), COALESCE(n.rank, 'UNRANKED')
+                FROM public.users u
+                LEFT JOIN tabla.player_stats n ON n.username = u.username
+               WHERE NOT EXISTS (SELECT 1 FROM public.user_game_stats s
+                                  WHERE s.user_id = u.id AND s.game_type = 'TABLA');
+
+              DROP TABLE tabla.player_stats;

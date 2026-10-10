@@ -109,8 +109,7 @@ public class Game extends BaseEntity {
             this.surrenderPlayer = opponent;
         }
 
-        // Stats are per game type, so a Santase win never touches a табла record.
-        winnerPlayer.getUser().statsFor(gameType).incrementWins();
-        opponent.getUser().statsFor(gameType).incrementLosses();
+        // The records are each game's own, in its own schema: the game that
+        // finished writes them (SantaseStatsService, TablaStatsService).
     }
 }

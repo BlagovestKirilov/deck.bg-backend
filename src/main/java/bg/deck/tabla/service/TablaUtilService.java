@@ -28,7 +28,6 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.IntStream;
 import bg.deck.common.service.GameUtilService;
-import bg.deck.common.service.RankingService;
 import bg.deck.common.service.WebSocketService;
 
 /**
@@ -42,7 +41,7 @@ public class TablaUtilService {
 
     private final GameUtilService gameUtilService;
     private final WebSocketService webSocketService;
-    private final RankingService rankingService;
+    private final TablaStatsService tablaStatsService;
     private final TablaDiceService diceService;
 
     /* ------------------------------------------------------------------
@@ -275,7 +274,7 @@ public class TablaUtilService {
             return;
         }
         game.setWinner(winner, opponentSurrendered);
-        rankingService.updateRankingAfterGame(game);
+        tablaStatsService.record(game);
         gameUtilService.saveGame(game);
         pushToBoth(game);
     }

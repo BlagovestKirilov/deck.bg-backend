@@ -324,7 +324,7 @@ public class SantaseService {
         game.getFirstPlayer().setHand(new ArrayList<>());
         game.getSecondPlayer().setHand(new ArrayList<>());
 
-        gameUtilService.setGameWinner(game, opponentPlayer, true);
+        santaseDealService.finishGame(game, opponentPlayer, true);
         log.info(
                 LogConstants.FINISH_GAME,
                 game.getId(),
