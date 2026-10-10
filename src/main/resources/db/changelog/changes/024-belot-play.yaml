@@ -1,0 +1,66 @@
+databaseChangeLog:
+  # The cards as they are played.
+  #
+  # One row per card, keyed by which trick and where in it, which is enough to
+  # rebuild every trick in order and, with the hands derived from the seed,
+  # every remaining hand: a player's cards are what they were dealt minus what
+  # they have played. Nothing about the state of the deal is stored twice.
+  #
+  # There is no declaration table. A declaration is in the hand, and the hand
+  # is in the seed — belote, sequences and four of a kind are all detected from
+  # the cards themselves when the deal is scored.
+  #
+  # Additive: one new table in belot's own schema.
+  - changeSet:
+      id: 024-belot-play
+      author: Blagovest Kirilov
+      comment: The cards played in a belot deal
+      changes:
+        - sql:
+            dbms: postgresql
+            splitStatements: false
+            sql: |
+              CREATE TABLE IF NOT EXISTS belot.play (
+                  id             UUID         PRIMARY KEY,
+                  created_at     TIMESTAMPTZ  NOT NULL,
+                  updated_at     TIMESTAMPTZ  NOT NULL,
+                  deal_id        UUID         NOT NULL REFERENCES belot.deal (id) ON DELETE CASCADE,
+                  trick_no       INTEGER      NOT NULL,
+                  order_in_trick INTEGER      NOT NULL,
+                  seat           VARCHAR(10)  NOT NULL,
+                  suit           VARCHAR(10)  NOT NULL,
+                  rank           VARCHAR(10)  NOT NULL,
+                  CONSTRAINT belot_play_trick_check      CHECK (trick_no BETWEEN 1 AND 8),
+                  CONSTRAINT belot_play_order_check      CHECK (order_in_trick BETWEEN 0 AND 3),
+                  -- One card per place in a trick, and one place per card: a
+                  -- replayed deal cannot have two versions of the same moment.
+                  CONSTRAINT belot_play_place_unique     UNIQUE (deal_id, trick_no, order_in_trick),
+                  CONSTRAINT belot_play_card_once_unique UNIQUE (deal_id, suit, rank)
+              );
+
+              CREATE INDEX IF NOT EXISTS belot_play_deal_idx ON belot.play (deal_id);
+
+  # What the deal came to, which is the score sheet a player expects to see:
+  # the raw card points each side took, the game points that were written down
+  # for them, and whether the contract was made, вътре or висящи. Derivable
+  # from the cards, but a score sheet that recomputes itself is a score sheet
+  # that can change after the fact.
+  - changeSet:
+      id: 024-belot-deal-result
+      author: Blagovest Kirilov
+      comment: What each deal came to
+      changes:
+        - sql:
+            dbms: postgresql
+            splitStatements: false
+            sql: |
+              ALTER TABLE belot.deal ADD COLUMN IF NOT EXISTS caller_points   INTEGER;
+              ALTER TABLE belot.deal ADD COLUMN IF NOT EXISTS opponent_points INTEGER;
+              ALTER TABLE belot.deal ADD COLUMN IF NOT EXISTS caller_score    INTEGER;
+              ALTER TABLE belot.deal ADD COLUMN IF NOT EXISTS opponent_score  INTEGER;
+              ALTER TABLE belot.deal ADD COLUMN IF NOT EXISTS result          VARCHAR(20);
+
+              ALTER TABLE belot.deal DROP CONSTRAINT IF EXISTS belot_deal_result_check;
+              ALTER TABLE belot.deal ADD CONSTRAINT belot_deal_result_check
+                  CHECK (result IS NULL OR result IN ('MADE', 'INSIDE', 'HANGING'));
+

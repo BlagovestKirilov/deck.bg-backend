@@ -19,7 +19,7 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: none
+      ddl-auto: validate
     properties:
       hibernate:
         dialect: ${DB_DIALECT}
@@ -28,6 +28,11 @@ spring:
   liquibase:
     enabled: true
     change-log: classpath:db/changelog/db.changelog-master.yaml
+    # Pinned rather than taken from the search path, which starts with the
+    # role's own name: a role ever named after one of the schemas the games
+    # now have would send Liquibase looking for its history in the wrong place.
+    default-schema: public
+    liquibase-schema: public
   mail:
     host: ${SANTASE_MAIL_HOST}
     port: ${SANTASE_MAIL_PORT}
@@ -43,6 +48,24 @@ deck:
     expired-links:
       interval: PT5M
       initial-delay: PT1M
+
+  # Belot. Defaults also live in BelotProperties.
+  belot:
+    # How long a seat may think before the table acts for them.
+    turn-timeout: PT30S
+    # How long a finished trick stays out before the next can be led. The
+    # client shows it held and then swept to whoever took it in this time;
+    # a lead inside it would pull the trick off every other screen before
+    # anyone saw who took it. Matches .belot__trick.is-collected.
+    trick-pause: PT1.6S
+    # How long the player cutting has to touch the deck before it is cut for
+    # them, and how long after the cut the deal takes to show before the
+    # bidding clock starts.
+    cut-timeout: PT8S
+    deal-pause: PT3S
+    # After a hand is played out, the last trick is shown being taken and the
+    # count is put up; the cut clock waits for both.
+    hand-pause: PT11S
 
 jwt:
   secret-key: ${JWT_SECRET}
@@ -81,7 +104,7 @@ spring:
       leak-detection-threshold: 20000
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: validate
 
 logging:
   level:

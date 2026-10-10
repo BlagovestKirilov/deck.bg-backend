@@ -1,0 +1,26 @@
+databaseChangeLog:
+  # A table that ends because somebody stopped playing.
+  #
+  # missed_turns counts, per seat, the turns the table had to take for that
+  # player because their time ran out; at three their pair gives the game up.
+  # forfeit and forfeited_by say how a game ended early and whose doing it
+  # was: given up (SURRENDER) or left to run out (INACTIVITY). Both are null
+  # for a game played to the end.
+  #
+  # Additive: three columns, one with a default. Every seat already there
+  # starts on nought missed turns and every game already there carries no
+  # forfeit, so a table being played when this runs carries on as it was.
+  - changeSet:
+      id: 031-belot-forfeit
+      author: Blagovest Kirilov
+      comment: Missed turns per belot seat, and how a game was forfeited
+      changes:
+        - sql:
+            dbms: postgresql
+            splitStatements: false
+            sql: |
+              ALTER TABLE belot.seat ADD COLUMN IF NOT EXISTS missed_turns SMALLINT NOT NULL DEFAULT 0;
+
+              ALTER TABLE belot.game ADD COLUMN IF NOT EXISTS forfeit VARCHAR(12);
+
+              ALTER TABLE belot.game ADD COLUMN IF NOT EXISTS forfeited_by VARCHAR(20);

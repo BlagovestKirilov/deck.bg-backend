@@ -1,0 +1,85 @@
+databaseChangeLog:
+  # A deal and the bidding it opens with.
+  #
+  # The hands are not here. A deal knows its number, and that number with the
+  # game's seed reproduces the shuffle exactly — so the eight cards each seat
+  # holds are derived on every read rather than stored, and no row can disagree
+  # with the shuffle the table was promised.
+  #
+  # The bidding is kept as the turns that were taken, not as the state they
+  # arrived at. Replaying them gives the state, and gives it the same way every
+  # time; keeping the state instead would mean two things to update and one of
+  # them eventually wrong. It is also what lets a player who reconnects be shown
+  # what was said before they left.
+  #
+  # Additive: two new tables in belot's own schema.
+  - changeSet:
+      id: 023-belot-deal
+      author: Blagovest Kirilov
+      comment: A belot deal and the turns of its bidding
+      changes:
+        - sql:
+            dbms: postgresql
+            splitStatements: false
+            sql: |
+              CREATE TABLE IF NOT EXISTS belot.deal (
+                  id            UUID         PRIMARY KEY,
+                  created_at    TIMESTAMPTZ  NOT NULL,
+                  updated_at    TIMESTAMPTZ  NOT NULL,
+                  game_id       UUID         NOT NULL REFERENCES belot.game (id) ON DELETE CASCADE,
+                  deal_number   INTEGER      NOT NULL,
+                  dealer_seat   VARCHAR(10)  NOT NULL,
+                  status        VARCHAR(20)  NOT NULL,
+                  contract      VARCHAR(20),
+                  declarer_seat VARCHAR(10),
+                  doubling      VARCHAR(20)  NOT NULL,
+                  CONSTRAINT belot_deal_status_check
+                      CHECK (status IN ('BIDDING', 'PLAYING', 'THROWN_IN', 'FINISHED')),
+                  CONSTRAINT belot_deal_doubling_check
+                      CHECK (doubling IN ('NONE', 'CONTRA', 'RECONTRA')),
+                  CONSTRAINT belot_deal_number_unique UNIQUE (game_id, deal_number)
+              );
+
+        - sql:
+            dbms: postgresql
+            splitStatements: false
+            sql: |
+              CREATE TABLE IF NOT EXISTS belot.bid (
+                  id         UUID         PRIMARY KEY,
+                  created_at TIMESTAMPTZ  NOT NULL,
+                  updated_at TIMESTAMPTZ  NOT NULL,
+                  deal_id    UUID         NOT NULL REFERENCES belot.deal (id) ON DELETE CASCADE,
+                  ordinal    INTEGER      NOT NULL,
+                  seat       VARCHAR(10)  NOT NULL,
+                  kind       VARCHAR(20)  NOT NULL,
+                  contract   VARCHAR(20),
+                  CONSTRAINT belot_bid_kind_check
+                      CHECK (kind IN ('PASS', 'BID', 'CONTRA', 'RECONTRA')),
+                  -- One turn per position, so a replayed bidding cannot have two
+                  -- versions of the same moment.
+                  CONSTRAINT belot_bid_ordinal_unique UNIQUE (deal_id, ordinal)
+              );
+
+        - sql:
+            dbms: postgresql
+            splitStatements: false
+            sql: |
+              CREATE INDEX IF NOT EXISTS belot_deal_game_idx ON belot.deal (game_id);
+              CREATE INDEX IF NOT EXISTS belot_bid_deal_idx  ON belot.bid (deal_id);
+
+  # Belot exists as far as the catalogue is concerned, and is offered to the
+  # accounts that are meant to see it first. Switching it on for everyone is
+  # `UPDATE available_service SET required_scope = 'PUBLIC' WHERE code = 'BELOT'`
+  # — no deploy, as with the other two.
+  - changeSet:
+      id: 023-belot-available
+      author: Blagovest Kirilov
+      comment: Belot on the catalogue, for beta accounts only
+      changes:
+        - sql:
+            dbms: postgresql
+            splitStatements: false
+            sql: |
+              INSERT INTO available_service (id, created_at, updated_at, code, state, required_scope)
+              VALUES (gen_random_uuid(), now(), now(), 'BELOT', 'ON', 'BETA')
+              ON CONFLICT (code) DO NOTHING;

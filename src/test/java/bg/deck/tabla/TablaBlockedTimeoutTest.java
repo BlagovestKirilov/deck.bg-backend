@@ -1,15 +1,14 @@
 package bg.deck.tabla;
 
-import bg.deck.model.Game;
-import bg.deck.model.Player;
-import bg.deck.model.TablaGameState;
-import bg.deck.model.User;
-import bg.deck.service.GameUtilService;
-import bg.deck.service.RankingService;
-import bg.deck.service.TablaDiceService;
-import bg.deck.service.TablaUtilService;
-import bg.deck.service.WebSocketService;
-import bg.deck.model.tabla.BoardState;
+import bg.deck.tabla.model.TablaGame;
+import bg.deck.tabla.model.TablaSeat;
+import bg.deck.tabla.model.TablaGameState;
+import bg.deck.tabla.repository.TablaGameRepository;
+import bg.deck.tabla.service.TablaDiceService;
+import bg.deck.tabla.service.TablaStatsService;
+import bg.deck.tabla.service.TablaUtilService;
+import bg.deck.common.service.WebSocketService;
+import bg.deck.tabla.engine.BoardState;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -36,21 +35,21 @@ import static org.mockito.Mockito.when;
 @DisplayName("A blocked roll that times out")
 class TablaBlockedTimeoutTest {
 
-    private GameUtilService gameUtilService;
+    private TablaGameRepository tablaGameRepository;
     private TablaUtilService tablaUtilService;
 
-    private Game game;
-    private Player white;
-    private Player black;
+    private TablaGame game;
+    private TablaSeat white;
+    private TablaSeat black;
     private TablaGameState state;
 
     @BeforeEach
     void setUp() {
-        gameUtilService = mock(GameUtilService.class);
+        tablaGameRepository = mock(TablaGameRepository.class);
         tablaUtilService = new TablaUtilService(
-                gameUtilService,
+                tablaGameRepository,
                 mock(WebSocketService.class),
-                mock(RankingService.class),
+                mock(TablaStatsService.class),
                 mock(TablaDiceService.class));
 
         // A player's name comes from the account behind the seat.
@@ -61,21 +60,21 @@ class TablaBlockedTimeoutTest {
         state.setBoardState(BoardState.initial());
         state.setInTurnPlayer(white);
 
-        game = new Game();
+        game = new TablaGame();
         game.setFirstPlayer(white);
         game.setSecondPlayer(black);
-        game.setTablaState(state);
+        game.setState(state);
         // The push reads the id; it is generated on persist, which never
         // happens here.
         setId(game, UUID.randomUUID());
 
-        when(gameUtilService.findGameById(any())).thenReturn(Optional.of(game));
-        when(gameUtilService.saveGame(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        when(tablaGameRepository.findById(any())).thenReturn(Optional.of(game));
+        when(tablaGameRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
     }
 
-    private static void setId(Game game, UUID id) {
+    private static void setId(TablaGame game, UUID id) {
         try {
-            var field = Class.forName("bg.deck.model.base.BaseEntity").getDeclaredField("id");
+            var field = Class.forName("bg.deck.common.model.base.BaseEntity").getDeclaredField("id");
             field.setAccessible(true);
             field.set(game, id);
         } catch (ReflectiveOperationException e) {
@@ -83,11 +82,9 @@ class TablaBlockedTimeoutTest {
         }
     }
 
-    private static Player seat(String username) {
-        User user = new User();
-        user.setUsername(username);
-        Player player = new Player();
-        player.setUser(user);
+    private static TablaSeat seat(String username) {
+        TablaSeat player = new TablaSeat();
+        player.setUsername(username);
         return player;
     }
 

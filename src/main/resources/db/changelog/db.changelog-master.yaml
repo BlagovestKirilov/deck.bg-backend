@@ -49,3 +49,82 @@ databaseChangeLog:
 
   - include:
       file: db/changelog/changes/019-available-services.yaml
+
+  # Written on the belot branch as 019 and 020, renumbered on the way in:
+  # 019-available-services has already run against production, and two
+  # changesets sharing a number is a merge waiting to pick the wrong one.
+  # Safe to renumber because neither of these has ever run anywhere.
+  - include:
+      file: db/changelog/changes/021-belot-schema.yaml
+
+  - include:
+      file: db/changelog/changes/022-belot-game.yaml
+
+  - include:
+      file: db/changelog/changes/023-belot-deal.yaml
+
+  - include:
+      file: db/changelog/changes/024-belot-play.yaml
+
+  - include:
+      file: db/changelog/changes/025-belot-turn-clock.yaml
+
+  - include:
+      file: db/changelog/changes/026-belot-player-stats.yaml
+
+  - include:
+      file: db/changelog/changes/027-belot-player-rating.yaml
+
+  - include:
+      file: db/changelog/changes/028-belot-abandoned-deal.yaml
+
+  - include:
+      file: db/changelog/changes/029-belot-matchmaking-lock.yaml
+
+  - include:
+      file: db/changelog/changes/030-belot-deal-cut.yaml
+
+  - include:
+      file: db/changelog/changes/031-belot-forfeit.yaml
+
+  # Santase and табла move into schemas of their own, as belot has: expand
+  # into the new schema, copy, verify, then drop what was copied. Each phase
+  # starts with a tag, but 042 drops the old tables in the same release, and
+  # nothing rolls back past it.
+  #   032-036  the records: santase.player_stats, tabla.player_stats
+  #   037-040  the games: santase.game/seat/game_state/hand/deck, tabla.game/seat/game_state
+  #   041      belot.deal.cut_at and belot.seat.missed_turns as INTEGER, as
+  #            the entities map them (030 and 031 made them SMALLINT).
+  #   042      drops the public tables 034-039 copied from. Irreversible.
+  - include:
+      file: db/changelog/changes/032-tag-before-stats-split.yaml
+
+  - include:
+      file: db/changelog/changes/033-santase-tabla-schemas.yaml
+
+  - include:
+      file: db/changelog/changes/034-santase-player-stats.yaml
+
+  - include:
+      file: db/changelog/changes/035-tabla-player-stats.yaml
+
+  - include:
+      file: db/changelog/changes/036-user-game-stats-cascade.yaml
+
+  - include:
+      file: db/changelog/changes/037-tag-before-game-split.yaml
+
+  - include:
+      file: db/changelog/changes/038-santase-games.yaml
+
+  - include:
+      file: db/changelog/changes/039-tabla-games.yaml
+
+  - include:
+      file: db/changelog/changes/040-player-user-set-null.yaml
+
+  - include:
+      file: db/changelog/changes/041-belot-integer-columns.yaml
+
+  - include:
+      file: db/changelog/changes/042-drop-old-game-tables.yaml

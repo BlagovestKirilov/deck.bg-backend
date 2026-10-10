@@ -1,0 +1,15 @@
+databaseChangeLog:
+  # A named point to roll back to: everything after it moves the santase and
+  # табла games out of public (game, player, game_state, tabla_game_state,
+  # player_hand, game_deck) into each game's own schema.
+  #
+  #   liquibase rollback before-game-split
+  #
+  # undoes 038-040, copying back whatever was played in the meantime.
+  - changeSet:
+      id: 037-tag-before-game-split
+      author: Blagovest Kirilov
+      comment: Rollback point before the game split
+      changes:
+        - tagDatabase:
+            tag: before-game-split

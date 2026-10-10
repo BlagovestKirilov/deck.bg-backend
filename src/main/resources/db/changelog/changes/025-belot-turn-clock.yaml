@@ -1,0 +1,31 @@
+databaseChangeLog:
+  # When the turn on the table started.
+  #
+  # A player who walks away mid-deal leaves three others waiting on a table
+  # that can never finish. The deadline is this column plus a timeout: a
+  # scheduled job acts for whoever has run out, and the same column is what the
+  # client counts down from, so the clock the player sees is the clock the
+  # server keeps.
+  #
+  # On the deal rather than the game, because it is a deal's turn that expires,
+  # and a deal that is over has no turn to expire.
+  #
+  # Additive: one nullable column.
+  - changeSet:
+      id: 025-belot-turn-clock
+      author: Blagovest Kirilov
+      comment: When the turn on a belot deal started
+      changes:
+        - sql:
+            dbms: postgresql
+            splitStatements: false
+            sql: |
+              ALTER TABLE belot.deal ADD COLUMN IF NOT EXISTS turn_started_at TIMESTAMPTZ;
+
+              -- Deals already in progress get the clock started now rather than
+              -- at the epoch, which would time every one of them out at once.
+              UPDATE belot.deal SET turn_started_at = now()
+               WHERE turn_started_at IS NULL AND status IN ('BIDDING', 'PLAYING');
+
+              CREATE INDEX IF NOT EXISTS belot_deal_turn_idx
+                  ON belot.deal (status, turn_started_at);

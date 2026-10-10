@@ -1,0 +1,43 @@
+databaseChangeLog:
+  # public.user_game_stats is no longer written or read by the application —
+  # the records are in santase.player_stats and tabla.player_stats — but it
+  # still holds a foreign key into public.users, and the account no longer
+  # deletes its rows on the way out (the mapping that did is gone). Without
+  # this, deleting an account would be refused by that key.
+  #
+  # The key is found by what it points at rather than by name, in the style of
+  # 014: its name is whatever the database it was created on gave it.
+  - changeSet:
+      id: 036-user-game-stats-cascade
+      author: Blagovest Kirilov
+      comment: Old stats rows go with a deleted account
+      changes:
+        - sql:
+            dbms: postgresql
+            splitStatements: false
+            sql: |
+              DO $$
+              DECLARE
+                  c record;
+              BEGIN
+                  FOR c IN SELECT con.conname
+                             FROM pg_constraint con
+                            WHERE con.conrelid = 'public.user_game_stats'::regclass
+                              AND con.contype = 'f'
+                              AND con.confrelid = 'public.users'::regclass
+                  LOOP
+                      EXECUTE format('ALTER TABLE public.user_game_stats DROP CONSTRAINT %I', c.conname);
+                  END LOOP;
+                  ALTER TABLE public.user_game_stats
+                      ADD CONSTRAINT fk_user_game_stats_user
+                      FOREIGN KEY (user_id) REFERENCES public.users (id) ON DELETE CASCADE;
+              END $$;
+      rollback:
+        - sql:
+            dbms: postgresql
+            splitStatements: false
+            sql: |
+              ALTER TABLE public.user_game_stats DROP CONSTRAINT fk_user_game_stats_user;
+              ALTER TABLE public.user_game_stats
+                  ADD CONSTRAINT fk_user_game_stats_user
+                  FOREIGN KEY (user_id) REFERENCES public.users (id);

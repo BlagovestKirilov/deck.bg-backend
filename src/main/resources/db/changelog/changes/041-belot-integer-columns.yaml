@@ -1,0 +1,31 @@
+databaseChangeLog:
+  # 030 added belot.deal.cut_at and 031 added belot.seat.missed_turns as
+  # SMALLINT, but both are Integer on the entity, which Hibernate maps to
+  # INTEGER. Production validates the schema at startup (ddl-auto: validate)
+  # and refuses to start on a column of the wrong type.
+  #
+  # A database that ran the application with ddl-auto: update before 030 and
+  # 031 already has both as INTEGER — Hibernate added the columns first and the
+  # IF NOT EXISTS in those changesets left them alone — and for it this is a
+  # no-op. 030 and 031 themselves stay as they are: they have run on such
+  # databases, and editing them would change their checksums.
+  #
+  # Widening a small integer loses nothing: every value fits.
+  - changeSet:
+      id: 041-belot-integer-columns
+      author: Blagovest Kirilov
+      comment: Belot cut_at and missed_turns as INTEGER, as the entities map them
+      changes:
+        - sql:
+            dbms: postgresql
+            splitStatements: false
+            sql: |
+              ALTER TABLE belot.deal ALTER COLUMN cut_at TYPE INTEGER;
+              ALTER TABLE belot.seat ALTER COLUMN missed_turns TYPE INTEGER;
+      rollback:
+        - sql:
+            dbms: postgresql
+            splitStatements: false
+            sql: |
+              ALTER TABLE belot.deal ALTER COLUMN cut_at TYPE SMALLINT;
+              ALTER TABLE belot.seat ALTER COLUMN missed_turns TYPE SMALLINT;

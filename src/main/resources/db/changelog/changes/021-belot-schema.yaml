@@ -1,0 +1,33 @@
+databaseChangeLog:
+  # Belot's own schema, and the one table that proves the seam exists.
+  #
+  # Everything belot owns lives in here and refers to nothing in public. A
+  # player is known by the username the token carries — which is its subject,
+  # is set at registration and has no rename path — so belot never reads
+  # public.users and the two halves can be pulled apart later without
+  # unpicking a foreign key.
+  #
+  # Additive: a new schema and a new table. Nothing existing is read or
+  # written.
+  - changeSet:
+      id: 021-belot-schema
+      author: Blagovest Kirilov
+      comment: The belot schema and the player it knows about
+      changes:
+        - sql:
+            dbms: postgresql
+            sql: CREATE SCHEMA IF NOT EXISTS belot;
+        - sql:
+            dbms: postgresql
+            splitStatements: false
+            sql: |
+              CREATE TABLE IF NOT EXISTS belot.player (
+                  id         UUID         PRIMARY KEY,
+                  created_at TIMESTAMPTZ  NOT NULL,
+                  updated_at TIMESTAMPTZ  NOT NULL,
+                  username   VARCHAR(20)  NOT NULL UNIQUE
+              );
+      rollback:
+        - sql:
+            dbms: postgresql
+            sql: DROP TABLE IF EXISTS belot.player;

@@ -1,0 +1,28 @@
+databaseChangeLog:
+  # Santase's and табла's own schemas, as belot has its own.
+  #
+  # Everything a game owns moves into its schema in the changesets that follow
+  # — the records first, the tables later — and refers to nothing outside it:
+  # a player is known by username, as belot knows them.
+  #
+  # Additive: two empty schemas. Nothing existing is read or written.
+  - changeSet:
+      id: 033-santase-tabla-schemas
+      author: Blagovest Kirilov
+      comment: The santase and tabla schemas
+      changes:
+        - sql:
+            dbms: postgresql
+            sql: CREATE SCHEMA IF NOT EXISTS santase;
+        - sql:
+            dbms: postgresql
+            sql: CREATE SCHEMA IF NOT EXISTS tabla;
+      rollback:
+        # Not CASCADE: a schema with something left in it is a mistake to look
+        # at, not to throw away.
+        - sql:
+            dbms: postgresql
+            sql: DROP SCHEMA IF EXISTS tabla;
+        - sql:
+            dbms: postgresql
+            sql: DROP SCHEMA IF EXISTS santase;

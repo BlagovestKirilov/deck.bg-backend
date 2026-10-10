@@ -1,0 +1,64 @@
+databaseChangeLog:
+  # A belot table and the four seats at it.
+  #
+  # A seat names its player by username, the same way belot.player does, so
+  # nothing here points out of the schema. The two scores and the hanging
+  # points live on the game because that is what the score sheet is.
+  #
+  # The deck is not stored. The server commits to a secret seed at the start —
+  # the table is shown its hash — and every deal is shuffled from that seed and
+  # the deal's number, so a hand can be dealt again from two columns rather than
+  # kept in thirty-two rows. The seed is revealed when the game ends, which is
+  # what lets a player check the shuffles were not chosen to suit the house.
+  # Same approach as табла's dice.
+  #
+  # Additive: two new tables in belot's own schema.
+  - changeSet:
+      id: 022-belot-game
+      author: Blagovest Kirilov
+      comment: A belot table, its seats and its score sheet
+      changes:
+        - sql:
+            dbms: postgresql
+            splitStatements: false
+            sql: |
+              CREATE TABLE IF NOT EXISTS belot.game (
+                  id                UUID         PRIMARY KEY,
+                  created_at        TIMESTAMPTZ  NOT NULL,
+                  updated_at        TIMESTAMPTZ  NOT NULL,
+                  status            VARCHAR(20)  NOT NULL,
+                  dealer_seat       VARCHAR(10),
+                  north_south_score INTEGER      NOT NULL DEFAULT 0,
+                  east_west_score   INTEGER      NOT NULL DEFAULT 0,
+                  hanging_points    INTEGER      NOT NULL DEFAULT 0,
+                  winner_team       VARCHAR(20),
+                  server_seed       BYTEA        NOT NULL,
+                  server_seed_hash  VARCHAR(64)  NOT NULL,
+                  CONSTRAINT belot_game_status_check
+                      CHECK (status IN ('WAITING', 'PLAYING', 'FINISHED'))
+              );
+        - sql:
+            dbms: postgresql
+            splitStatements: false
+            sql: |
+              CREATE TABLE IF NOT EXISTS belot.seat (
+                  id         UUID         PRIMARY KEY,
+                  created_at TIMESTAMPTZ  NOT NULL,
+                  updated_at TIMESTAMPTZ  NOT NULL,
+                  game_id    UUID         NOT NULL REFERENCES belot.game (id) ON DELETE CASCADE,
+                  seat       VARCHAR(10)  NOT NULL,
+                  username   VARCHAR(20)  NOT NULL,
+                  CONSTRAINT belot_seat_check CHECK (seat IN ('NORTH', 'WEST', 'SOUTH', 'EAST')),
+                  CONSTRAINT belot_seat_unique_per_game UNIQUE (game_id, seat)
+              );
+        - sql:
+            dbms: postgresql
+            sql: |
+              CREATE INDEX IF NOT EXISTS belot_seat_username_idx ON belot.seat (username);
+      rollback:
+        - sql:
+            dbms: postgresql
+            sql: DROP TABLE IF EXISTS belot.seat;
+        - sql:
+            dbms: postgresql
+            sql: DROP TABLE IF EXISTS belot.game;
