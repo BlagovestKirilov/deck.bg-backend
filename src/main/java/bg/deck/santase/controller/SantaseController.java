@@ -1,5 +1,6 @@
 package bg.deck.santase.controller;
 
+import bg.deck.common.model.response.SearchGameResponse;
 import bg.deck.santase.model.request.CardRequest;
 import bg.deck.santase.service.SantaseService;
 import jakarta.validation.Valid;
@@ -25,14 +26,16 @@ public class SantaseController {
     }
 
     /**
-     * The game this player is already in, if any: 202 and its id on the search
-     * topic, or 204 when there is none and the screen offers a search.
+     * The game this player is already in, if any: 200 with its id — the same
+     * answer the search topic gives — or 204 when there is none and the screen
+     * offers a search. The id goes on the search topic as well, for a client
+     * from before it was in the answer.
      */
     @GetMapping("/active")
-    public ResponseEntity<Void> active() {
+    public ResponseEntity<SearchGameResponse> active() {
         return santaseService.resumeActiveGame()
-                ? ResponseEntity.accepted().build()
-                : ResponseEntity.noContent().build();
+                .map(id -> ResponseEntity.ok(SearchGameResponse.started(id)))
+                .orElseGet(() -> ResponseEntity.noContent().build());
     }
 
     @GetMapping("/state")

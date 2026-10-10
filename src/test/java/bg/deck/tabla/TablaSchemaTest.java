@@ -85,6 +85,8 @@ class TablaSchemaTest {
         assertThat(reread.getState().getBoard()).isEqualTo(BoardState.initial().encode());
         assertThat(reread.getFirstPlayer().getUsername()).isEqualTo("petko91");
         assertThat(games.findActiveGamesByUsername("ninja2011")).extracting(TablaGame::getId).containsExactly(gameId);
+        assertThat(games.findActiveGameIdsByUsername("ninja2011")).containsExactly(gameId);
+        assertThat(games.findActiveGameIdsByUsername("nobody")).isEmpty();
     }
 
     @Test

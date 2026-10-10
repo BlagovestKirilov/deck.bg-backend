@@ -32,6 +32,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -102,6 +103,31 @@ class SantaseServiceTest {
 
     private SantaseSeat createPlayer(String name) {
         return SantaseSeat.builder().username(name).hand(new ArrayList<>()).score(0).result(0).build();
+    }
+
+    @Nested
+    @DisplayName("Opening the screen")
+    class ResumeTests {
+        @Test
+        @DisplayName("a player in a game gets its id back, and on the search topic for an older client")
+        void inAGame() {
+            signIn(p1Name);
+            UUID gameId = UUID.randomUUID();
+            when(santaseTableService.activeGameId(p1Name)).thenReturn(Optional.of(gameId));
+
+            assertThat(santaseService.resumeActiveGame()).contains(gameId);
+            verify(webSocketService).notifyGameSearch(p1Name, SantaseService.SANTASE, SearchGameResponse.started(gameId));
+        }
+
+        @Test
+        @DisplayName("a player in no game gets nothing back, and nothing is sent")
+        void inNoGame() {
+            signIn(p1Name);
+            when(santaseTableService.activeGameId(p1Name)).thenReturn(Optional.empty());
+
+            assertThat(santaseService.resumeActiveGame()).isEmpty();
+            verify(webSocketService, never()).notifyGameSearch(eq(p1Name), any(String.class), any(SearchGameResponse.class));
+        }
     }
 
     @Nested
