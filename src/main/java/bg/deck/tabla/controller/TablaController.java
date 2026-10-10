@@ -10,12 +10,11 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import bg.deck.santase.controller.SantaseController;
 
 /**
  * Обикновена табла.
  *
- * <p>Mirrors {@link SantaseController}: every endpoint returns 202 with an empty
+ * <p>Mirrors {@code SantaseController}: every endpoint returns 202 with an empty
  * body and all real output is pushed over STOMP, so both games behave the same
  * way from the client's point of view.
  */

@@ -1,4 +1,4 @@
-package bg.deck.common.model;
+package bg.deck.santase.model;
 
 import bg.deck.common.model.base.BaseEntity;
 import jakarta.persistence.AttributeOverride;
@@ -8,8 +8,8 @@ import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Embedded;
 import jakarta.persistence.Entity;
 import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.OneToOne;
+import jakarta.persistence.OrderColumn;
+import jakarta.persistence.Table;
 import jakarta.persistence.Transient;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -19,8 +19,15 @@ import lombok.Setter;
 import lombok.ToString;
 
 import java.util.List;
-import bg.deck.santase.model.Card;
 
+/**
+ * One player's seat in one сантасе game: their hand, the card they have
+ * played, the deal's score and the game's result.
+ *
+ * <p>Named by username, in santase's own schema, so a seat points at nothing
+ * outside it. A deleted account's seats are renamed to the tombstone name,
+ * which no account can take.
+ */
 @Setter
 @Getter
 @Builder
@@ -28,14 +35,11 @@ import bg.deck.santase.model.Card;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-public class Player extends BaseEntity {
-    /**
-     * A player row is one seat in one game, not one row per user: result, score,
-     * hand and playedCard are per-game mutable state. The unique constraint on
-     * user_id was already dropped in changeset 007.
-     */
-    @ManyToOne
-    private User user;
+@Table(schema = "santase", name = "seat")
+public class SantaseSeat extends BaseEntity {
+
+    @Column(nullable = false, length = 20)
+    private String username;
 
     private Integer result;
 
@@ -44,8 +48,14 @@ public class Player extends BaseEntity {
     @Transient
     private Integer bonus;
 
+    /**
+     * The hand in the order it was dealt and drawn. The order is stored: the
+     * order of the rows is not, and a hand read back in another order is a
+     * different hand on the screen.
+     */
     @ElementCollection
-    @CollectionTable(name = "player_hand", joinColumns = @JoinColumn(name = "player_id"))
+    @CollectionTable(schema = "santase", name = "hand", joinColumns = @JoinColumn(name = "seat_id"))
+    @OrderColumn(name = "card_index")
     private List<Card> hand;
 
     @Embedded
@@ -57,16 +67,6 @@ public class Player extends BaseEntity {
     private Boolean isBlanked;
 
     private Integer inactivityCount;
-
-    @OneToOne
-    private DeletedUser deletedUser;
-
-    public String getUsername() {
-        if (user != null) {
-            return user.getUsername();
-        }
-        return deletedUser != null ? deletedUser.getUsername() : null;
-    }
 
     public void drawCard(Card lastDrawnCard) {
         hand.forEach(card -> card.setIsLastDrawn(false));

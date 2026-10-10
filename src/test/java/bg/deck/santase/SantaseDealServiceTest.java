@@ -4,10 +4,9 @@ import bg.deck.santase.enums.Rank;
 import bg.deck.santase.enums.Suit;
 import bg.deck.santase.exception.CardNotPlayableException;
 import bg.deck.santase.model.Card;
-import bg.deck.common.model.Game;
-import bg.deck.santase.model.GameState;
-import bg.deck.common.model.Player;
-import bg.deck.common.model.User;
+import bg.deck.santase.model.SantaseGame;
+import bg.deck.santase.model.SantaseGameState;
+import bg.deck.santase.model.SantaseSeat;
 import bg.deck.santase.service.SantaseDealService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -32,23 +31,21 @@ class SantaseDealServiceTest {
     @InjectMocks
     private SantaseDealService santaseDealService;
 
-    private Player p1;
-    private Player p2;
-    private Game game;
-    private GameState state;
+    private SantaseSeat p1;
+    private SantaseSeat p2;
+    private SantaseGame game;
+    private SantaseGameState state;
 
     @BeforeEach
     void setUp() {
         p1 = createPlayer("p1");
         p2 = createPlayer("p2");
-        state = GameState.builder().deck(new LinkedList<>()).build();
-        game = Game.builder().firstPlayer(p1).secondPlayer(p2).state(state).build();
+        state = SantaseGameState.builder().deck(new LinkedList<>()).build();
+        game = SantaseGame.builder().firstPlayer(p1).secondPlayer(p2).state(state).build();
     }
 
-    private Player createPlayer(String name) {
-        User user = new User();
-        user.setUsername(name);
-        return Player.builder().user(user).hand(new ArrayList<>()).score(0).result(0).isBlanked(true).build();
+    private SantaseSeat createPlayer(String name) {
+        return SantaseSeat.builder().username(name).hand(new ArrayList<>()).score(0).result(0).isBlanked(true).build();
     }
 
     @Nested

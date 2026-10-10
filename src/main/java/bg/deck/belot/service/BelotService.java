@@ -32,7 +32,6 @@ import bg.deck.belot.model.response.BelotSeatView;
 import bg.deck.belot.model.response.BelotStateResponse;
 import bg.deck.belot.model.response.BelotTrickView;
 import bg.deck.belot.model.response.BelotTurnView;
-import bg.deck.common.enums.GameType;
 import bg.deck.common.exception.IllegalMoveException;
 import bg.deck.common.service.AvailabilityService;
 import bg.deck.common.service.WebSocketService;
@@ -65,7 +64,7 @@ import java.util.stream.Collectors;
 @Service
 public class BelotService {
 
-    /** The catalogue code. Not a {@code GameType}: belot keeps out of that enum. */
+    /** The catalogue code: in the availability table and the search topic. */
     public static final String BELOT = "BELOT";
 
     /**
@@ -90,8 +89,7 @@ public class BelotService {
      * Sits a player down, and deals if that filled the table.
      *
      * <p>Gated like the other two searches: nobody joins a queue for a game
-     * they are not being offered. {@link GameType} is deliberately not involved
-     * — belot is not in that enum, by the rule in {@code docs/belot/BUILD.md}.
+     * they are not being offered.
      */
     @Transactional
     public void search(String username) {

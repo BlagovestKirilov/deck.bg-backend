@@ -1,9 +1,11 @@
 package bg.deck.tabla.service;
 
-import bg.deck.common.enums.GameType;
-import bg.deck.common.model.Game;
-import bg.deck.common.model.Player;
+import bg.deck.common.exception.NoActiveGameFoundException;
+import bg.deck.common.model.response.SearchGameResponse;
+import bg.deck.tabla.model.TablaGame;
+import bg.deck.tabla.model.TablaSeat;
 import bg.deck.tabla.model.TablaGameState;
+import bg.deck.tabla.repository.TablaGameRepository;
 import bg.deck.tabla.model.dto.ComboHopDTO;
 import bg.deck.tabla.model.dto.HopDTO;
 import bg.deck.tabla.model.dto.OpeningThrowDTO;
@@ -25,21 +27,23 @@ import java.time.Instant;
 import java.util.Arrays;
 import java.util.HexFormat;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.IntStream;
-import bg.deck.common.service.GameUtilService;
 import bg.deck.common.service.WebSocketService;
 
 /**
  * Table lifecycle for табла: creating games, building the per-player payload and
  * ending games. {@link TablaService} holds the request-facing operations.
+ *
+ * <p>The only class that speaks to {@link TablaGameRepository}.
  */
 @Log4j2
 @RequiredArgsConstructor
 @Service
 public class TablaUtilService {
 
-    private final GameUtilService gameUtilService;
+    private final TablaGameRepository tablaGameRepository;
     private final WebSocketService webSocketService;
     private final TablaStatsService tablaStatsService;
     private final TablaDiceService diceService;
@@ -56,7 +60,7 @@ public class TablaUtilService {
      * now starts the same way — press Хвърли — including the first.
      */
     @Transactional
-    public Game startGame(Player firstPlayer, Player secondPlayer) {
+    public TablaGame startGame(TablaSeat firstPlayer, TablaSeat secondPlayer) {
         firstPlayer.setInactivityCount(0);
         secondPlayer.setInactivityCount(0);
 
@@ -68,21 +72,48 @@ public class TablaUtilService {
                 .maxDiceUsable(0)
                 .build();
 
-        Game game = Game.builder()
-                .gameType(GameType.TABLA)
+        TablaGame game = TablaGame.builder()
                 .firstPlayer(firstPlayer)
                 .secondPlayer(secondPlayer)
-                .tablaState(state)
+                .state(state)
                 .serverSeed(seed)
                 .serverSeedHash(diceService.hash(seed))
                 .build();
 
-        game = gameUtilService.saveGame(game);
+        game = tablaGameRepository.save(game);
 
         // Nobody is on turn yet: each player throws one die first, with the same
         // time — and the same warning — as any turn.
         state.extendNextMoveTime();
-        return gameUtilService.saveGame(game);
+        return tablaGameRepository.save(game);
+    }
+
+    /** The game with this id, if it is still there. */
+    public Optional<TablaGame> findGameById(UUID gameId) {
+        return tablaGameRepository.findById(gameId);
+    }
+
+    /** Every game still being played. */
+    public List<TablaGame> findAllActiveGames() {
+        return tablaGameRepository.findAllActive();
+    }
+
+    public TablaGame saveGame(TablaGame game) {
+        return tablaGameRepository.save(game);
+    }
+
+    /**
+     * True when the player is free to start a game. A player already in one is
+     * pointed back at it on their search topic and is not free.
+     */
+    public boolean checkIfUserExistsAndIsAvailable(String username) {
+        Optional<TablaGame> game = tablaGameRepository.findActiveGamesByUsername(username).stream().findFirst();
+        if (game.isPresent()) {
+            webSocketService.notifyGameSearch(username, TablaService.TABLA,
+                    SearchGameResponse.started(game.get().getId()));
+            return false;
+        }
+        return true;
     }
 
     /* ------------------------------------------------------------------
@@ -96,8 +127,8 @@ public class TablaUtilService {
      * progress, and die1/die2 hold whichever of its two dice have been thrown
      * — the first player's (WHITE) and the second player's.
      */
-    public boolean isOpening(Game game) {
-        return game.getWinner() == null && game.getTablaState().getInTurnPlayer() == null;
+    public boolean isOpening(TablaGame game) {
+        return game.getWinner() == null && game.getState().getInTurnPlayer() == null;
     }
 
     /**
@@ -109,8 +140,8 @@ public class TablaUtilService {
      * can throw again for a better one. Once both dice are out the throw is
      * settled — see {@link #settleOpening}.
      */
-    public boolean openingThrow(Game game, Player player) {
-        TablaGameState state = game.getTablaState();
+    public boolean openingThrow(TablaGame game, TablaSeat player) {
+        TablaGameState state = game.getState();
         boolean first = player.equals(game.getFirstPlayer());
         if ((first ? state.getDie1() : state.getDie2()) != null) {
             return false;
@@ -135,8 +166,8 @@ public class TablaUtilService {
      * throw. The turn index moves past every throw the opening used, so the next
      * roll of the game still draws unseen dice from the seed.
      */
-    private void settleOpening(Game game, Dice pair) {
-        TablaGameState state = game.getTablaState();
+    private void settleOpening(TablaGame game, Dice pair) {
+        TablaGameState state = game.getState();
         state.setTurnIndex(state.getTurnIndex() + 1);
 
         if (pair.isDouble()) {
@@ -146,7 +177,7 @@ public class TablaUtilService {
             return;
         }
 
-        Player starter = pair.d1() > pair.d2() ? game.getFirstPlayer() : game.getSecondPlayer();
+        TablaSeat starter = pair.d1() > pair.d2() ? game.getFirstPlayer() : game.getSecondPlayer();
         state.setFirstTurnPlayer(starter);
         state.setInTurnPlayer(starter);
         placeDice(game, starter, pair);
@@ -158,8 +189,8 @@ public class TablaUtilService {
      * unthrown. Time extensions and the inactivity count use this, so the
      * opening throw has exactly the time and warnings a turn has.
      */
-    public boolean mustAct(Game game, Player player) {
-        TablaGameState state = game.getTablaState();
+    public boolean mustAct(TablaGame game, TablaSeat player) {
+        TablaGameState state = game.getState();
         if (isOpening(game)) {
             return (player.equals(game.getFirstPlayer()) ? state.getDie1() : state.getDie2()) == null;
         }
@@ -178,17 +209,17 @@ public class TablaUtilService {
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public boolean openingTimedOut(UUID gameId) {
-        Game game = gameUtilService.findGameById(gameId).orElse(null);
+        TablaGame game = tablaGameRepository.findById(gameId).orElse(null);
         if (game == null || !isOpening(game)) {
             return false;
         }
 
-        TablaGameState state = game.getTablaState();
+        TablaGameState state = game.getState();
         boolean firstThrew = state.getDie1() != null;
         boolean secondThrew = state.getDie2() != null;
 
         if (firstThrew != secondThrew) {
-            Player absent = firstThrew ? game.getSecondPlayer() : game.getFirstPlayer();
+            TablaSeat absent = firstThrew ? game.getSecondPlayer() : game.getFirstPlayer();
             log.info("Табла {}: {} did not throw the opening die in time — the game is lost", gameId, absent.getUsername());
             finishGame(game, game.getOpponent(absent), true);
             return true;
@@ -196,7 +227,7 @@ public class TablaUtilService {
 
         log.info("Табла {}: neither player threw the opening die — the window opens again", gameId);
         state.extendNextMoveTime();
-        gameUtilService.saveGame(game);
+        tablaGameRepository.save(game);
         pushToBoth(game);
         return true;
     }
@@ -206,8 +237,8 @@ public class TablaUtilService {
      * them the position lets them use, and the board to undo back to. A normal
      * roll and the opening roll both start a turn this way.
      */
-    public void placeDice(Game game, Player player, Dice dice) {
-        TablaGameState state = game.getTablaState();
+    public void placeDice(TablaGame game, TablaSeat player, Dice dice) {
+        TablaGameState state = game.getState();
         state.setDie1(dice.d1());
         state.setDie2(dice.d2());
         state.setRemainingDiceValues(dice.values());
@@ -227,8 +258,8 @@ public class TablaUtilService {
      * pair on its first turn; that roll moves the turn index past the opening,
      * so such a game never reports one.
      */
-    private List<OpeningThrowDTO> openingThrows(Game game, Player player) {
-        TablaGameState state = game.getTablaState();
+    private List<OpeningThrowDTO> openingThrows(TablaGame game, TablaSeat player) {
+        TablaGameState state = game.getState();
         if (game.getWinner() != null) {
             return null;
         }
@@ -238,7 +269,7 @@ public class TablaUtilService {
             // Every throw before the one in progress was a tie.
             completed = state.getTurnIndex();
         } else {
-            Player starter = state.getFirstTurnPlayer();
+            TablaSeat starter = state.getFirstTurnPlayer();
             if (starter == null || !state.isInTurn(starter) || !state.isRolled()) {
                 return null;
             }
@@ -256,11 +287,14 @@ public class TablaUtilService {
                 .toList();
     }
 
-    public Game findActiveGame(String username) {
-        return gameUtilService.findGameByUsername(username, GameType.TABLA);
+    public TablaGame findActiveGame(String username) {
+        return tablaGameRepository.findActiveGamesByUsername(username)
+                .stream()
+                .findFirst()
+                .orElseThrow(() -> new NoActiveGameFoundException(username));
     }
 
-    public Side sideOf(Game game, Player player) {
+    public Side sideOf(TablaGame game, TablaSeat player) {
         return game.getFirstPlayer().equals(player) ? Side.WHITE : Side.BLACK;
     }
 
@@ -269,13 +303,13 @@ public class TablaUtilService {
        ------------------------------------------------------------------ */
 
     @Transactional
-    public void finishGame(Game game, Player winner, boolean opponentSurrendered) {
+    public void finishGame(TablaGame game, TablaSeat winner, boolean opponentSurrendered) {
         if (game.getWinner() != null) {
             return;
         }
         game.setWinner(winner, opponentSurrendered);
         tablaStatsService.record(game);
-        gameUtilService.saveGame(game);
+        tablaGameRepository.save(game);
         pushToBoth(game);
     }
 
@@ -297,22 +331,22 @@ public class TablaUtilService {
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public boolean passIfBlocked(UUID gameId) {
-        Game game = gameUtilService.findGameById(gameId).orElse(null);
+        TablaGame game = tablaGameRepository.findById(gameId).orElse(null);
         if (game == null || game.getWinner() != null) {
             return false;
         }
 
-        TablaGameState state = game.getTablaState();
+        TablaGameState state = game.getState();
         if (state == null || isOpening(game) || !state.isRolled() || state.getMaxDiceUsable() != 0) {
             return false;
         }
 
-        Player blocked = state.getInTurnPlayer();
+        TablaSeat blocked = state.getInTurnPlayer();
         log.info("Табла: {} timed out with no legal move — the turn passes instead", blocked.getUsername());
 
         state.clearTurn();
         state.setInTurnPlayer(game.getOpponent(blocked));
-        gameUtilService.saveGame(game);
+        tablaGameRepository.save(game);
         pushToBoth(game);
         return true;
     }
@@ -323,13 +357,13 @@ public class TablaUtilService {
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void surrenderByInactivity(UUID gameId) {
-        Game game = gameUtilService.findGameById(gameId).orElse(null);
+        TablaGame game = tablaGameRepository.findById(gameId).orElse(null);
         if (game == null || game.getWinner() != null) {
             return;
         }
 
-        Player timedOut = game.getTablaState().getInTurnPlayer();
-        Player opponent = game.getOpponent(timedOut);
+        TablaSeat timedOut = game.getState().getInTurnPlayer();
+        TablaSeat opponent = game.getOpponent(timedOut);
 
         log.info("Табла: {} timed out, {} wins", timedOut.getUsername(), opponent.getUsername());
         finishGame(game, opponent, true);
@@ -339,19 +373,19 @@ public class TablaUtilService {
        Pushing state
        ------------------------------------------------------------------ */
 
-    public void pushToBoth(Game game) {
+    public void pushToBoth(TablaGame game) {
         push(game, game.getFirstPlayer().getUsername());
         push(game, game.getSecondPlayer().getUsername());
     }
 
-    public void push(Game game, String username) {
+    public void push(TablaGame game, String username) {
         webSocketService.notifyGameUpdate(game.getId().toString(), username, buildState(game, username));
     }
 
     /** The position from one player's point of view, with their legal moves. */
-    public TablaStateResponse buildState(Game game, String username) {
-        Player player = game.getPlayerByUsername(username);
-        TablaGameState state = game.getTablaState();
+    public TablaStateResponse buildState(TablaGame game, String username) {
+        TablaSeat player = game.getPlayerByUsername(username);
+        TablaGameState state = game.getState();
         boolean opponentsClock = game.getWinner() == null && state.getNextMoveTime() != null
                 && mustAct(game, game.getOpponent(player));
 
@@ -386,7 +420,7 @@ public class TablaUtilService {
 
         return TablaStateResponse.builder()
                 .gameId(game.getId().toString())
-                .gameType(GameType.TABLA.name())
+                .gameType(TablaService.TABLA)
                 .firstPlayerUsername(game.getFirstPlayer().getUsername())
                 .secondPlayerUsername(game.getSecondPlayer().getUsername())
                 .mySide(side.name())
@@ -433,8 +467,8 @@ public class TablaUtilService {
     }
 
     /** Convenience for tests and the service layer. */
-    public List<Hop> legalHops(Game game, Player player) {
-        TablaGameState state = game.getTablaState();
+    public List<Hop> legalHops(TablaGame game, TablaSeat player) {
+        TablaGameState state = game.getState();
         return BackgammonRules.legalTurnHops(state.boardState(), sideOf(game, player),
                 state.remainingDiceValues(), state.usedDiceCount(), state.getMaxDiceUsable());
     }

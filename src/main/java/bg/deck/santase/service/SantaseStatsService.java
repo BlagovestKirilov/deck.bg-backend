@@ -1,7 +1,8 @@
 package bg.deck.santase.service;
 
-import bg.deck.common.model.Game;
-import bg.deck.common.model.Player;
+import bg.deck.santase.model.SantaseGame;
+import bg.deck.santase.model.SantaseSeat;
+import bg.deck.common.constant.Constants;
 import bg.deck.common.model.dto.GameStatsDTO;
 import bg.deck.common.util.Elo;
 import bg.deck.common.util.RankLadder;
@@ -41,8 +42,8 @@ public class SantaseStatsService {
      * settled.
      */
     @Transactional
-    public void record(Game game) {
-        Player winner = game.getWinner();
+    public void record(SantaseGame game) {
+        SantaseSeat winner = game.getWinner();
         SantasePlayerStats won = recordOf(winner);
         SantasePlayerStats lost = recordOf(game.getOpponent(winner));
         Elo.settle(won, lost);
@@ -65,11 +66,11 @@ public class SantaseStatsService {
                 .orElse(false);
     }
 
-    private SantasePlayerStats recordOf(Player seat) {
-        if (seat == null || seat.getUser() == null) {
+    private SantasePlayerStats recordOf(SantaseSeat seat) {
+        if (seat == null || Constants.DELETED_PLAYER.equals(seat.getUsername())) {
             return null;
         }
-        String username = seat.getUser().getUsername();
+        String username = seat.getUsername();
         return santasePlayerStatsRepository.findByUsername(username)
                 .orElseGet(() -> new SantasePlayerStats(username));
     }

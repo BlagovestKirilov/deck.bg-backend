@@ -1,7 +1,8 @@
 package bg.deck.tabla.service;
 
-import bg.deck.common.model.Game;
-import bg.deck.common.model.Player;
+import bg.deck.tabla.model.TablaGame;
+import bg.deck.tabla.model.TablaSeat;
+import bg.deck.common.constant.Constants;
 import bg.deck.common.model.dto.GameStatsDTO;
 import bg.deck.common.util.Elo;
 import bg.deck.common.util.RankLadder;
@@ -40,8 +41,8 @@ public class TablaStatsService {
      * settled.
      */
     @Transactional
-    public void record(Game game) {
-        Player winner = game.getWinner();
+    public void record(TablaGame game) {
+        TablaSeat winner = game.getWinner();
         TablaPlayerStats won = recordOf(winner);
         TablaPlayerStats lost = recordOf(game.getOpponent(winner));
         Elo.settle(won, lost);
@@ -64,11 +65,11 @@ public class TablaStatsService {
                 .orElse(false);
     }
 
-    private TablaPlayerStats recordOf(Player seat) {
-        if (seat == null || seat.getUser() == null) {
+    private TablaPlayerStats recordOf(TablaSeat seat) {
+        if (seat == null || Constants.DELETED_PLAYER.equals(seat.getUsername())) {
             return null;
         }
-        String username = seat.getUser().getUsername();
+        String username = seat.getUsername();
         return tablaPlayerStatsRepository.findByUsername(username)
                 .orElseGet(() -> new TablaPlayerStats(username));
     }

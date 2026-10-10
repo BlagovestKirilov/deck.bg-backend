@@ -1,8 +1,7 @@
 package bg.deck.tabla;
 
-import bg.deck.common.model.Game;
-import bg.deck.common.model.Player;
-import bg.deck.common.model.User;
+import bg.deck.tabla.model.TablaGame;
+import bg.deck.tabla.model.TablaSeat;
 import bg.deck.tabla.model.TablaPlayerStats;
 import bg.deck.tabla.repository.TablaPlayerStatsRepository;
 import bg.deck.tabla.service.TablaStatsService;
@@ -51,9 +50,9 @@ class TablaStatsTest {
     @Test
     @DisplayName("a result is written into both records, and a deleted account's is let go of")
     void aResultAndADeletion() {
-        Player won = seat("petko91");
-        Player lost = seat("gosho");
-        Game game = Game.builder().firstPlayer(won).secondPlayer(lost).build();
+        TablaSeat won = seat("petko91");
+        TablaSeat lost = seat("gosho");
+        TablaGame game = TablaGame.builder().firstPlayer(won).secondPlayer(lost).build();
         game.setWinner(won, true);
 
         stats.record(game);
@@ -70,10 +69,8 @@ class TablaStatsTest {
         assertThat(records.findByUsername("gosho")).isEmpty();
     }
 
-    private static Player seat(String username) {
-        User user = new User();
-        user.setUsername(username);
-        Player player = Player.builder().user(user).build();
+    private static TablaSeat seat(String username) {
+        TablaSeat player = TablaSeat.builder().username(username).build();
         try {
             var field = Class.forName("bg.deck.common.model.base.BaseEntity").getDeclaredField("id");
             field.setAccessible(true);

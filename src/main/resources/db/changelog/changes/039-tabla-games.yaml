@@ -1,0 +1,204 @@
+databaseChangeLog:
+  # Табла games move out of public (game, player, tabla_game_state) into the
+  # tabla schema: game, seat, game_state.
+  #
+  # - Every id is kept. The dice of a game are worked out from its id and its
+  #   committed seed, so a game in progress throws exactly what it would have;
+  #   the players' screens subscribe by the id as well.
+  # - A seat holds a name instead of a key into public.users, with the
+  #   tombstone name for an account that is gone, as in 038.
+  # - The state keeps its version, which guards against a move applied twice.
+  #
+  # Create, copy and verify in one changeset, as 038. The public tables are
+  # read, never written.
+  - changeSet:
+      id: 039-tabla-games
+      author: Blagovest Kirilov
+      comment: Табла games in the tabla schema
+      changes:
+        - sql:
+            dbms: postgresql
+            splitStatements: false
+            sql: |
+              DO $$
+              BEGIN
+                  IF EXISTS (SELECT 1 FROM public.game WHERE game_type = 'TABLA' AND state_id IS NOT NULL) THEN
+                      RAISE EXCEPTION 'a табла game in public.game has a santase state';
+                  END IF;
+              END $$;
+
+              CREATE TABLE tabla.seat (
+                  id               UUID         PRIMARY KEY,
+                  created_at       TIMESTAMPTZ  NOT NULL,
+                  updated_at       TIMESTAMPTZ  NOT NULL,
+                  username         VARCHAR(20)  NOT NULL,
+                  inactivity_count INTEGER
+              );
+              CREATE INDEX ix_seat_username ON tabla.seat (username);
+
+              CREATE TABLE tabla.game_state (
+                  id                   UUID          PRIMARY KEY,
+                  created_at           TIMESTAMPTZ   NOT NULL,
+                  updated_at           TIMESTAMPTZ   NOT NULL,
+                  version              INTEGER       NOT NULL,
+                  first_turn_player_id UUID REFERENCES tabla.seat (id),
+                  in_turn_player_id    UUID REFERENCES tabla.seat (id),
+                  next_move_time       TIMESTAMPTZ,
+                  board                VARCHAR(160)  NOT NULL,
+                  turn_start_board     VARCHAR(160),
+                  die1                 INTEGER,
+                  die2                 INTEGER,
+                  remaining_dice       VARCHAR(32),
+                  pending_hops         VARCHAR(256),
+                  max_dice_usable      INTEGER       NOT NULL,
+                  turn_index           INTEGER       NOT NULL
+              );
+
+              CREATE TABLE tabla.game (
+                  id                  UUID         PRIMARY KEY,
+                  created_at          TIMESTAMPTZ  NOT NULL,
+                  updated_at          TIMESTAMPTZ  NOT NULL,
+                  first_player_id     UUID REFERENCES tabla.seat (id),
+                  second_player_id    UUID REFERENCES tabla.seat (id),
+                  state_id            UUID UNIQUE REFERENCES tabla.game_state (id),
+                  server_seed         BYTEA,
+                  server_seed_hash    VARCHAR(64),
+                  winner_id           UUID REFERENCES tabla.seat (id),
+                  surrender_player_id UUID REFERENCES tabla.seat (id),
+                  finished_at         TIMESTAMPTZ
+              );
+              CREATE INDEX ix_game_first_player ON tabla.game (first_player_id);
+              CREATE INDEX ix_game_second_player ON tabla.game (second_player_id);
+
+              INSERT INTO tabla.seat (id, created_at, updated_at, username, inactivity_count)
+              SELECT p.id,
+                     COALESCE(p.created_at, p.updated_at, now()),
+                     COALESCE(p.updated_at, p.created_at, now()),
+                     COALESCE(u.username, U&'\0418\0437\0442\0440\0438\0442 \0438\0433\0440\0430\0447'),
+                     p.inactivity_count
+                FROM public.player p
+                LEFT JOIN public.users u ON u.id = p.user_id
+               WHERE p.id IN (
+                     SELECT g.first_player_id     FROM public.game g WHERE g.game_type = 'TABLA'
+                     UNION SELECT g.second_player_id    FROM public.game g WHERE g.game_type = 'TABLA'
+                     UNION SELECT g.winner_id           FROM public.game g WHERE g.game_type = 'TABLA'
+                     UNION SELECT g.surrender_player_id FROM public.game g WHERE g.game_type = 'TABLA'
+                     UNION SELECT s.first_turn_player_id FROM public.tabla_game_state s
+                                  JOIN public.game g ON g.tabla_state_id = s.id WHERE g.game_type = 'TABLA'
+                     UNION SELECT s.in_turn_player_id    FROM public.tabla_game_state s
+                                  JOIN public.game g ON g.tabla_state_id = s.id WHERE g.game_type = 'TABLA');
+
+              INSERT INTO tabla.game_state (id, created_at, updated_at, version, first_turn_player_id,
+                                            in_turn_player_id, next_move_time, board, turn_start_board, die1, die2,
+                                            remaining_dice, pending_hops, max_dice_usable, turn_index)
+              SELECT s.id,
+                     COALESCE(s.created_at, s.updated_at, now()),
+                     COALESCE(s.updated_at, s.created_at, now()),
+                     s.version, s.first_turn_player_id, s.in_turn_player_id, s.next_move_time, s.board,
+                     s.turn_start_board, s.die1, s.die2, s.remaining_dice, s.pending_hops, s.max_dice_usable,
+                     s.turn_index
+                FROM public.tabla_game_state s
+               WHERE s.id IN (SELECT g.tabla_state_id FROM public.game g WHERE g.game_type = 'TABLA');
+
+              INSERT INTO tabla.game (id, created_at, updated_at, first_player_id, second_player_id, state_id,
+                                      server_seed, server_seed_hash, winner_id, surrender_player_id, finished_at)
+              SELECT g.id,
+                     COALESCE(g.created_at, g.updated_at, now()),
+                     COALESCE(g.updated_at, g.created_at, now()),
+                     g.first_player_id, g.second_player_id, g.tabla_state_id, g.server_seed, g.server_seed_hash,
+                     g.winner_id, g.surrender_player_id, g.finished_at
+                FROM public.game g
+               WHERE g.game_type = 'TABLA';
+
+              DO $$
+              DECLARE
+                  source_rows bigint;
+                  copied_rows bigint;
+                  differing   bigint;
+              BEGIN
+                  SELECT count(*) INTO source_rows FROM public.game WHERE game_type = 'TABLA';
+                  SELECT count(*) INTO copied_rows FROM tabla.game;
+                  IF source_rows <> copied_rows THEN
+                      RAISE EXCEPTION 'tabla.game: copied % of % games', copied_rows, source_rows;
+                  END IF;
+                  -- The seed and the id are what the dice are made of.
+                  SELECT count(*) INTO differing
+                    FROM public.game g JOIN tabla.game n ON n.id = g.id
+                   WHERE (g.first_player_id, g.second_player_id, g.tabla_state_id, g.server_seed,
+                          g.server_seed_hash, g.winner_id, g.surrender_player_id, g.finished_at)
+                         IS DISTINCT FROM (n.first_player_id, n.second_player_id, n.state_id, n.server_seed,
+                                           n.server_seed_hash, n.winner_id, n.surrender_player_id, n.finished_at);
+                  IF differing <> 0 THEN
+                      RAISE EXCEPTION 'tabla.game: % games differ from the source', differing;
+                  END IF;
+
+                  SELECT count(*) INTO differing
+                    FROM tabla.seat n
+                    JOIN public.player p ON p.id = n.id
+                    LEFT JOIN public.users u ON u.id = p.user_id
+                   WHERE (n.username, n.inactivity_count)
+                         IS DISTINCT FROM (COALESCE(u.username, U&'\0418\0437\0442\0440\0438\0442 \0438\0433\0440\0430\0447'),
+                                           p.inactivity_count);
+                  IF differing <> 0 THEN
+                      RAISE EXCEPTION 'tabla.seat: % seats differ from the source', differing;
+                  END IF;
+
+                  SELECT count(*) INTO source_rows
+                    FROM public.game WHERE game_type = 'TABLA' AND tabla_state_id IS NOT NULL;
+                  SELECT count(*) INTO copied_rows FROM tabla.game_state;
+                  IF source_rows <> copied_rows THEN
+                      RAISE EXCEPTION 'tabla.game_state: copied % of % states', copied_rows, source_rows;
+                  END IF;
+                  SELECT count(*) INTO differing
+                    FROM public.tabla_game_state s JOIN tabla.game_state n ON n.id = s.id
+                   WHERE (s.version, s.first_turn_player_id, s.in_turn_player_id, s.next_move_time, s.board,
+                          s.turn_start_board, s.die1, s.die2, s.remaining_dice, s.pending_hops,
+                          s.max_dice_usable, s.turn_index)
+                         IS DISTINCT FROM (n.version, n.first_turn_player_id, n.in_turn_player_id, n.next_move_time,
+                                           n.board, n.turn_start_board, n.die1, n.die2, n.remaining_dice,
+                                           n.pending_hops, n.max_dice_usable, n.turn_index);
+                  IF differing <> 0 THEN
+                      RAISE EXCEPTION 'tabla.game_state: % states differ from the source', differing;
+                  END IF;
+              END $$;
+      rollback:
+        - sql:
+            dbms: postgresql
+            splitStatements: false
+            sql: |
+              -- What was played while this release was live goes back into the
+              -- old tables before the new ones are dropped, as in 038.
+              INSERT INTO public.player (id, created_at, updated_at, user_id, inactivity_count)
+              SELECT n.id, n.created_at, n.updated_at, u.id, n.inactivity_count
+                FROM tabla.seat n
+                LEFT JOIN public.users u ON u.username = n.username
+              ON CONFLICT (id) DO UPDATE
+                 SET updated_at = EXCLUDED.updated_at, inactivity_count = EXCLUDED.inactivity_count;
+
+              INSERT INTO public.tabla_game_state (id, created_at, updated_at, version, first_turn_player_id,
+                                                   in_turn_player_id, next_move_time, board, turn_start_board,
+                                                   die1, die2, remaining_dice, pending_hops, max_dice_usable,
+                                                   turn_index)
+              SELECT id, created_at, updated_at, version, first_turn_player_id, in_turn_player_id, next_move_time,
+                     board, turn_start_board, die1, die2, remaining_dice, pending_hops, max_dice_usable, turn_index
+                FROM tabla.game_state
+              ON CONFLICT (id) DO UPDATE
+                 SET updated_at = EXCLUDED.updated_at, version = EXCLUDED.version,
+                     first_turn_player_id = EXCLUDED.first_turn_player_id,
+                     in_turn_player_id = EXCLUDED.in_turn_player_id, next_move_time = EXCLUDED.next_move_time,
+                     board = EXCLUDED.board, turn_start_board = EXCLUDED.turn_start_board,
+                     die1 = EXCLUDED.die1, die2 = EXCLUDED.die2, remaining_dice = EXCLUDED.remaining_dice,
+                     pending_hops = EXCLUDED.pending_hops, max_dice_usable = EXCLUDED.max_dice_usable,
+                     turn_index = EXCLUDED.turn_index;
+
+              INSERT INTO public.game (id, created_at, updated_at, game_type, first_player_id, second_player_id,
+                                       tabla_state_id, server_seed, server_seed_hash, winner_id,
+                                       surrender_player_id, finished_at)
+              SELECT id, created_at, updated_at, 'TABLA', first_player_id, second_player_id, state_id,
+                     server_seed, server_seed_hash, winner_id, surrender_player_id, finished_at
+                FROM tabla.game
+              ON CONFLICT (id) DO UPDATE
+                 SET updated_at = EXCLUDED.updated_at, winner_id = EXCLUDED.winner_id,
+                     surrender_player_id = EXCLUDED.surrender_player_id, finished_at = EXCLUDED.finished_at;
+
+              DROP TABLE tabla.game, tabla.game_state, tabla.seat;

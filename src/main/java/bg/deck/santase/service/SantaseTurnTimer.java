@@ -1,10 +1,9 @@
 package bg.deck.santase.service;
 
-import bg.deck.common.enums.GameType;
-import bg.deck.common.model.Game;
+import bg.deck.santase.model.SantaseGame;
+import bg.deck.santase.model.SantaseGameState;
 import bg.deck.common.model.TurnClock;
 import bg.deck.common.scheduler.DeadlineTimer;
-import bg.deck.common.service.GameUtilService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
@@ -29,11 +28,11 @@ import java.util.UUID;
 public class SantaseTurnTimer {
 
     private final DeadlineTimer deadlineTimer;
-    private final GameUtilService gameUtilService;
+    private final SantaseTableService santaseTableService;
     private final SantaseDealService santaseDealService;
     private final WebSocketUtilService webSocketUtilService;
 
-    public void update(Game game) {
+    public void update(SantaseGame game) {
         if (game.getWinner() != null) {
             cancel(game.getId());
             return;
@@ -55,7 +54,7 @@ public class SantaseTurnTimer {
      * real deadline instead.
      */
     private void runOut(UUID gameId) {
-        Optional<Game> game = gameUtilService.findGameById(gameId);
+        Optional<SantaseGame> game = santaseTableService.findGameById(gameId);
         if (game.isEmpty() || game.get().getWinner() != null) {
             return;
         }
@@ -76,18 +75,18 @@ public class SantaseTurnTimer {
      */
     @EventListener(ApplicationReadyEvent.class)
     public void rescheduleActiveGames() {
-        List<Game> active = gameUtilService.findAllActiveGames(GameType.SANTASE);
+        List<SantaseGame> active = santaseTableService.findAllActiveGames();
         active.forEach(this::rearmAfterRestart);
         if (!active.isEmpty()) {
             log.info("Re-armed santase turn timers for {} live game(s) after startup", active.size());
         }
     }
 
-    private void rearmAfterRestart(Game game) {
+    private void rearmAfterRestart(SantaseGame game) {
         try {
             if (hasRunOut(game) && game.getTurnClock() != null) {
                 game.getTurnClock().extendNextMoveTime();
-                gameUtilService.saveGame(game);
+                santaseTableService.saveGame(game);
                 webSocketUtilService.updateGameState(game);
             }
             update(game);
@@ -96,17 +95,17 @@ public class SantaseTurnTimer {
         }
     }
 
-    private static Instant deadlineOf(Game game) {
+    private static Instant deadlineOf(SantaseGame game) {
         // Schedule to the persisted deadline rather than a hardcoded 33s. That
         // literal used to live in two places and stayed in sync only because
         // every mutation path happened to touch both.
         TurnClock clock = game.getTurnClock();
         return clock == null || clock.getNextMoveTime() == null
-                ? Instant.now().plusSeconds(clock == null ? TurnClock.TURN_SECONDS : clock.turnSeconds())
+                ? Instant.now().plusSeconds(clock == null ? SantaseGameState.TURN_SECONDS : clock.turnSeconds())
                 : clock.getNextMoveTime();
     }
 
-    private static boolean hasRunOut(Game game) {
+    private static boolean hasRunOut(SantaseGame game) {
         TurnClock clock = game.getTurnClock();
         return clock == null || clock.getNextMoveTime() == null
                 || !Instant.now().isBefore(clock.getNextMoveTime());

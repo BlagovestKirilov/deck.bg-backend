@@ -6,28 +6,33 @@ entities from the application class's package down, so it has to be above
 all four.
 
 - `bg.deck.santase` — `controller`, `service`, `repository`, `model` (`dto`,
-  `request`, `response`), `enums`, `exception`, `util`: the cards, the santase
-  state, its rules (`SantaseDealService`), its turn clock (`SantaseTurnTimer`)
-  and its own errors.
-- `bg.deck.tabla` — `controller`, `service`, `model` (`dto`, `request`,
-  `response`), `engine` (the backgammon rules), `enums`, `exception`; its
-  turn clock is `TablaTurnTimer`.
+  `request`, `response`), `enums`, `exception`, `util`: its tables in schema
+  `santase` (`SantaseGame`, `SantaseSeat`, `SantaseGameState`, the records),
+  its table (`SantaseTableService`), its seats (`SantaseSeatService`), its
+  rules (`SantaseDealService`), its turn clock (`SantaseTurnTimer`) and its
+  own errors.
+- `bg.deck.tabla` — `controller`, `service`, `repository`, `model` (`dto`,
+  `request`, `response`), `engine` (the backgammon rules), `enums`,
+  `exception`: its tables in schema `tabla` (`TablaGame`, `TablaSeat`,
+  `TablaGameState`, the records), its table and lifecycle
+  (`TablaUtilService`), its seats (`TablaSeatService`) and its turn clock
+  (`TablaTurnTimer`).
 - `bg.deck.belot` — a package apart, with its own `controller`, `service`,
-  `repository`, `model`, `config` and `engine` — see **The belot**
-  **seam** below before writing anything in it.
+  `repository`, `model`, `config` and `engine`.
 - `bg.deck.common`: `controller`, `service`, `scheduler`, `repository`,
   `model`, `security`, `config`, `constant`, `enums`, `exception`, `util` —
-  accounts, auth, email, availability, ranking, the websocket transport, the
-  timing every turn clock uses (`DeadlineTimer`), and the two-player table
-  santase and tabla still share: `Game`, `Player`, `TurnClock` and
-  `GameUtilService` (finding, saving, a seat, the winner — no game's rules).
-  A game package may use `common`; **`common` imports no game package**, and
-  `CommonStandsAloneTest` fails if it does. What common needs from a game it
-  gets through an interface the game implements (`GameRecordProvider` for
-  the profile), an exception base class (`GameRuleException`), or an event
-  the game listens to (`SessionDisconnectEvent`, `UserDeleted`). The only
-  files allowed are `Game`, `Player` and `TurnClock`, until santase and tabla
-  each get tables of their own in schemas `santase` and `tabla`.
+  accounts, auth, email, availability, the websocket transport, and what the
+  games share as code, never as a table: the timing every turn clock uses
+  (`DeadlineTimer`, `TurnClock`), the rating (`Elo`, `RankLadder`,
+  `BasePlayerStats`) and the profile's question to each game
+  (`GameRecordProvider`). A game package may use `common`; **`common` imports
+  no game package**, and `CommonStandsAloneTest` fails if it does. What
+  common needs from a game it gets through an interface the game implements
+  (`GameRecordProvider`), an exception base class (`GameRuleException`), or
+  an event the game listens to (`SessionDisconnectEvent`, `UserDeleted`).
+
+Every game works by the same three rules — see **The game seams** below
+before writing anything in one.
 
 ## One repository, one service
 
@@ -38,13 +43,15 @@ that service.**
 | Repository | Its service |
 |---|---|
 | `UserRepository` | `UserAccountService` |
-| `PlayerRepository` | `PlayerService` |
 | `ForgotPasswordRepository` | `ForgotPasswordService` |
 | `EmailConfirmationRepository` | `EmailConfirmationService` |
 | `UserDeletionRepository` | `UserDeletionService` |
-| `GameRepository` | `GameUtilService` |
+| `SantaseGameRepository` | `SantaseTableService` |
+| `SantaseSeatRepository` | `SantaseSeatService` |
 | `SantaseGameStateRepository` | `SantaseDealService` |
 | `SantasePlayerStatsRepository` | `SantaseStatsService` |
+| `TablaGameRepository` | `TablaUtilService` |
+| `TablaSeatRepository` | `TablaSeatService` |
 | `TablaPlayerStatsRepository` | `TablaStatsService` |
 | `DeletedUserRepository` | `UserUtilService` |
 | `AvailableServiceRepository` | `CacheService` |
@@ -110,9 +117,11 @@ other asks.
 
 An owner that everyone needs must depend on as little as possible.
 `UserRepository` is owned by `UserAccountService`, which depends on nothing,
-rather than by `UserService`: `UserService` already depends on
-`GameUtilService`, which needs accounts, so that would have closed a circle and
-the context would not start. Check before adding a dependency between services.
+rather than by `UserService`: `UserService` already depends on every game's
+`GameRecordProvider`, and a game's seat service needs accounts
+(`SantaseSeatService.newSeatFor` checks the account exists), so that would
+have closed a circle and the context would not start. Check before adding a
+dependency between services.
 
 ## One top-level type per file
 
@@ -194,41 +203,53 @@ registered by the configuration that needs it, with
 `TemplateLoader` is a class for the other reason: it holds no state at all, it
 is behaviour, and a record with no components says nothing about it.
 
-## The belot seam
+## The game seams
 
-Belot is built so it can be lifted out into a service of its own later. Three
-rules keep that option open, and breaking any of them closes it quietly.
+Every game is built so it can be lifted out into a service of its own later.
+Belot was built that way from the start; santase and tabla were moved there
+(changesets 032-040). Three rules keep that option open, and breaking any of
+them closes it quietly.
 
-1. **Belot tables live in schema `belot`.** Every entity carries
-   `@Table(schema = "belot")`.
-2. **No cross-schema foreign key, ever.** Belot names a player by username,
-   never by a `@ManyToOne User`.
-3. **Belot code reads no `public` table; santase code reads no `belot` table.**
-   The only thing that crosses is the authenticated username — on a request,
-   from the security context; on a deletion, in a `UserDeleted` event.
+1. **A game's tables live in its own schema.** Every entity carries
+   `@Table(schema = "belot" | "santase" | "tabla")`. Public holds the
+   accounts and nothing a game owns — `PublicSchemaTest`.
+2. **No cross-schema foreign key, ever.** A game names a player by username,
+   never by a `@ManyToOne User`. A seat whose account is deleted keeps its
+   game under the tombstone name, `Constants.DELETED_PLAYER`.
+3. **A game's code reads no other schema.** The only thing that crosses is
+   the authenticated username — on a request, from the security context; on
+   a deletion, in a `UserDeleted` event each game listens to.
 
-The checks, before a belot commit:
+`BelotSchemaTest`, `SantaseSchemaTest` and `TablaSchemaTest` pin each
+schema's exact table list and that no key leaves it. The checks, before a
+commit:
 
 ```bash
-grep -rn "bg.deck.common.model.User\b" --include=*.java src/main/java/bg/deck/belot   # empty
-grep -rn "bg.deck.belot" --include=*.java src/main/java/bg/deck/common               # empty
+grep -rn "bg.deck.common.model.User\b" --include=*.java src/main/java/bg/deck/{belot,santase,tabla}   # empty
+grep -rn "bg.deck.\(belot\|santase\|tabla\)" --include=*.java src/main/java/bg/deck/common       # empty
 ```
 
-Three things that look reasonable and are not:
+Things that look reasonable and are not:
 
-- **Do not add `BELOT` to `GameType`.** `UserService.getProfile` loops over
-  `GameType.values()` and `User.statsFor` throws on a missing row: adding a
-  value 500s every existing profile until a backfill runs. Belot keeps
-  `belot.player_stats` and `GET /belot/profile`, and the profile page asks both.
-- **Do not widen `Game`.** Two seats, one state column per game type. Belot
-  needs four seats and two teams, and has its own tables.
-- **Do not reuse santase's or табла's turn timer.** Each game has its own
+- **Do not add a game list to common.** Each game has its own code string
+  (`SantaseService.SANTASE`, `TablaService.TABLA`, `BelotService.BELOT`) for
+  the availability table and the search topic, and the profile asks every
+  `GameRecordProvider` there is (santase and табла; belot's record has its
+  own `GET /belot/profile`, and the profile page asks both). A list in common
+  is a file that has to know every game.
+- **Do not share a table between games.** Two games that look alike today —
+  santase and tabla both have two seats — still each get their own; that is
+  what let them move apart.
+- **Do not reuse one game's turn timer for another.** Each game has its own
   (`SantaseTurnTimer`, `TablaTurnTimer`) on the shared `DeadlineTimer`, and
-  works on `Game`. Belot has `BelotTurnTimer`, built on the same pattern: one
-  timer per table, set to the deadline the table was just sent, firing on a
-  virtual thread. `BelotService` publishes the clock (`BelotTurnClock`) from
-  the one place every change ends — `tellEveryone` — and the timer sets it
-  once that change commits. No sweep, no ShedLock row.
+  works on its own game. Belot has `BelotTurnTimer`, built on the same
+  pattern: one timer per table, set to the deadline the table was just sent,
+  firing on a virtual thread. `BelotService` publishes the clock
+  (`BelotTurnClock`) from the one place every change ends — `tellEveryone` —
+  and the timer sets it once that change commits. No sweep, no ShedLock row.
+- **An ordered card list needs its order stored.** The santase deck and
+  hands are `@OrderColumn` lists, and `Card.id` is updatable for that reason:
+  taking the top card moves every card after it up one row.
 
 A fourth thing is true of the rating, and it is a choice rather than a rule:
 **a belot result moves both partners equally.** `TeamElo` rates a pair as the
@@ -250,8 +271,14 @@ shared, which is what the third law is about. Santase and табла keep their
 records the same way, each in its own schema (`santase.player_stats`,
 `tabla.player_stats`, keyed by username, made on the first result), written
 by their own stats service with `Elo` and `BasePlayerStats` from common, and
-let go of on `UserDeleted`; `public.user_game_stats` is read by nothing and
-goes in a later release.
+let go of on `UserDeleted`.
+
+The old public tables santase and табла were copied out of (`game`,
+`player`, `game_state`, `tabla_game_state`, `player_hand`, `game_deck`,
+`user_game_stats`) are read by nothing. `041-drop-old-game-tables.yaml`
+drops them and is deliberately not in the master changelog yet: it goes in a
+later release, once 032-040 have been live long enough that nobody will roll
+them back.
 
 `docs/belot/RULES.md` holds the rules of the game; `docs/belot/BUILD.md` the
 plan and what is still open; `docs/belot/DEPLOY.md` what belot needs on the

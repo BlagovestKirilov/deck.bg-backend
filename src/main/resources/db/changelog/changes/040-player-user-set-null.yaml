@@ -1,0 +1,44 @@
+databaseChangeLog:
+  # public.player is no longer written or read by the application — the seats
+  # are in santase.seat and tabla.seat — but it still holds a foreign key into
+  # public.users, and the account no longer hands its seats to a tombstone on
+  # the way out. Without this, deleting an account that ever played would be
+  # refused by that key.
+  #
+  # SET NULL rather than CASCADE: the row is a seat in a game that public.game
+  # still names, and that game keeps its other seat. The key is found by what
+  # it points at, as in 036.
+  - changeSet:
+      id: 040-player-user-set-null
+      author: Blagovest Kirilov
+      comment: Old seats let go of a deleted account
+      changes:
+        - sql:
+            dbms: postgresql
+            splitStatements: false
+            sql: |
+              DO $$
+              DECLARE
+                  c record;
+              BEGIN
+                  FOR c IN SELECT con.conname
+                             FROM pg_constraint con
+                            WHERE con.conrelid = 'public.player'::regclass
+                              AND con.contype = 'f'
+                              AND con.confrelid = 'public.users'::regclass
+                  LOOP
+                      EXECUTE format('ALTER TABLE public.player DROP CONSTRAINT %I', c.conname);
+                  END LOOP;
+                  ALTER TABLE public.player
+                      ADD CONSTRAINT fk_player_user
+                      FOREIGN KEY (user_id) REFERENCES public.users (id) ON DELETE SET NULL;
+              END $$;
+      rollback:
+        - sql:
+            dbms: postgresql
+            splitStatements: false
+            sql: |
+              ALTER TABLE public.player DROP CONSTRAINT fk_player_user;
+              ALTER TABLE public.player
+                  ADD CONSTRAINT fk_player_user
+                  FOREIGN KEY (user_id) REFERENCES public.users (id);

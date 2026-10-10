@@ -1,11 +1,9 @@
 package bg.deck.santase.service;
 
 import bg.deck.common.constant.LogConstants;
-import bg.deck.common.enums.GameType;
 import bg.deck.common.exception.NoActiveGameFoundException;
-import bg.deck.common.model.Game;
-import bg.deck.common.model.Player;
-import bg.deck.common.service.GameUtilService;
+import bg.deck.santase.model.SantaseGame;
+import bg.deck.santase.model.SantaseSeat;
 import bg.deck.santase.enums.Rank;
 import bg.deck.santase.enums.Suit;
 import bg.deck.santase.exception.CardNotFoundException;
@@ -14,7 +12,7 @@ import bg.deck.santase.exception.DeckSizeException;
 import bg.deck.santase.exception.NotFirstInTurnException;
 import bg.deck.santase.exception.NotInTurnException;
 import bg.deck.santase.model.Card;
-import bg.deck.santase.model.GameState;
+import bg.deck.santase.model.SantaseGameState;
 import bg.deck.santase.repository.SantaseGameStateRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
@@ -30,10 +28,8 @@ import java.util.UUID;
  * The rules of сантасе: dealing, what may be played on what, taking a trick,
  * the 20 and 40, scoring a deal and a game.
  *
- * <p>Santase's own, in santase's own package. They used to sit in
- * {@code GameUtilService} in common, beside the game core табла stands on too,
- * which is how common came to import half of santase. What is shared — finding
- * a game, saving it, a seat, the winner — stays there, and is asked for.
+ * <p>Santase's own, in santase's own package. Finding a game, saving it and
+ * marking the winner are {@link SantaseTableService}'s, and asked for.
  *
  * <p>The only class that speaks to {@link SantaseGameStateRepository}.
  */
@@ -42,33 +38,32 @@ import java.util.UUID;
 @Service
 public class SantaseDealService {
 
-    private final GameUtilService gameUtilService;
+    private final SantaseTableService santaseTableService;
     private final SantaseGameStateRepository gameStateRepository;
     private final WebSocketUtilService webSocketUtilService;
     private final SantaseStatsService santaseStatsService;
 
     @Transactional
-    public Game startGame(Player firstPlayer, Player secondPlayer) {
-        GameState gameState = GameState.builder().build();
+    public SantaseGame startGame(SantaseSeat firstPlayer, SantaseSeat secondPlayer) {
+        SantaseGameState gameState = SantaseGameState.builder().build();
         firstPlayer.setResult(0);
         secondPlayer.setResult(0);
         firstPlayer.setInactivityCount(0);
         secondPlayer.setInactivityCount(0);
 
-        Game game = Game.builder()
-                .gameType(GameType.SANTASE)
+        SantaseGame game = SantaseGame.builder()
                 .firstPlayer(firstPlayer)
                 .secondPlayer(secondPlayer)
                 .state(gameState)
                 .build();
 
         prepareNewState(game, null);
-        return gameUtilService.saveGame(game);
+        return santaseTableService.saveGame(game);
     }
 
     /** This player's сантасе game in progress. */
-    public Game findGameByUsername(String username) {
-        return gameUtilService.findGameByUsername(username, GameType.SANTASE);
+    public SantaseGame findGameByUsername(String username) {
+        return santaseTableService.findGameByUsername(username);
     }
 
     /**
@@ -76,12 +71,12 @@ public class SantaseDealService {
      * only by whoever leads, on their turn, while the deck has more than two
      * cards and is not the untouched twelve.
      */
-    public Game findGame(String username) {
-        Game game = findGameByUsername(username);
+    public SantaseGame findGame(String username) {
+        SantaseGame game = findGameByUsername(username);
 
-        Player player = game.getPlayerByUsername(username);
+        SantaseSeat player = game.getPlayerByUsername(username);
 
-        GameState state = game.getState();
+        SantaseGameState state = game.getState();
 
         if (!state.getFirstTurnPlayer().equals(player)) {
             throw new NotFirstInTurnException(username);
@@ -98,11 +93,11 @@ public class SantaseDealService {
         return game;
     }
 
-    public void saveGameState(GameState gameState) {
+    public void saveGameState(SantaseGameState gameState) {
         gameStateRepository.save(gameState);
     }
 
-    public void removeCardFromHand(Game game, Player player, Card cardForRemoval) {
+    public void removeCardFromHand(SantaseGame game, SantaseSeat player, Card cardForRemoval) {
         List<Card> playerCards = player.getHand();
 
         if (!playerCards.contains(cardForRemoval)) {
@@ -169,12 +164,12 @@ public class SantaseDealService {
         playerCards.remove(cardForRemoval);
     }
 
-    public void evaluateTrick(Game game) {
-        GameState state = game.getState();
-        Player firstPlayer = game.getFirstPlayer();
-        Player secondPlayer = game.getSecondPlayer();
+    public void evaluateTrick(SantaseGame game) {
+        SantaseGameState state = game.getState();
+        SantaseSeat firstPlayer = game.getFirstPlayer();
+        SantaseSeat secondPlayer = game.getSecondPlayer();
 
-        Player trickWinner = determineWinner(game);
+        SantaseSeat trickWinner = determineWinner(game);
 
         // --- Award trick points ---
         int trickPoints = firstPlayer.getPlayedCard().getPoints() + secondPlayer.getPlayedCard().getPoints();
@@ -194,7 +189,7 @@ public class SantaseDealService {
 
         // --- End of game scoring ---
         if (isLastCardPlayed(game)) {
-            Player dealWinner = applyEndOfGameScore(game, trickWinner);
+            SantaseSeat dealWinner = applyEndOfGameScore(game, trickWinner);
             webSocketUtilService.updateGameState(game, game.getFirstPlayer().getUsername(),
                     dealWinner.getUsername(), game.getFirstPlayer().getScore(), game.getSecondPlayer().getScore());
 
@@ -208,22 +203,22 @@ public class SantaseDealService {
         secondPlayer.setPlayedCard(null);
     }
 
-    protected void drawCards(Game game, Player trickWinner) {
+    protected void drawCards(SantaseGame game, SantaseSeat trickWinner) {
         if (game.getState().getDeck().isEmpty()) return;
 
         trickWinner.drawCard(game.getState().getDeck().removeFirst());
         game.getOpponent(trickWinner).drawCard(game.getState().getDeck().removeFirst());
     }
 
-    public Player applyEndOfGameScore(Game game, Player trickWinner) {
-        GameState state = game.getState();
+    public SantaseSeat applyEndOfGameScore(SantaseGame game, SantaseSeat trickWinner) {
+        SantaseGameState state = game.getState();
 
-        Player dealWinner;
+        SantaseSeat dealWinner;
         int bonusPoints;
 
         if (state.isClosed()) {
-            Player closer = state.getClosedByPlayer();
-            Player opponent = game.getOpponent(closer);
+            SantaseSeat closer = state.getClosedByPlayer();
+            SantaseSeat opponent = game.getOpponent(closer);
 
             if (closer.getScore() >= 66) {
                 // Successful close
@@ -238,7 +233,7 @@ public class SantaseDealService {
         } else {
             // Open game (normal end)
             dealWinner = trickWinner;
-            Player loser = game.getOpponent(trickWinner);
+            SantaseSeat loser = game.getOpponent(trickWinner);
             bonusPoints = calculateStandardBonus(loser.getScore(), loser.getIsBlanked());
         }
 
@@ -256,7 +251,7 @@ public class SantaseDealService {
         }
     }
 
-    public void prepareNewState(Game game, Player trickWinner) {
+    public void prepareNewState(SantaseGame game, SantaseSeat trickWinner) {
         int firstPlayerResult = game.getFirstPlayer().getResult();
         int secondPlayerResult = game.getSecondPlayer().getResult();
 
@@ -324,7 +319,7 @@ public class SantaseDealService {
         return deck;
     }
 
-    protected boolean isLastCardPlayed(Game game) {
+    protected boolean isLastCardPlayed(SantaseGame game) {
         return game.getState().getDeck().isEmpty()
                 && game.getFirstPlayer().getHand().isEmpty()
                 && game.getSecondPlayer().getHand().isEmpty();
@@ -335,8 +330,8 @@ public class SantaseDealService {
      * nothing, so it can be asked before the trick is taken — for the screens
      * to show the winning card while both are still out.
      */
-    public Player determineWinner(Game game) {
-        GameState state = game.getState();
+    public SantaseSeat determineWinner(SantaseGame game) {
+        SantaseGameState state = game.getState();
         Card firstPlayerCard = game.getFirstPlayer().getPlayedCard();
         Card secondPlayerCard = game.getSecondPlayer().getPlayedCard();
 
@@ -354,7 +349,7 @@ public class SantaseDealService {
         return game.getState().getFirstTurnPlayer();
     }
 
-    public boolean checkTwentyForty(Game game, Player player, Card playedCard) {
+    public boolean checkTwentyForty(SantaseGame game, SantaseSeat player, Card playedCard) {
         if (game.getState().getDeck().size() == 12) {
             return false;
         }
@@ -393,14 +388,14 @@ public class SantaseDealService {
     }
 
     /** The game is over: the winner set, and the result written into both records. */
-    public void finishGame(Game game, Player winner, boolean opponentSurrendered) {
-        gameUtilService.setGameWinner(game, winner, opponentSurrendered);
+    public void finishGame(SantaseGame game, SantaseSeat winner, boolean opponentSurrendered) {
+        santaseTableService.setGameWinner(game, winner, opponentSurrendered);
         santaseStatsService.record(game);
     }
 
     @Transactional
     public void surrenderByInactivity(UUID gameId) {
-        Game game = gameUtilService.findGameById(gameId)
+        SantaseGame game = santaseTableService.findGameById(gameId)
                 .orElseThrow(() -> new NoActiveGameFoundException(gameId.toString()));
         if (game.getWinner() != null) {
             // The game finished normally between the timer firing and this
@@ -409,8 +404,8 @@ public class SantaseDealService {
             return;
         }
 
-        Player surrenderPlayer = game.getState().getInTurnPlayer();
-        Player opponentPlayer = game.getOpponent(surrenderPlayer);
+        SantaseSeat surrenderPlayer = game.getState().getInTurnPlayer();
+        SantaseSeat opponentPlayer = game.getOpponent(surrenderPlayer);
 
         log.info(LogConstants.FINISH_GAME_SURRENDER_INACTIVITY, surrenderPlayer.getUsername(), opponentPlayer.getUsername());
 
@@ -430,7 +425,7 @@ public class SantaseDealService {
                 game.getSecondPlayer().getResult()
         );
 
-        gameUtilService.saveGame(game);
+        santaseTableService.saveGame(game);
         webSocketUtilService.updateGameState(game);
     }
 }

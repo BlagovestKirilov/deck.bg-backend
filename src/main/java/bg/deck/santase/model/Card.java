@@ -24,7 +24,10 @@ import java.util.UUID;
 @Builder
 @Embeddable
 public class Card {
-    @Column(name = "card_id", nullable = false, updatable = false)
+    // Updatable: the deck and the hands are ordered lists, and taking the top
+    // card moves every card after it up one row. A card id the row may not
+    // change would stay behind while its suit and rank moved on.
+    @Column(name = "card_id", nullable = false)
     private UUID id;
 
     @Enumerated(EnumType.STRING)

@@ -1,8 +1,8 @@
 package bg.deck.santase.service;
 
-import bg.deck.common.model.Game;
-import bg.deck.santase.model.GameState;
-import bg.deck.common.model.Player;
+import bg.deck.santase.model.SantaseGame;
+import bg.deck.santase.model.SantaseGameState;
+import bg.deck.santase.model.SantaseSeat;
 import bg.deck.santase.model.dto.CardDTO;
 import bg.deck.santase.model.response.GameStateResponse;
 import bg.deck.santase.util.CardMapper;
@@ -21,7 +21,7 @@ public class WebSocketUtilService {
     private final CardMapper cardMapper;
 
     public void updateGameState(
-            Game game,
+            SantaseGame game,
             String username,
             String trickWinnerUsername,
             int trickFirstPlayerScore,
@@ -37,7 +37,7 @@ public class WebSocketUtilService {
         webSocketService.notifyGameUpdate(game.getId().toString(), username, response);
     }
 
-    public void updateGameState(Game game) {
+    public void updateGameState(SantaseGame game) {
         List<String> players = List.of(game.getFirstPlayer().getUsername(),
                 game.getSecondPlayer().getUsername());
 
@@ -52,8 +52,8 @@ public class WebSocketUtilService {
      * trick is taken, so both screens can ring the winning card while the
      * two are still out.
      */
-    public void updateGameStateWithTrickTaker(Game game, String takenBy) {
-        for (Player player : List.of(game.getFirstPlayer(), game.getSecondPlayer())) {
+    public void updateGameStateWithTrickTaker(SantaseGame game, String takenBy) {
+        for (SantaseSeat player : List.of(game.getFirstPlayer(), game.getSecondPlayer())) {
             GameStateResponse response = buildBaseGameStateResponse(game, player.getUsername())
                     .toBuilder()
                     .trickTakenBy(takenBy)
@@ -62,10 +62,10 @@ public class WebSocketUtilService {
         }
     }
 
-    public void updateGameStateWithTrickWinner(Game game, String trickWinner) {
-        List<Player> players = List.of(game.getFirstPlayer(), game.getSecondPlayer());
+    public void updateGameStateWithTrickWinner(SantaseGame game, String trickWinner) {
+        List<SantaseSeat> players = List.of(game.getFirstPlayer(), game.getSecondPlayer());
 
-        for (Player player : players) {
+        for (SantaseSeat player : players) {
             String username = player.getUsername();
 
             GameStateResponse response = buildBaseGameStateResponse(game, username)
@@ -79,17 +79,17 @@ public class WebSocketUtilService {
         }
     }
 
-    public void updateGameState(Game game, String username) {
+    public void updateGameState(SantaseGame game, String username) {
         GameStateResponse response = buildBaseGameStateResponse(game, username);
         webSocketService.notifyGameUpdate(game.getId().toString(), username, response);
     }
 
 
-    private GameStateResponse buildBaseGameStateResponse(Game game, String username) {
-        Player player = game.getPlayerByUsername(username);
-        Player opponentPlayer = game.getOpponent(player);
+    private GameStateResponse buildBaseGameStateResponse(SantaseGame game, String username) {
+        SantaseSeat player = game.getPlayerByUsername(username);
+        SantaseSeat opponentPlayer = game.getOpponent(player);
 
-        GameState state = game.getState();
+        SantaseGameState state = game.getState();
         boolean opponentsClock = game.getWinner() == null && state.isInTurn(opponentPlayer)
                 && state.getNextMoveTime() != null;
 

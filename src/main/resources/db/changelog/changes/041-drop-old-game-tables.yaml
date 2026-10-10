@@ -1,0 +1,51 @@
+databaseChangeLog:
+  # NOT INCLUDED IN db.changelog-master.yaml YET — on purpose.
+  #
+  # The last step of moving santase and табла out of public: drop what 034,
+  # 035, 038 and 039 copied. It belongs in a later release than those, once
+  # the copies have been live for at least two weeks and nobody has needed
+  # `liquibase rollback before-game-split`, because after this there is
+  # nothing to roll back to: those rollbacks copy into the tables this drops.
+  #
+  # Before including it, take a `pg_dump -Fc` of the database and keep it: it is
+  # the only way back.
+  #
+  # The guard refuses to drop anything unless every old game is already in
+  # its new schema, so a database that skipped a copy keeps its data. No
+  # CASCADE: if anything else still points at these tables, the drop fails
+  # rather than taking that with it. No rollback: Liquibase refuses to roll
+  # back through this changeset, which is the truth.
+  - changeSet:
+      id: 041-drop-old-game-tables
+      author: Blagovest Kirilov
+      comment: Drop the public game tables santase and табла no longer use
+      changes:
+        - sql:
+            dbms: postgresql
+            splitStatements: false
+            sql: |
+              DO $$
+              DECLARE
+                  missing bigint;
+              BEGIN
+                  SELECT count(*) INTO missing
+                    FROM public.game g
+                   WHERE (g.game_type = 'SANTASE' AND NOT EXISTS (SELECT 1 FROM santase.game n WHERE n.id = g.id))
+                      OR (g.game_type = 'TABLA'   AND NOT EXISTS (SELECT 1 FROM tabla.game n WHERE n.id = g.id))
+                      OR g.game_type NOT IN ('SANTASE', 'TABLA');
+                  IF missing <> 0 THEN
+                      RAISE EXCEPTION 'public.game: % games are not in their new schema; nothing dropped', missing;
+                  END IF;
+
+                  SELECT count(*) INTO missing
+                    FROM public.user_game_stats s
+                    JOIN public.users u ON u.id = s.user_id
+                   WHERE (s.game_type = 'SANTASE' AND NOT EXISTS (SELECT 1 FROM santase.player_stats n WHERE n.username = u.username))
+                      OR (s.game_type = 'TABLA'   AND NOT EXISTS (SELECT 1 FROM tabla.player_stats n WHERE n.username = u.username));
+                  IF missing <> 0 THEN
+                      RAISE EXCEPTION 'public.user_game_stats: % records are not in their new schema; nothing dropped', missing;
+                  END IF;
+              END $$;
+
+              DROP TABLE public.game, public.game_deck, public.player_hand, public.game_state,
+                         public.tabla_game_state, public.player, public.user_game_stats;

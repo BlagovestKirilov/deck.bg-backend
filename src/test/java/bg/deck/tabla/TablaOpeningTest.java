@@ -1,12 +1,11 @@
 package bg.deck.tabla;
 
-import bg.deck.common.model.Game;
-import bg.deck.common.model.Player;
+import bg.deck.tabla.model.TablaGame;
+import bg.deck.tabla.model.TablaSeat;
 import bg.deck.tabla.model.TablaGameState;
-import bg.deck.common.model.User;
 import bg.deck.tabla.model.dto.OpeningThrowDTO;
 import bg.deck.tabla.model.response.TablaStateResponse;
-import bg.deck.common.service.GameUtilService;
+import bg.deck.tabla.repository.TablaGameRepository;
 import bg.deck.tabla.service.TablaDiceService;
 import bg.deck.tabla.service.TablaStatsService;
 import bg.deck.tabla.service.TablaUtilService;
@@ -44,16 +43,16 @@ class TablaOpeningTest {
 
     private final TablaDiceService realDice = new TablaDiceService();
 
-    private GameUtilService gameUtilService;
-    private Player white;
-    private Player black;
+    private TablaGameRepository tablaGameRepository;
+    private TablaSeat white;
+    private TablaSeat black;
 
     @BeforeEach
     void setUp() {
-        gameUtilService = mock(GameUtilService.class);
+        tablaGameRepository = mock(TablaGameRepository.class);
         // Persisting is what assigns the id; the dice are derived from it.
-        when(gameUtilService.saveGame(any())).thenAnswer(invocation -> {
-            Game game = invocation.getArgument(0);
+        when(tablaGameRepository.save(any())).thenAnswer(invocation -> {
+            TablaGame game = invocation.getArgument(0);
             if (game.getId() == null) setId(game, GAME_ID);
             return game;
         });
@@ -67,8 +66,8 @@ class TablaOpeningTest {
     @Test
     @DisplayName("a new game waits for both players to throw — nobody is on turn")
     void nobodyStartsUntilBothThrow() {
-        Game game = start(seedWhere(false));
-        TablaGameState state = game.getTablaState();
+        TablaGame game = start(seedWhere(false));
+        TablaGameState state = game.getState();
         TablaUtilService service = service();
 
         assertTrue(service.isOpening(game));
@@ -89,7 +88,7 @@ class TablaOpeningTest {
     @DisplayName("a throw shows its die to both players, and not in the table's dice row")
     void oneThrowIsSeenByBoth() {
         byte[] seed = seedWhere(false);
-        Game game = start(seed);
+        TablaGame game = start(seed);
         TablaUtilService service = service();
         Dice pair = realDice.roll(seed, GAME_ID, 0);
 
@@ -112,14 +111,14 @@ class TablaOpeningTest {
     @Test
     @DisplayName("a second tap on your die changes nothing")
     void throwingTwiceIsIgnored() {
-        Game game = start(seedWhere(false));
+        TablaGame game = start(seedWhere(false));
         TablaUtilService service = service();
 
         assertTrue(service.openingThrow(game, white));
-        Integer thrown = game.getTablaState().getDie1();
+        Integer thrown = game.getState().getDie1();
         assertFalse(service.openingThrow(game, white));
-        assertEquals(thrown, game.getTablaState().getDie1());
-        assertNull(game.getTablaState().getDie2());
+        assertEquals(thrown, game.getState().getDie1());
+        assertNull(game.getState().getDie2());
     }
 
     /* ---------------- settling it ---------------- */
@@ -128,15 +127,15 @@ class TablaOpeningTest {
     @DisplayName("the higher die starts, playing both opening dice — in whichever order they were thrown")
     void theHigherDieStartsWithBothDice() {
         byte[] seed = seedWhere(false);
-        Game game = start(seed);
+        TablaGame game = start(seed);
         TablaUtilService service = service();
         Dice pair = realDice.roll(seed, GAME_ID, 0);
 
         service.openingThrow(game, black);
         service.openingThrow(game, white);
 
-        TablaGameState state = game.getTablaState();
-        Player starter = pair.d1() > pair.d2() ? white : black;
+        TablaGameState state = game.getState();
+        TablaSeat starter = pair.d1() > pair.d2() ? white : black;
         assertFalse(service.isOpening(game));
         assertEquals(starter, state.getInTurnPlayer());
         assertEquals(starter, state.getFirstTurnPlayer());
@@ -157,14 +156,14 @@ class TablaOpeningTest {
     @DisplayName("equal dice are shown as a tie, and both players throw again")
     void aTieIsThrownAgain() {
         byte[] seed = seedWhere(true);
-        Game game = start(seed);
+        TablaGame game = start(seed);
         TablaUtilService service = service();
         Dice tie = realDice.roll(seed, GAME_ID, 0);
 
         service.openingThrow(game, white);
         service.openingThrow(game, black);
 
-        TablaGameState state = game.getTablaState();
+        TablaGameState state = game.getState();
         assertTrue(service.isOpening(game), "a tie decides nothing");
         assertNull(state.getDie1());
         assertNull(state.getDie2());
@@ -196,40 +195,40 @@ class TablaOpeningTest {
     @Test
     @DisplayName("nothing is ever thrown for a player: one who lets the time run out loses, as with any turn")
     void aPlayerWhoDoesNotThrowLoses() {
-        Game game = start(seedWhere(false));
-        when(gameUtilService.findGameById(GAME_ID)).thenReturn(Optional.of(game));
+        TablaGame game = start(seedWhere(false));
+        when(tablaGameRepository.findById(GAME_ID)).thenReturn(Optional.of(game));
         TablaUtilService service = service();
 
         service.openingThrow(game, white);
         assertTrue(service.openingTimedOut(GAME_ID));
 
-        assertNull(game.getTablaState().getDie2(), "black's die was not thrown for them");
+        assertNull(game.getState().getDie2(), "black's die was not thrown for them");
         assertEquals(white, game.getWinner());
     }
 
     @Test
     @DisplayName("when neither has thrown, neither is singled out — the window opens again")
     void neitherThrewNobodyLoses() throws Exception {
-        Game game = start(seedWhere(false));
-        when(gameUtilService.findGameById(GAME_ID)).thenReturn(Optional.of(game));
+        TablaGame game = start(seedWhere(false));
+        when(tablaGameRepository.findById(GAME_ID)).thenReturn(Optional.of(game));
         TablaUtilService service = service();
-        java.time.Instant before = game.getTablaState().getNextMoveTime();
+        java.time.Instant before = game.getState().getNextMoveTime();
 
         Thread.sleep(5);
         assertTrue(service.openingTimedOut(GAME_ID));
 
         assertNull(game.getWinner());
         assertTrue(service.isOpening(game));
-        assertNull(game.getTablaState().getDie1());
-        assertNull(game.getTablaState().getDie2());
-        assertTrue(game.getTablaState().getNextMoveTime().isAfter(before), "a fresh window");
+        assertNull(game.getState().getDie1());
+        assertNull(game.getState().getDie2());
+        assertTrue(game.getState().getNextMoveTime().isAfter(before), "a fresh window");
     }
 
     @Test
     @DisplayName("a player still to throw has a clock, extensions and warnings — as on turn")
     void whoHasToAct() {
         byte[] seed = seedWhere(false);
-        Game game = start(seed);
+        TablaGame game = start(seed);
         TablaUtilService service = service();
 
         assertTrue(service.mustAct(game, white));
@@ -243,20 +242,20 @@ class TablaOpeningTest {
         assertNotNull(service.buildState(game, "ninja2011").nextMoveTimeInSeconds());
 
         service.openingThrow(game, black);
-        Player starter = game.getTablaState().getInTurnPlayer();
+        TablaSeat starter = game.getState().getInTurnPlayer();
         assertTrue(service.mustAct(game, starter));
         assertFalse(service.mustAct(game, game.getOpponent(starter)));
 
         // Past the opening, the scheduler goes back to the ordinary rules.
-        when(gameUtilService.findGameById(GAME_ID)).thenReturn(Optional.of(game));
+        when(tablaGameRepository.findById(GAME_ID)).thenReturn(Optional.of(game));
         assertFalse(service.openingTimedOut(GAME_ID));
     }
 
     @Test
     @DisplayName("the blocked-roll pass leaves the opening alone")
     void aBlockedPassIsNotAnOpening() {
-        Game game = start(seedWhere(false));
-        when(gameUtilService.findGameById(GAME_ID)).thenReturn(Optional.of(game));
+        TablaGame game = start(seedWhere(false));
+        when(tablaGameRepository.findById(GAME_ID)).thenReturn(Optional.of(game));
 
         assertFalse(service().passIfBlocked(GAME_ID));
         assertTrue(service().isOpening(game));
@@ -267,11 +266,11 @@ class TablaOpeningTest {
     @Test
     @DisplayName("once the starter's turn is over, the opening is no longer reported")
     void goneAfterTheFirstTurn() {
-        Game game = start(seedWhere(false));
+        TablaGame game = start(seedWhere(false));
         TablaUtilService service = service();
         service.openingThrow(game, white);
         service.openingThrow(game, black);
-        TablaGameState state = game.getTablaState();
+        TablaGameState state = game.getState();
         assertNotNull(service.buildState(game, "petko91").openingThrows());
 
         // What endTurn does when the starter confirms.
@@ -287,8 +286,8 @@ class TablaOpeningTest {
     @DisplayName("a game begun under the old rule, where the starter throws afresh, never reports one")
     void notForAGameBegunBeforeTheRule() {
         byte[] seed = seedWhere(false);
-        Game game = start(seed);
-        TablaGameState state = game.getTablaState();
+        TablaGame game = start(seed);
+        TablaGameState state = game.getState();
         TablaUtilService service = service();
 
         // Old rule: a starter already chosen, on turn, before throwing.
@@ -306,7 +305,7 @@ class TablaOpeningTest {
 
     /* ---------------- helpers ---------------- */
 
-    private Game start(byte[] seed) {
+    private TablaGame start(byte[] seed) {
         TablaDiceService fixedSeed = new TablaDiceService() {
             @Override
             public byte[] newSeed() {
@@ -321,7 +320,7 @@ class TablaOpeningTest {
     }
 
     private TablaUtilService service(TablaDiceService dice) {
-        return new TablaUtilService(gameUtilService, mock(WebSocketService.class), mock(TablaStatsService.class), dice);
+        return new TablaUtilService(tablaGameRepository, mock(WebSocketService.class), mock(TablaStatsService.class), dice);
     }
 
     /** A seed whose first opening throw is — or is not — a tie, for this game id. */
@@ -335,11 +334,9 @@ class TablaOpeningTest {
         throw new IllegalStateException("no such seed in range");
     }
 
-    private static Player seat(String username) {
-        User user = new User();
-        user.setUsername(username);
-        Player player = new Player();
-        player.setUser(user);
+    private static TablaSeat seat(String username) {
+        TablaSeat player = new TablaSeat();
+        player.setUsername(username);
         // Entities compare by id, and two seats must not be equal.
         setId(player, UUID.randomUUID());
         return player;

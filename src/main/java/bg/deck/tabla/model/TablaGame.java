@@ -1,15 +1,14 @@
-package bg.deck.common.model;
+package bg.deck.tabla.model;
 
-import bg.deck.common.enums.GameType;
 import bg.deck.common.exception.UserNotPartOfGameException;
+import bg.deck.common.model.TurnClock;
 import bg.deck.common.model.base.BaseEntity;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToOne;
+import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -17,39 +16,31 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.time.Instant;
-import bg.deck.santase.model.GameState;
-import bg.deck.tabla.model.TablaGameState;
 
+/**
+ * A game of табла: two seats, the board, the committed dice seed, and who won.
+ *
+ * <p>In tabla's own schema, with nothing pointing outside it. Its id is kept
+ * as it was when the game moved here: the dice are worked out from it, and the
+ * players' screens subscribe by it.
+ */
 @Getter
 @Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-public class Game extends BaseEntity {
+@Table(schema = "tabla", name = "game")
+public class TablaGame extends BaseEntity {
 
     @ManyToOne
-    private Player firstPlayer;
+    private TablaSeat firstPlayer;
 
     @ManyToOne
-    private Player secondPlayer;
-
-    @Enumerated(EnumType.STRING)
-    @Column(name = "game_type", nullable = false, length = 20)
-    @Builder.Default
-    private GameType gameType = GameType.SANTASE;
+    private TablaSeat secondPlayer;
 
     @OneToOne(cascade = CascadeType.ALL)
-    private GameState state;
-
-    /**
-     * Table state for табла. Exactly one of {@code state} / {@code tablaState} is
-     * set, chosen by {@link #gameType}. Two nullable links rather than a JOINED
-     * hierarchy: an inheritance split would force a discriminator onto the live
-     * game_state table and touch every line of the working Santase service.
-     */
-    @OneToOne(cascade = CascadeType.ALL)
-    private TablaGameState tablaState;
+    private TablaGameState state;
 
     /** Committed dice seed; revealed only once the game is finished. */
     private byte[] serverSeed;
@@ -58,14 +49,14 @@ public class Game extends BaseEntity {
     private String serverSeedHash;
 
     @ManyToOne
-    private Player winner;
+    private TablaSeat winner;
 
     @ManyToOne
-    private Player surrenderPlayer;
+    private TablaSeat surrenderPlayer;
 
     private Instant finishedAt;
 
-    public Player getPlayerByUsername(String username) {
+    public TablaSeat getPlayerByUsername(String username) {
         if (username.equals(firstPlayer.getUsername())) {
             return firstPlayer;
         } else if (username.equals(secondPlayer.getUsername())) {
@@ -75,7 +66,7 @@ public class Game extends BaseEntity {
         }
     }
 
-    public Player getOpponentPlayerByUsername(String username) {
+    public TablaSeat getOpponentPlayerByUsername(String username) {
         if (username.equals(firstPlayer.getUsername())) {
             return secondPlayer;
         } else if (username.equals(secondPlayer.getUsername())) {
@@ -85,7 +76,7 @@ public class Game extends BaseEntity {
         }
     }
 
-    public Player getOpponent(Player player) {
+    public TablaSeat getOpponent(TablaSeat player) {
         if (player.equals(firstPlayer)) {
             return secondPlayer;
         } else if (player.equals(secondPlayer)) {
@@ -95,21 +86,17 @@ public class Game extends BaseEntity {
         }
     }
 
-    /** Whichever state object drives the turn timer for this game type. */
+    /** The board's clock, which is what the turn timer reads. */
     public TurnClock getTurnClock() {
-        return state != null ? state : tablaState;
+        return state;
     }
 
-    public void setWinner(Player winnerPlayer, boolean opponentSurrendered) {
+    /** Marks the game won. Writing the result into the players' records is TablaStatsService's. */
+    public void setWinner(TablaSeat winnerPlayer, boolean opponentSurrendered) {
         this.winner = winnerPlayer;
         this.finishedAt = Instant.now();
-
-        Player opponent = getOpponent(winnerPlayer);
         if (opponentSurrendered) {
-            this.surrenderPlayer = opponent;
+            this.surrenderPlayer = getOpponent(winnerPlayer);
         }
-
-        // The records are each game's own, in its own schema: the game that
-        // finished writes them (SantaseStatsService, TablaStatsService).
     }
 }

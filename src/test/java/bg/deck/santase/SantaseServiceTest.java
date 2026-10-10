@@ -4,18 +4,17 @@ import bg.deck.santase.enums.Rank;
 import bg.deck.santase.enums.Suit;
 import bg.deck.santase.exception.NotInTurnException;
 import bg.deck.santase.model.Card;
-import bg.deck.common.enums.GameType;
-import bg.deck.common.model.Game;
-import bg.deck.santase.model.GameState;
-import bg.deck.common.model.Player;
-import bg.deck.common.model.User;
+import bg.deck.santase.model.SantaseGame;
+import bg.deck.santase.model.SantaseGameState;
+import bg.deck.santase.model.SantaseSeat;
 import bg.deck.santase.model.request.CardRequest;
 import bg.deck.common.model.response.SearchGameResponse;
 import bg.deck.common.service.AvailabilityService;
 import bg.deck.santase.service.SantaseDealService;
+import bg.deck.santase.service.SantaseSeatService;
 import bg.deck.santase.service.SantaseService;
+import bg.deck.santase.service.SantaseTableService;
 import bg.deck.santase.service.SantaseTurnTimer;
-import bg.deck.common.service.GameUtilService;
 import bg.deck.common.service.WebSocketService;
 import bg.deck.santase.service.WebSocketUtilService;
 import org.junit.jupiter.api.AfterEach;
@@ -56,7 +55,9 @@ class SantaseServiceTest {
     @Mock
     private WebSocketService webSocketService;
     @Mock
-    private GameUtilService gameUtilService;
+    private SantaseTableService santaseTableService;
+    @Mock
+    private SantaseSeatService santaseSeatService;
     @Mock
     private SantaseDealService santaseDealService;
     @Mock
@@ -65,23 +66,23 @@ class SantaseServiceTest {
     private AvailabilityService availabilityService;
     @InjectMocks
     private SantaseService santaseService;
-    private Player p1;
-    private Player p2;
-    private Game game;
-    private GameState state;
+    private SantaseSeat p1;
+    private SantaseSeat p2;
+    private SantaseGame game;
+    private SantaseGameState state;
 
     @BeforeEach
     void setUp() {
         p1 = createPlayer(p1Name);
         p2 = createPlayer(p2Name);
-        state = GameState.builder()
+        state = SantaseGameState.builder()
                 .inTurnPlayer(p1)
                 .firstTurnPlayer(p1)
                 .deck(new ArrayList<>())
                 .trumpCard(new Card(UUID.randomUUID(), Suit.HEARTS, Rank.ACE, true, false))
                 .build();
 
-        game = Game.builder()
+        game = SantaseGame.builder()
                 .firstPlayer(p1)
                 .secondPlayer(p2)
                 .state(state)
@@ -99,10 +100,8 @@ class SantaseServiceTest {
         SecurityContextHolder.clearContext();
     }
 
-    private Player createPlayer(String name) {
-        User user = new User();
-        user.setUsername(name);
-        return Player.builder().user(user).hand(new ArrayList<>()).score(0).result(0).build();
+    private SantaseSeat createPlayer(String name) {
+        return SantaseSeat.builder().username(name).hand(new ArrayList<>()).score(0).result(0).build();
     }
 
     @Nested
@@ -111,7 +110,7 @@ class SantaseServiceTest {
         @Test
         void searchGame_WhenQueueEmpty_AddsUserToQueue() {
             signIn(p1Name);
-            when(gameUtilService.checkIfUserExistsAndIsAvailable(p1Name, GameType.SANTASE)).thenReturn(true);
+            when(santaseTableService.checkIfUserExistsAndIsAvailable(p1Name)).thenReturn(true);
 
             santaseService.searchGame();
 
@@ -123,16 +122,16 @@ class SantaseServiceTest {
         void searchGame_WhenPlayerInQueue_StartsNewGame() {
             // First player enters queue
             signIn(p1Name);
-            when(gameUtilService.checkIfUserExistsAndIsAvailable(p1Name, GameType.SANTASE)).thenReturn(true);
+            when(santaseTableService.checkIfUserExistsAndIsAvailable(p1Name)).thenReturn(true);
             santaseService.searchGame();
 
             // Second player enters queue
             reset(webSocketUtilService);
             signIn(p2Name);
-            when(gameUtilService.checkIfUserExistsAndIsAvailable(p2Name, GameType.SANTASE)).thenReturn(true);
+            when(santaseTableService.checkIfUserExistsAndIsAvailable(p2Name)).thenReturn(true);
             // A fresh seat is now created per game rather than reusing a per-user row.
-            when(gameUtilService.newPlayerFor(p2Name)).thenReturn(p2);
-            when(gameUtilService.newPlayerFor(p1Name)).thenReturn(p1);
+            when(santaseSeatService.newSeatFor(p2Name)).thenReturn(p2);
+            when(santaseSeatService.newSeatFor(p1Name)).thenReturn(p1);
             when(santaseDealService.startGame(p2, p1)).thenReturn(game);
 
             santaseService.searchGame();
@@ -161,7 +160,7 @@ class SantaseServiceTest {
             assertThat(p1.getPlayedCard()).isEqualTo(card);
             assertThat(state.getInTurnPlayer()).isEqualTo(p2);
             verify(santaseDealService).removeCardFromHand(game, p1, card);
-            verify(gameUtilService).saveGame(game);
+            verify(santaseTableService).saveGame(game);
         }
 
         @Test
@@ -294,7 +293,7 @@ class SantaseServiceTest {
             assertThat(p2.getHand()).isEmpty();
 
             // Verify interactions
-            verify(gameUtilService).saveGame(game);
+            verify(santaseTableService).saveGame(game);
             verify(webSocketUtilService).updateGameState(game);
         }
     }

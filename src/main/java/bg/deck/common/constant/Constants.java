@@ -31,6 +31,9 @@ public class Constants {
 
     /** What a seat says once the account that sat in it is gone. */
     public static final String DELETED_PLAYER = "Изтрит играч";
+
+    /** The game whose record fills the profile's legacy santase* fields. */
+    public static final String LEGACY_PROFILE_GAME = "SANTASE";
     public static final String ROLE = "role";
     public static final String USERNAME = "username";
     public static final String BEARER = "Bearer ";

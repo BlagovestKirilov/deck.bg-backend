@@ -10,7 +10,8 @@ import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
 /**
- * Santase letting go of a deleted account's record.
+ * Santase letting go of a deleted account: its record goes, and its
+ * seats keep their games under the tombstone name.
  *
  * <p>Told about the deletion rather than reaching into the accounts table, as
  * belot is. Runs after the deletion has committed, in a transaction of its
@@ -22,11 +23,14 @@ import org.springframework.transaction.event.TransactionalEventListener;
 public class SantaseAccountListener {
 
     private final SantaseStatsService santaseStatsService;
+    private final SantaseSeatService santaseSeatService;
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     public void onUserDeleted(UserDeleted event) {
         boolean stats = santaseStatsService.forget(event.username());
-        log.info("Santase: let go of {} — record {}", event.username(), stats ? "removed" : "not found");
+        int seats = santaseSeatService.anonymise(event.username());
+        log.info("Santase: let go of {} — record {}, {} seat(s) renamed", event.username(),
+                stats ? "removed" : "not found", seats);
     }
 }

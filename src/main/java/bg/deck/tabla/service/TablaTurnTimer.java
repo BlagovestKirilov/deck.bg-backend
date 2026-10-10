@@ -1,10 +1,9 @@
 package bg.deck.tabla.service;
 
-import bg.deck.common.enums.GameType;
-import bg.deck.common.model.Game;
+import bg.deck.tabla.model.TablaGame;
+import bg.deck.tabla.model.TablaGameState;
 import bg.deck.common.model.TurnClock;
 import bg.deck.common.scheduler.DeadlineTimer;
-import bg.deck.common.service.GameUtilService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
@@ -29,10 +28,9 @@ import java.util.UUID;
 public class TablaTurnTimer {
 
     private final DeadlineTimer deadlineTimer;
-    private final GameUtilService gameUtilService;
     private final TablaUtilService tablaUtilService;
 
-    public void update(Game game) {
+    public void update(TablaGame game) {
         if (game.getWinner() != null) {
             cancel(game.getId());
             return;
@@ -49,7 +47,7 @@ public class TablaTurnTimer {
      * deadline is read again, since "Continue" may have moved it.
      */
     private void runOut(UUID gameId) {
-        Optional<Game> game = gameUtilService.findGameById(gameId);
+        Optional<TablaGame> game = tablaUtilService.findGameById(gameId);
         if (game.isEmpty() || game.get().getWinner() != null) {
             return;
         }
@@ -60,7 +58,7 @@ public class TablaTurnTimer {
         // Nobody has started yet: the opening has rules of its own for a die
         // left unthrown — but never throws it for anyone.
         if (tablaUtilService.openingTimedOut(gameId)) {
-            gameUtilService.findGameById(gameId).ifPresent(this::update);
+            tablaUtilService.findGameById(gameId).ifPresent(this::update);
             return;
         }
         // A roll with no legal move is passed, not lost: the player had nothing
@@ -68,7 +66,7 @@ public class TablaTurnTimer {
         // goes to the opponent, and the timer is set again to the deadline that
         // hand-off just set.
         if (tablaUtilService.passIfBlocked(gameId)) {
-            gameUtilService.findGameById(gameId).ifPresent(this::update);
+            tablaUtilService.findGameById(gameId).ifPresent(this::update);
             return;
         }
         tablaUtilService.surrenderByInactivity(gameId);
@@ -81,18 +79,18 @@ public class TablaTurnTimer {
      */
     @EventListener(ApplicationReadyEvent.class)
     public void rescheduleActiveGames() {
-        List<Game> active = gameUtilService.findAllActiveGames(GameType.TABLA);
+        List<TablaGame> active = tablaUtilService.findAllActiveGames();
         active.forEach(this::rearmAfterRestart);
         if (!active.isEmpty()) {
             log.info("Re-armed табла turn timers for {} live game(s) after startup", active.size());
         }
     }
 
-    private void rearmAfterRestart(Game game) {
+    private void rearmAfterRestart(TablaGame game) {
         try {
             if (hasRunOut(game) && game.getTurnClock() != null) {
                 game.getTurnClock().extendNextMoveTime();
-                gameUtilService.saveGame(game);
+                tablaUtilService.saveGame(game);
                 tablaUtilService.pushToBoth(game);
             }
             update(game);
@@ -101,14 +99,14 @@ public class TablaTurnTimer {
         }
     }
 
-    private static Instant deadlineOf(Game game) {
+    private static Instant deadlineOf(TablaGame game) {
         TurnClock clock = game.getTurnClock();
         return clock == null || clock.getNextMoveTime() == null
-                ? Instant.now().plusSeconds(clock == null ? TurnClock.TABLA_TURN_SECONDS : clock.turnSeconds())
+                ? Instant.now().plusSeconds(clock == null ? TablaGameState.TURN_SECONDS : clock.turnSeconds())
                 : clock.getNextMoveTime();
     }
 
-    private static boolean hasRunOut(Game game) {
+    private static boolean hasRunOut(TablaGame game) {
         TurnClock clock = game.getTurnClock();
         return clock == null || clock.getNextMoveTime() == null
                 || !Instant.now().isBefore(clock.getNextMoveTime());

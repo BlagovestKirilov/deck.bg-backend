@@ -1,6 +1,5 @@
 package bg.deck.common.service;
 
-import bg.deck.common.enums.GameType;
 import bg.deck.common.model.response.SearchGameResponse;
 import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
@@ -62,9 +61,9 @@ public class WebSocketService {
      * legacy un-scoped one as well so a client running the old build during a
      * rolling deploy still receives its match.
      */
-    public void notifyGameSearch(String username, GameType gameType, SearchGameResponse response) {
+    public void notifyGameSearch(String username, String gameCode, SearchGameResponse response) {
         String scoped = String.format(NOTIFY_SEARCH_BY_GAME_DESTINATION,
-                gameType.name().toLowerCase(), username);
+                gameCode.toLowerCase(), username);
         String legacy = String.format(NOTIFY_GAME_SEARCH_DESTINATION, username);
         enqueueMessage(username, () -> {
             messagingTemplate.convertAndSend(scoped, response);
@@ -72,8 +71,8 @@ public class WebSocketService {
         });
     }
 
-    public void notifyGameSearch(List<String> usernames, GameType gameType, SearchGameResponse response) {
-        usernames.forEach(username -> notifyGameSearch(username, gameType, response));
+    public void notifyGameSearch(List<String> usernames, String gameCode, SearchGameResponse response) {
+        usernames.forEach(username -> notifyGameSearch(username, gameCode, response));
     }
 
     public void notifyGameSearch(List<String> usernames, SearchGameResponse searchGameResponse) {

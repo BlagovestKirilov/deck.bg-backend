@@ -1,0 +1,331 @@
+databaseChangeLog:
+  # Santase games move out of public (game, player, game_state, player_hand,
+  # game_deck) into the santase schema: game, seat, game_state, hand, deck.
+  #
+  # - Every id is kept. The players' screens subscribe by the game id, and a
+  #   game in progress carries on where it was.
+  # - A seat holds a name instead of a key into public.users. A seat whose
+  #   account is gone gets the tombstone name the application writes on a
+  #   deletion (Constants.DELETED_PLAYER, "Изтрит играч", written as escapes so
+  #   the file's encoding cannot change it); the old name is not kept.
+  # - The deck and the hands get an order column. The old tables had none: the
+  #   application read their rows in the order the table returned them, which
+  #   with no index on them is their physical order, ctid. That is the order
+  #   copied, so a game in progress draws the card it would have drawn.
+  #
+  # Create, copy and verify in one changeset, so one transaction: a mismatch
+  # raises, and the tables go with it. No IF NOT EXISTS and no precondition, as
+  # in 034. The public tables are read, never written; a later release drops
+  # them, so this one can be rolled back.
+  - changeSet:
+      id: 038-santase-games
+      author: Blagovest Kirilov
+      comment: Santase games in the santase schema
+      changes:
+        - sql:
+            dbms: postgresql
+            splitStatements: false
+            sql: |
+              DO $$
+              BEGIN
+                  IF EXISTS (SELECT 1 FROM public.game WHERE game_type NOT IN ('SANTASE', 'TABLA')) THEN
+                      RAISE EXCEPTION 'public.game holds a game type this migration does not know';
+                  END IF;
+                  IF EXISTS (SELECT 1 FROM public.game WHERE game_type = 'SANTASE' AND tabla_state_id IS NOT NULL) THEN
+                      RAISE EXCEPTION 'a santase game in public.game has a табла state';
+                  END IF;
+              END $$;
+
+              CREATE TABLE santase.seat (
+                  id               UUID         PRIMARY KEY,
+                  created_at       TIMESTAMPTZ  NOT NULL,
+                  updated_at       TIMESTAMPTZ  NOT NULL,
+                  username         VARCHAR(20)  NOT NULL,
+                  result           INTEGER,
+                  score            INTEGER,
+                  played_card_id   UUID,
+                  played_card_suit VARCHAR(255),
+                  played_card_rank VARCHAR(255),
+                  is_playable      BOOLEAN,
+                  is_last_drawn    BOOLEAN,
+                  is_blanked       BOOLEAN,
+                  inactivity_count INTEGER,
+                  CONSTRAINT seat_played_card_suit_check
+                      CHECK (played_card_suit IN ('HEARTS','DIAMONDS','CLUBS','SPADES')),
+                  CONSTRAINT seat_played_card_rank_check
+                      CHECK (played_card_rank IN ('NINE','JACK','QUEEN','KING','TEN','ACE'))
+              );
+              CREATE INDEX ix_seat_username ON santase.seat (username);
+
+              CREATE TABLE santase.hand (
+                  seat_id       UUID          NOT NULL REFERENCES santase.seat (id),
+                  card_index    INTEGER       NOT NULL CHECK (card_index >= 0),
+                  card_id       UUID          NOT NULL,
+                  suit          VARCHAR(255)  CHECK (suit IN ('HEARTS','DIAMONDS','CLUBS','SPADES')),
+                  rank          VARCHAR(255)  CHECK (rank IN ('NINE','JACK','QUEEN','KING','TEN','ACE')),
+                  is_playable   BOOLEAN,
+                  is_last_drawn BOOLEAN,
+                  PRIMARY KEY (seat_id, card_index)
+              );
+
+              CREATE TABLE santase.game_state (
+                  id                   UUID         PRIMARY KEY,
+                  created_at           TIMESTAMPTZ  NOT NULL,
+                  updated_at           TIMESTAMPTZ  NOT NULL,
+                  trump_card_id        UUID,
+                  trump_card_suit      VARCHAR(255),
+                  trump_card_rank      VARCHAR(255),
+                  is_playable          BOOLEAN,
+                  is_last_drawn        BOOLEAN,
+                  first_turn_player_id UUID REFERENCES santase.seat (id),
+                  in_turn_player_id    UUID REFERENCES santase.seat (id),
+                  closed_by_player_id  UUID REFERENCES santase.seat (id),
+                  next_move_time       TIMESTAMPTZ,
+                  CONSTRAINT game_state_trump_card_suit_check
+                      CHECK (trump_card_suit IN ('HEARTS','DIAMONDS','CLUBS','SPADES')),
+                  CONSTRAINT game_state_trump_card_rank_check
+                      CHECK (trump_card_rank IN ('NINE','JACK','QUEEN','KING','TEN','ACE'))
+              );
+
+              CREATE TABLE santase.deck (
+                  state_id      UUID          NOT NULL REFERENCES santase.game_state (id),
+                  card_index    INTEGER       NOT NULL CHECK (card_index >= 0),
+                  card_id       UUID          NOT NULL,
+                  suit          VARCHAR(255)  CHECK (suit IN ('HEARTS','DIAMONDS','CLUBS','SPADES')),
+                  rank          VARCHAR(255)  CHECK (rank IN ('NINE','JACK','QUEEN','KING','TEN','ACE')),
+                  is_playable   BOOLEAN,
+                  is_last_drawn BOOLEAN,
+                  PRIMARY KEY (state_id, card_index)
+              );
+
+              CREATE TABLE santase.game (
+                  id                  UUID         PRIMARY KEY,
+                  created_at          TIMESTAMPTZ  NOT NULL,
+                  updated_at          TIMESTAMPTZ  NOT NULL,
+                  first_player_id     UUID REFERENCES santase.seat (id),
+                  second_player_id    UUID REFERENCES santase.seat (id),
+                  state_id            UUID UNIQUE REFERENCES santase.game_state (id),
+                  winner_id           UUID REFERENCES santase.seat (id),
+                  surrender_player_id UUID REFERENCES santase.seat (id),
+                  finished_at         TIMESTAMPTZ
+              );
+              CREATE INDEX ix_game_first_player ON santase.game (first_player_id);
+              CREATE INDEX ix_game_second_player ON santase.game (second_player_id);
+
+              -- Every seat a santase game or its state points at. The keys on
+              -- the new tables refuse a game whose seat was not copied.
+              INSERT INTO santase.seat (id, created_at, updated_at, username, result, score,
+                                        played_card_id, played_card_suit, played_card_rank,
+                                        is_playable, is_last_drawn, is_blanked, inactivity_count)
+              SELECT p.id,
+                     COALESCE(p.created_at, p.updated_at, now()),
+                     COALESCE(p.updated_at, p.created_at, now()),
+                     COALESCE(u.username, U&'\0418\0437\0442\0440\0438\0442 \0438\0433\0440\0430\0447'),
+                     p.result, p.score, p.played_card_id, p.played_card_suit, p.played_card_rank,
+                     p.is_playable, p.is_last_drawn, p.is_blanked, p.inactivity_count
+                FROM public.player p
+                LEFT JOIN public.users u ON u.id = p.user_id
+               WHERE p.id IN (
+                     SELECT g.first_player_id     FROM public.game g WHERE g.game_type = 'SANTASE'
+                     UNION SELECT g.second_player_id    FROM public.game g WHERE g.game_type = 'SANTASE'
+                     UNION SELECT g.winner_id           FROM public.game g WHERE g.game_type = 'SANTASE'
+                     UNION SELECT g.surrender_player_id FROM public.game g WHERE g.game_type = 'SANTASE'
+                     UNION SELECT s.first_turn_player_id FROM public.game_state s
+                                  JOIN public.game g ON g.state_id = s.id WHERE g.game_type = 'SANTASE'
+                     UNION SELECT s.in_turn_player_id    FROM public.game_state s
+                                  JOIN public.game g ON g.state_id = s.id WHERE g.game_type = 'SANTASE'
+                     UNION SELECT s.closed_by_player_id  FROM public.game_state s
+                                  JOIN public.game g ON g.state_id = s.id WHERE g.game_type = 'SANTASE');
+
+              INSERT INTO santase.hand (seat_id, card_index, card_id, suit, rank, is_playable, is_last_drawn)
+              SELECT h.player_id,
+                     (row_number() OVER (PARTITION BY h.player_id ORDER BY h.ctid) - 1)::integer,
+                     h.card_id, h.suit, h.rank, h.is_playable, h.is_last_drawn
+                FROM public.player_hand h
+               WHERE h.player_id IN (SELECT id FROM santase.seat);
+
+              INSERT INTO santase.game_state (id, created_at, updated_at, trump_card_id, trump_card_suit,
+                                              trump_card_rank, is_playable, is_last_drawn, first_turn_player_id,
+                                              in_turn_player_id, closed_by_player_id, next_move_time)
+              SELECT s.id,
+                     COALESCE(s.created_at, s.updated_at, now()),
+                     COALESCE(s.updated_at, s.created_at, now()),
+                     s.trump_card_id, s.trump_card_suit, s.trump_card_rank, s.is_playable, s.is_last_drawn,
+                     s.first_turn_player_id, s.in_turn_player_id, s.closed_by_player_id, s.next_move_time
+                FROM public.game_state s
+               WHERE s.id IN (SELECT g.state_id FROM public.game g WHERE g.game_type = 'SANTASE');
+
+              INSERT INTO santase.deck (state_id, card_index, card_id, suit, rank, is_playable, is_last_drawn)
+              SELECT d.game_id,
+                     (row_number() OVER (PARTITION BY d.game_id ORDER BY d.ctid) - 1)::integer,
+                     d.card_id, d.suit, d.rank, d.is_playable, d.is_last_drawn
+                FROM public.game_deck d
+               WHERE d.game_id IN (SELECT id FROM santase.game_state);
+
+              INSERT INTO santase.game (id, created_at, updated_at, first_player_id, second_player_id, state_id,
+                                        winner_id, surrender_player_id, finished_at)
+              SELECT g.id,
+                     COALESCE(g.created_at, g.updated_at, now()),
+                     COALESCE(g.updated_at, g.created_at, now()),
+                     g.first_player_id, g.second_player_id, g.state_id, g.winner_id, g.surrender_player_id,
+                     g.finished_at
+                FROM public.game g
+               WHERE g.game_type = 'SANTASE';
+
+              DO $$
+              DECLARE
+                  source_rows bigint;
+                  copied_rows bigint;
+                  differing   bigint;
+              BEGIN
+                  -- Games: every one, and every column as it was.
+                  SELECT count(*) INTO source_rows FROM public.game WHERE game_type = 'SANTASE';
+                  SELECT count(*) INTO copied_rows FROM santase.game;
+                  IF source_rows <> copied_rows THEN
+                      RAISE EXCEPTION 'santase.game: copied % of % games', copied_rows, source_rows;
+                  END IF;
+                  SELECT count(*) INTO differing
+                    FROM public.game g JOIN santase.game n ON n.id = g.id
+                   WHERE (g.first_player_id, g.second_player_id, g.state_id, g.winner_id,
+                          g.surrender_player_id, g.finished_at)
+                         IS DISTINCT FROM (n.first_player_id, n.second_player_id, n.state_id, n.winner_id,
+                                           n.surrender_player_id, n.finished_at);
+                  IF differing <> 0 THEN
+                      RAISE EXCEPTION 'santase.game: % games differ from the source', differing;
+                  END IF;
+
+                  -- Seats: the state of the deal as it was, under the right name.
+                  SELECT count(*) INTO differing
+                    FROM santase.seat n
+                    JOIN public.player p ON p.id = n.id
+                    LEFT JOIN public.users u ON u.id = p.user_id
+                   WHERE (n.username, n.result, n.score, n.played_card_id, n.played_card_suit,
+                          n.played_card_rank, n.is_playable, n.is_last_drawn, n.is_blanked, n.inactivity_count)
+                         IS DISTINCT FROM (COALESCE(u.username, U&'\0418\0437\0442\0440\0438\0442 \0438\0433\0440\0430\0447'),
+                                           p.result, p.score, p.played_card_id, p.played_card_suit,
+                                           p.played_card_rank, p.is_playable, p.is_last_drawn, p.is_blanked,
+                                           p.inactivity_count);
+                  IF differing <> 0 THEN
+                      RAISE EXCEPTION 'santase.seat: % seats differ from the source', differing;
+                  END IF;
+
+                  -- States.
+                  SELECT count(*) INTO source_rows
+                    FROM public.game WHERE game_type = 'SANTASE' AND state_id IS NOT NULL;
+                  SELECT count(*) INTO copied_rows FROM santase.game_state;
+                  IF source_rows <> copied_rows THEN
+                      RAISE EXCEPTION 'santase.game_state: copied % of % states', copied_rows, source_rows;
+                  END IF;
+                  SELECT count(*) INTO differing
+                    FROM public.game_state s JOIN santase.game_state n ON n.id = s.id
+                   WHERE (s.trump_card_id, s.trump_card_suit, s.trump_card_rank, s.is_playable, s.is_last_drawn,
+                          s.first_turn_player_id, s.in_turn_player_id, s.closed_by_player_id, s.next_move_time)
+                         IS DISTINCT FROM (n.trump_card_id, n.trump_card_suit, n.trump_card_rank, n.is_playable,
+                                           n.is_last_drawn, n.first_turn_player_id, n.in_turn_player_id,
+                                           n.closed_by_player_id, n.next_move_time);
+                  IF differing <> 0 THEN
+                      RAISE EXCEPTION 'santase.game_state: % states differ from the source', differing;
+                  END IF;
+
+                  -- The deck, card for card and in order.
+                  SELECT count(*) INTO source_rows
+                    FROM public.game_deck WHERE game_id IN (SELECT id FROM santase.game_state);
+                  SELECT count(*) INTO copied_rows FROM santase.deck;
+                  IF source_rows <> copied_rows THEN
+                      RAISE EXCEPTION 'santase.deck: copied % of % cards', copied_rows, source_rows;
+                  END IF;
+                  SELECT count(*) INTO differing
+                    FROM (SELECT d.game_id, array_agg(d.card_id ORDER BY d.ctid) AS cards
+                            FROM public.game_deck d
+                           WHERE d.game_id IN (SELECT id FROM santase.game_state)
+                           GROUP BY d.game_id) o
+                    FULL JOIN (SELECT state_id, array_agg(card_id ORDER BY card_index) AS cards
+                                 FROM santase.deck GROUP BY state_id) n ON n.state_id = o.game_id
+                   WHERE o.cards IS DISTINCT FROM n.cards;
+                  IF differing <> 0 THEN
+                      RAISE EXCEPTION 'santase.deck: % decks differ from the source', differing;
+                  END IF;
+
+                  -- The hands, the same way.
+                  SELECT count(*) INTO source_rows
+                    FROM public.player_hand WHERE player_id IN (SELECT id FROM santase.seat);
+                  SELECT count(*) INTO copied_rows FROM santase.hand;
+                  IF source_rows <> copied_rows THEN
+                      RAISE EXCEPTION 'santase.hand: copied % of % cards', copied_rows, source_rows;
+                  END IF;
+                  SELECT count(*) INTO differing
+                    FROM (SELECT h.player_id, array_agg(h.card_id ORDER BY h.ctid) AS cards
+                            FROM public.player_hand h
+                           WHERE h.player_id IN (SELECT id FROM santase.seat)
+                           GROUP BY h.player_id) o
+                    FULL JOIN (SELECT seat_id, array_agg(card_id ORDER BY card_index) AS cards
+                                 FROM santase.hand GROUP BY seat_id) n ON n.seat_id = o.player_id
+                   WHERE o.cards IS DISTINCT FROM n.cards;
+                  IF differing <> 0 THEN
+                      RAISE EXCEPTION 'santase.hand: % hands differ from the source', differing;
+                  END IF;
+              END $$;
+      rollback:
+        - sql:
+            dbms: postgresql
+            splitStatements: false
+            sql: |
+              -- What was played while this release was live goes back into the
+              -- old tables before the new ones are dropped: seats first, then
+              -- states, then games, as the old keys need.
+              --
+              -- A seat made while this release was live is linked back to its
+              -- account by name. A seat whose account was deleted in that time
+              -- has lost the name, and goes back linked to nobody.
+              INSERT INTO public.player (id, created_at, updated_at, user_id, result, score,
+                                         played_card_id, played_card_suit, played_card_rank,
+                                         is_playable, is_last_drawn, is_blanked, inactivity_count)
+              SELECT n.id, n.created_at, n.updated_at, u.id, n.result, n.score,
+                     n.played_card_id, n.played_card_suit, n.played_card_rank,
+                     n.is_playable, n.is_last_drawn, n.is_blanked, n.inactivity_count
+                FROM santase.seat n
+                LEFT JOIN public.users u ON u.username = n.username
+              ON CONFLICT (id) DO UPDATE
+                 SET updated_at = EXCLUDED.updated_at, result = EXCLUDED.result, score = EXCLUDED.score,
+                     played_card_id = EXCLUDED.played_card_id, played_card_suit = EXCLUDED.played_card_suit,
+                     played_card_rank = EXCLUDED.played_card_rank, is_playable = EXCLUDED.is_playable,
+                     is_last_drawn = EXCLUDED.is_last_drawn, is_blanked = EXCLUDED.is_blanked,
+                     inactivity_count = EXCLUDED.inactivity_count;
+
+              INSERT INTO public.game_state (id, created_at, updated_at, trump_card_id, trump_card_suit,
+                                             trump_card_rank, is_playable, is_last_drawn, first_turn_player_id,
+                                             in_turn_player_id, closed_by_player_id, next_move_time)
+              SELECT id, created_at, updated_at, trump_card_id, trump_card_suit, trump_card_rank, is_playable,
+                     is_last_drawn, first_turn_player_id, in_turn_player_id, closed_by_player_id, next_move_time
+                FROM santase.game_state
+              ON CONFLICT (id) DO UPDATE
+                 SET updated_at = EXCLUDED.updated_at, trump_card_id = EXCLUDED.trump_card_id,
+                     trump_card_suit = EXCLUDED.trump_card_suit, trump_card_rank = EXCLUDED.trump_card_rank,
+                     is_playable = EXCLUDED.is_playable, is_last_drawn = EXCLUDED.is_last_drawn,
+                     first_turn_player_id = EXCLUDED.first_turn_player_id,
+                     in_turn_player_id = EXCLUDED.in_turn_player_id,
+                     closed_by_player_id = EXCLUDED.closed_by_player_id,
+                     next_move_time = EXCLUDED.next_move_time;
+
+              INSERT INTO public.game (id, created_at, updated_at, game_type, first_player_id, second_player_id,
+                                       state_id, winner_id, surrender_player_id, finished_at)
+              SELECT id, created_at, updated_at, 'SANTASE', first_player_id, second_player_id, state_id,
+                     winner_id, surrender_player_id, finished_at
+                FROM santase.game
+              ON CONFLICT (id) DO UPDATE
+                 SET updated_at = EXCLUDED.updated_at, winner_id = EXCLUDED.winner_id,
+                     surrender_player_id = EXCLUDED.surrender_player_id, finished_at = EXCLUDED.finished_at;
+
+              -- The old tables have no order column: rows go back in the order
+              -- the old code reads them.
+              DELETE FROM public.game_deck WHERE game_id IN (SELECT id FROM santase.game_state);
+              INSERT INTO public.game_deck (game_id, card_id, suit, rank, is_playable, is_last_drawn)
+              SELECT state_id, card_id, suit, rank, is_playable, is_last_drawn
+                FROM santase.deck ORDER BY state_id, card_index;
+
+              DELETE FROM public.player_hand WHERE player_id IN (SELECT id FROM santase.seat);
+              INSERT INTO public.player_hand (player_id, card_id, suit, rank, is_playable, is_last_drawn)
+              SELECT seat_id, card_id, suit, rank, is_playable, is_last_drawn
+                FROM santase.hand ORDER BY seat_id, card_index;
+
+              DROP TABLE santase.game, santase.deck, santase.hand, santase.game_state, santase.seat;

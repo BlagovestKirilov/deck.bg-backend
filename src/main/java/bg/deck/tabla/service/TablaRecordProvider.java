@@ -1,6 +1,5 @@
 package bg.deck.tabla.service;
 
-import bg.deck.common.enums.GameType;
 import bg.deck.common.model.dto.GameStatsDTO;
 import bg.deck.common.service.GameRecordProvider;
 import lombok.RequiredArgsConstructor;
@@ -17,7 +16,7 @@ public class TablaRecordProvider implements GameRecordProvider {
 
     @Override
     public String code() {
-        return GameType.TABLA.name();
+        return TablaService.TABLA;
     }
 
     @Override

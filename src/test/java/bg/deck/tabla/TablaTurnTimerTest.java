@@ -1,9 +1,9 @@
 package bg.deck.tabla;
 
-import bg.deck.common.model.Game;
+import bg.deck.tabla.model.TablaGame;
 import bg.deck.common.model.TurnClock;
 import bg.deck.common.scheduler.DeadlineTimer;
-import bg.deck.common.service.GameUtilService;
+import bg.deck.tabla.model.TablaGameState;
 import bg.deck.tabla.service.TablaTurnTimer;
 import bg.deck.tabla.service.TablaUtilService;
 import org.junit.jupiter.api.AfterEach;
@@ -31,23 +31,22 @@ class TablaTurnTimerTest {
 
     private final ScheduledThreadPoolExecutor scheduler = new ScheduledThreadPoolExecutor(1);
     private final ExecutorService virtualThreads = Executors.newVirtualThreadPerTaskExecutor();
-    private final GameUtilService games = mock(GameUtilService.class);
     private final TablaUtilService tabla = mock(TablaUtilService.class);
     private final TablaTurnTimer timers =
-            new TablaTurnTimer(new DeadlineTimer(scheduler, virtualThreads), games, tabla);
+            new TablaTurnTimer(new DeadlineTimer(scheduler, virtualThreads), tabla);
 
     private final UUID gameId = UUID.randomUUID();
     private final AtomicReference<Instant> deadline = new AtomicReference<>(Instant.now().minusSeconds(1));
-    private Game game;
+    private TablaGame game;
 
     @BeforeEach
     void setUp() {
         TurnClock clock = mock(TurnClock.class);
         when(clock.getNextMoveTime()).thenAnswer(_ -> deadline.get());
-        game = mock(Game.class);
+        game = mock(TablaGame.class);
         when(game.getId()).thenReturn(gameId);
         when(game.getTurnClock()).thenReturn(clock);
-        when(games.findGameById(gameId)).thenReturn(Optional.of(game));
+        when(tabla.findGameById(gameId)).thenReturn(Optional.of(game));
     }
 
     @AfterEach
@@ -61,7 +60,7 @@ class TablaTurnTimerTest {
     void aBlockedRollIsPassed() {
         // A pass hands the turn over, and with it a fresh deadline.
         when(tabla.passIfBlocked(gameId)).thenAnswer(_ -> {
-            deadline.set(Instant.now().plusSeconds(TurnClock.TABLA_TURN_SECONDS));
+            deadline.set(Instant.now().plusSeconds(TablaGameState.TURN_SECONDS));
             return true;
         });
 

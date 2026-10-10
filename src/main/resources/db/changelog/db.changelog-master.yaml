@@ -92,6 +92,10 @@ databaseChangeLog:
   # and only in a later release drop what was copied. Each phase starts with
   # a tag to roll back to.
   #   032-036  the records: santase.player_stats, tabla.player_stats
+  #   037-040  the games: santase.game/seat/game_state/hand/deck, tabla.game/seat/game_state
+  #   041      drops the public tables 034-039 copied from. Not included yet:
+  #            it goes in a later release, once 032-040 have been live long
+  #            enough that nobody will roll them back — see the file.
   - include:
       file: db/changelog/changes/032-tag-before-stats-split.yaml
 
@@ -106,3 +110,15 @@ databaseChangeLog:
 
   - include:
       file: db/changelog/changes/036-user-game-stats-cascade.yaml
+
+  - include:
+      file: db/changelog/changes/037-tag-before-game-split.yaml
+
+  - include:
+      file: db/changelog/changes/038-santase-games.yaml
+
+  - include:
+      file: db/changelog/changes/039-tabla-games.yaml
+
+  - include:
+      file: db/changelog/changes/040-player-user-set-null.yaml

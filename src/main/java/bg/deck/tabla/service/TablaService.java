@@ -1,11 +1,10 @@
 package bg.deck.tabla.service;
 
 import bg.deck.common.constant.LogConstants;
-import bg.deck.common.enums.GameType;
 import bg.deck.common.exception.PlayerInactivitySurrenderException;
 import bg.deck.tabla.exception.TablaException;
-import bg.deck.common.model.Game;
-import bg.deck.common.model.Player;
+import bg.deck.tabla.model.TablaGame;
+import bg.deck.tabla.model.TablaSeat;
 import bg.deck.tabla.model.TablaGameState;
 import bg.deck.tabla.model.request.MoveRequest;
 import bg.deck.common.model.response.SearchGameResponse;
@@ -23,7 +22,6 @@ import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import bg.deck.common.service.AvailabilityService;
-import bg.deck.common.service.GameUtilService;
 import bg.deck.common.util.AuthenticatedUser;
 import bg.deck.common.service.WebSocketService;
 
@@ -40,11 +38,14 @@ import bg.deck.common.service.WebSocketService;
 @Service
 public class TablaService {
 
+    /** The game's code: in the availability table, on the profile, and in the search topic. */
+    public static final String TABLA = "TABLA";
+
     private static final int MAX_INACTIVITY = 3;
 
     private final TablaUtilService tablaUtilService;
     private final TablaDiceService diceService;
-    private final GameUtilService gameUtilService;
+    private final TablaSeatService tablaSeatService;
     private final TablaTurnTimer tablaTurnTimer;
     private final WebSocketService webSocketService;
     private final AvailabilityService availabilityService;
@@ -63,7 +64,7 @@ public class TablaService {
      */
     public boolean resumeActiveGame() {
         String username = AuthenticatedUser.username();
-        return !gameUtilService.checkIfUserExistsAndIsAvailable(username, GameType.TABLA);
+        return !tablaUtilService.checkIfUserExistsAndIsAvailable(username);
     }
 
     public void searchGame() {
@@ -72,15 +73,14 @@ public class TablaService {
         // Nobody joins the queue for a game they are not being offered.
         // Only the start is gated: switching табла off stops new games and
         // lets the tables already being played finish.
-        availabilityService.requireAvailable(GameType.TABLA.name(), username);
+        availabilityService.requireAvailable(TABLA, username);
 
-        // Typed, so an in-progress Santase game does not block a табла search.
-        if (!gameUtilService.checkIfUserExistsAndIsAvailable(username, GameType.TABLA)) {
+        if (!tablaUtilService.checkIfUserExistsAndIsAvailable(username)) {
             return;
         }
 
         if (matchQueue.contains(username)) {
-            webSocketService.notifyGameSearch(username, GameType.TABLA, SearchGameResponse.waiting());
+            webSocketService.notifyGameSearch(username, TABLA, SearchGameResponse.waiting());
             return;
         }
 
@@ -88,17 +88,17 @@ public class TablaService {
 
         if (waiting == null) {
             matchQueue.offer(username);
-            webSocketService.notifyGameSearch(username, GameType.TABLA, SearchGameResponse.waiting());
+            webSocketService.notifyGameSearch(username, TABLA, SearchGameResponse.waiting());
             return;
         }
 
-        Player first = gameUtilService.newPlayerFor(waiting);
-        Player second = gameUtilService.newPlayerFor(username);
+        TablaSeat first = tablaSeatService.newSeatFor(waiting);
+        TablaSeat second = tablaSeatService.newSeatFor(username);
 
-        Game game = tablaUtilService.startGame(first, second);
+        TablaGame game = tablaUtilService.startGame(first, second);
         log.info("Табла match: {} vs {} ({})", waiting, username, game.getId());
 
-        webSocketService.notifyGameSearch(List.of(waiting, username), GameType.TABLA,
+        webSocketService.notifyGameSearch(List.of(waiting, username), TABLA,
                 SearchGameResponse.started(game.getId()));
         tablaTurnTimer.update(game);
     }
@@ -109,7 +109,7 @@ public class TablaService {
 
     public void getState() {
         String username = AuthenticatedUser.username();
-        Game game = tablaUtilService.findActiveGame(username);
+        TablaGame game = tablaUtilService.findActiveGame(username);
         tablaUtilService.push(game, username);
     }
 
@@ -124,7 +124,7 @@ public class TablaService {
     @Transactional
     public void openingThrow() {
         String username = AuthenticatedUser.username();
-        Game game = tablaUtilService.findActiveGame(username);
+        TablaGame game = tablaUtilService.findActiveGame(username);
         if (!tablaUtilService.isOpening(game)) {
             throw TablaException.openingOver();
         }
@@ -138,9 +138,9 @@ public class TablaService {
     @Transactional
     public void roll() {
         String username = AuthenticatedUser.username();
-        Game game = tablaUtilService.findActiveGame(username);
-        TablaGameState state = game.getTablaState();
-        Player player = requireInTurn(game, username);
+        TablaGame game = tablaUtilService.findActiveGame(username);
+        TablaGameState state = game.getState();
+        TablaSeat player = requireInTurn(game, username);
 
         if (state.isRolled()) {
             throw TablaException.diceAlreadyRolled();
@@ -162,9 +162,9 @@ public class TablaService {
     @Transactional
     public void move(MoveRequest request) {
         String username = AuthenticatedUser.username();
-        Game game = tablaUtilService.findActiveGame(username);
-        TablaGameState state = game.getTablaState();
-        Player player = requireInTurn(game, username);
+        TablaGame game = tablaUtilService.findActiveGame(username);
+        TablaGameState state = game.getState();
+        TablaSeat player = requireInTurn(game, username);
 
         if (!state.isRolled()) {
             throw TablaException.diceNotRolled();
@@ -205,9 +205,9 @@ public class TablaService {
     @Transactional
     public void undo() {
         String username = AuthenticatedUser.username();
-        Game game = tablaUtilService.findActiveGame(username);
-        TablaGameState state = game.getTablaState();
-        Player player = requireInTurn(game, username);
+        TablaGame game = tablaUtilService.findActiveGame(username);
+        TablaGameState state = game.getState();
+        TablaSeat player = requireInTurn(game, username);
 
         List<Hop> pending = state.pendingHopList();
         if (pending.isEmpty()) {
@@ -237,20 +237,20 @@ public class TablaService {
     @Transactional
     public void confirm() {
         String username = AuthenticatedUser.username();
-        Game game = tablaUtilService.findActiveGame(username);
-        TablaGameState state = game.getTablaState();
-        Player player = requireInTurn(game, username);
+        TablaGame game = tablaUtilService.findActiveGame(username);
+        TablaGameState state = game.getState();
+        TablaSeat player = requireInTurn(game, username);
 
         confirmInternal(game, state, tablaUtilService.sideOf(game, player));
     }
 
-    private void confirmInternal(Game game, TablaGameState state, Side side) {
+    private void confirmInternal(TablaGame game, TablaGameState state, Side side) {
         if (state.usedDiceCount() != state.getMaxDiceUsable()) {
             throw TablaException.turnNotComplete(state.usedDiceCount(), state.getMaxDiceUsable());
         }
 
         if (BackgammonRules.isFinished(state.boardState(), side)) {
-            Player winner = state.getInTurnPlayer();
+            TablaSeat winner = state.getInTurnPlayer();
             state.clearTurn();
             tablaUtilService.finishGame(game, winner, false);
             tablaTurnTimer.cancel(game.getId());
@@ -260,9 +260,9 @@ public class TablaService {
         endTurn(game);
     }
 
-    private void endTurn(Game game) {
-        TablaGameState state = game.getTablaState();
-        Player next = game.getOpponent(state.getInTurnPlayer());
+    private void endTurn(TablaGame game) {
+        TablaGameState state = game.getState();
+        TablaSeat next = game.getOpponent(state.getInTurnPlayer());
 
         state.clearTurn();
         state.setInTurnPlayer(next);
@@ -278,13 +278,13 @@ public class TablaService {
     @Transactional
     public void surrender() {
         String username = AuthenticatedUser.username();
-        Game game = tablaUtilService.findActiveGame(username);
+        TablaGame game = tablaUtilService.findActiveGame(username);
 
         if (game.getWinner() != null) {
             return;
         }
 
-        Player opponent = game.getOpponentPlayerByUsername(username);
+        TablaSeat opponent = game.getOpponentPlayerByUsername(username);
         tablaUtilService.finishGame(game, opponent, true);
         tablaTurnTimer.cancel(game.getId());
     }
@@ -292,11 +292,11 @@ public class TablaService {
     @Transactional
     public void reportInactivity() {
         String username = AuthenticatedUser.username();
-        Game game = tablaUtilService.findActiveGame(username);
+        TablaGame game = tablaUtilService.findActiveGame(username);
         // Deliberately unguarded: the client reads a 400 here as "allowance
         // spent" and forfeits, so a report racing the end of a turn must not
         // be refused.
-        Player player = game.getPlayerByUsername(username);
+        TablaSeat player = game.getPlayerByUsername(username);
 
         int count = (player.getInactivityCount() == null ? 0 : player.getInactivityCount()) + 1;
         player.setInactivityCount(count);
@@ -318,26 +318,26 @@ public class TablaService {
     @Transactional
     public void extendTime() {
         String username = AuthenticatedUser.username();
-        Game game = tablaUtilService.findActiveGame(username);
+        TablaGame game = tablaUtilService.findActiveGame(username);
         requireToAct(game, username);
 
-        game.getTablaState().extendNextMoveTime();
+        game.getState().extendNextMoveTime();
         tablaTurnTimer.update(game);
         tablaUtilService.pushToBoth(game);
     }
 
     /** On turn, or in the opening with their die still to throw. */
-    private Player requireToAct(Game game, String username) {
-        Player player = game.getPlayerByUsername(username);
+    private TablaSeat requireToAct(TablaGame game, String username) {
+        TablaSeat player = game.getPlayerByUsername(username);
         if (!tablaUtilService.mustAct(game, player)) {
             throw TablaException.notYourTurn();
         }
         return player;
     }
 
-    private Player requireInTurn(Game game, String username) {
-        Player player = game.getPlayerByUsername(username);
-        if (!game.getTablaState().isInTurn(player)) {
+    private TablaSeat requireInTurn(TablaGame game, String username) {
+        TablaSeat player = game.getPlayerByUsername(username);
+        if (!game.getState().isInTurn(player)) {
             throw TablaException.notYourTurn();
         }
         return player;

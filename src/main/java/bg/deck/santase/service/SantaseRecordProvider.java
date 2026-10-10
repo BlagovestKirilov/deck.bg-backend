@@ -1,6 +1,5 @@
 package bg.deck.santase.service;
 
-import bg.deck.common.enums.GameType;
 import bg.deck.common.model.dto.GameStatsDTO;
 import bg.deck.common.service.GameRecordProvider;
 import lombok.RequiredArgsConstructor;
@@ -17,7 +16,7 @@ public class SantaseRecordProvider implements GameRecordProvider {
 
     @Override
     public String code() {
-        return GameType.SANTASE.name();
+        return SantaseService.SANTASE;
     }
 
     @Override

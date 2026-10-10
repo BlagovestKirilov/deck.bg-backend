@@ -1,8 +1,8 @@
 package bg.deck.santase;
 
-import bg.deck.common.model.Game;
-import bg.deck.common.model.Player;
-import bg.deck.common.model.User;
+import bg.deck.common.constant.Constants;
+import bg.deck.santase.model.SantaseGame;
+import bg.deck.santase.model.SantaseSeat;
 import bg.deck.common.model.dto.GameStatsDTO;
 import bg.deck.common.util.Elo;
 import bg.deck.santase.model.SantasePlayerStats;
@@ -86,8 +86,8 @@ class SantaseStatsTest {
     @Test
     @DisplayName("a deleted account's seat is skipped, and the other player is still settled")
     void aDeletedSeatIsSkipped() {
-        Game game = gameWonBy("petko91", "gosho");
-        game.getOpponent(game.getWinner()).setUser(null);
+        SantaseGame game = gameWonBy("petko91", "gosho");
+        game.getOpponent(game.getWinner()).setUsername(Constants.DELETED_PLAYER);
 
         stats.record(game);
         flush();
@@ -126,18 +126,16 @@ class SantaseStatsTest {
     }
 
     /** A finished game between two accounts, never saved: only the result is written. */
-    static Game gameWonBy(String winner, String loser) {
-        Player won = seat(winner);
-        Player lost = seat(loser);
-        Game game = Game.builder().firstPlayer(won).secondPlayer(lost).build();
+    static SantaseGame gameWonBy(String winner, String loser) {
+        SantaseSeat won = seat(winner);
+        SantaseSeat lost = seat(loser);
+        SantaseGame game = SantaseGame.builder().firstPlayer(won).secondPlayer(lost).build();
         game.setWinner(won, false);
         return game;
     }
 
-    private static Player seat(String username) {
-        User user = new User();
-        user.setUsername(username);
-        Player player = Player.builder().user(user).build();
+    private static SantaseSeat seat(String username) {
+        SantaseSeat player = SantaseSeat.builder().username(username).build();
         // Entities compare by id, and two seats must not be equal.
         setId(player, UUID.randomUUID());
         return player;

@@ -8,6 +8,7 @@ import bg.deck.tabla.enums.Side;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
 import jakarta.persistence.Version;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -19,8 +20,6 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import bg.deck.common.model.Game;
-import bg.deck.common.model.Player;
 import bg.deck.common.model.TurnClock;
 
 /**
@@ -36,17 +35,25 @@ import bg.deck.common.model.TurnClock;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
+@Table(schema = "tabla", name = "game_state")
 public class TablaGameState extends BaseEntity implements TurnClock {
+
+    /**
+     * Табла's budget for one turn: 45s to act plus a 10s warning and 3s of
+     * slack. A turn here is several taps (roll, move each die, confirm), not
+     * one card, so santase's 20s is too short.
+     */
+    public static final int TURN_SECONDS = 58;
 
     /** Guards against a double-tapped move being applied twice. */
     @Version
     private int version;
 
     @ManyToOne
-    private Player firstTurnPlayer;
+    private TablaSeat firstTurnPlayer;
 
     @ManyToOne
-    private Player inTurnPlayer;
+    private TablaSeat inTurnPlayer;
 
     private Instant nextMoveTime;
 
@@ -139,21 +146,21 @@ public class TablaGameState extends BaseEntity implements TurnClock {
      * The first player is always WHITE, so no side column is stored. Which player
      * moves first is decided by the opening roll and lives in {@code inTurnPlayer}.
      */
-    public Side sideOf(Game game, Player player) {
+    public Side sideOf(TablaGame game, TablaSeat player) {
         return game.getFirstPlayer().equals(player) ? Side.WHITE : Side.BLACK;
     }
 
     /* ---------------- TurnClock ---------------- */
 
-    @Override
-    public void setInTurnPlayer(Player inTurnPlayer) {
+    /** Hands the turn to {@code inTurnPlayer} and restarts the clock. */
+    public void setInTurnPlayer(TablaSeat inTurnPlayer) {
         this.inTurnPlayer = inTurnPlayer;
         extendNextMoveTime();
     }
 
     @Override
     public int turnSeconds() {
-        return TurnClock.TABLA_TURN_SECONDS;
+        return TURN_SECONDS;
     }
 
     @Override
@@ -161,8 +168,7 @@ public class TablaGameState extends BaseEntity implements TurnClock {
         this.nextMoveTime = Instant.now().plusSeconds(turnSeconds());
     }
 
-    @Override
-    public boolean isInTurn(Player player) {
+    public boolean isInTurn(TablaSeat player) {
         return player.equals(this.inTurnPlayer);
     }
 }

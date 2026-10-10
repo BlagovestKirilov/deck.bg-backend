@@ -10,7 +10,8 @@ import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
 /**
- * Табла letting go of a deleted account's record.
+ * Табла letting go of a deleted account: its record goes, and its
+ * seats keep their games under the tombstone name.
  *
  * <p>Told about the deletion rather than reaching into the accounts table, as
  * belot is. Runs after the deletion has committed, in a transaction of its
@@ -22,11 +23,14 @@ import org.springframework.transaction.event.TransactionalEventListener;
 public class TablaAccountListener {
 
     private final TablaStatsService tablaStatsService;
+    private final TablaSeatService tablaSeatService;
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     public void onUserDeleted(UserDeleted event) {
         boolean stats = tablaStatsService.forget(event.username());
-        log.info("Табла: let go of {} — record {}", event.username(), stats ? "removed" : "not found");
+        int seats = tablaSeatService.anonymise(event.username());
+        log.info("Табла: let go of {} — record {}, {} seat(s) renamed", event.username(),
+                stats ? "removed" : "not found", seats);
     }
 }

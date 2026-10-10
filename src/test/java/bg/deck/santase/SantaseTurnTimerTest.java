@@ -1,11 +1,11 @@
 package bg.deck.santase;
 
-import bg.deck.common.enums.GameType;
-import bg.deck.common.model.Game;
+import bg.deck.santase.model.SantaseGame;
 import bg.deck.common.model.TurnClock;
 import bg.deck.common.scheduler.DeadlineTimer;
-import bg.deck.common.service.GameUtilService;
+import bg.deck.santase.model.SantaseGameState;
 import bg.deck.santase.service.SantaseDealService;
+import bg.deck.santase.service.SantaseTableService;
 import bg.deck.santase.service.SantaseTurnTimer;
 import bg.deck.santase.service.WebSocketUtilService;
 import org.junit.jupiter.api.AfterEach;
@@ -42,7 +42,7 @@ class SantaseTurnTimerTest {
 
     private final ScheduledThreadPoolExecutor scheduler = new ScheduledThreadPoolExecutor(1);
     private final ExecutorService virtualThreads = Executors.newVirtualThreadPerTaskExecutor();
-    private final GameUtilService games = mock(GameUtilService.class);
+    private final SantaseTableService games = mock(SantaseTableService.class);
     private final SantaseDealService deals = mock(SantaseDealService.class);
     private final WebSocketUtilService screens = mock(WebSocketUtilService.class);
     private final SantaseTurnTimer timers =
@@ -51,15 +51,15 @@ class SantaseTurnTimerTest {
     private final UUID gameId = UUID.randomUUID();
     private final AtomicReference<Instant> deadline = new AtomicReference<>();
     private TurnClock clock;
-    private Game game;
+    private SantaseGame game;
 
     @BeforeEach
     void setUp() {
         clock = mock(TurnClock.class);
         when(clock.getNextMoveTime()).thenAnswer(_ -> deadline.get());
-        when(clock.turnSeconds()).thenReturn(TurnClock.TURN_SECONDS);
+        when(clock.turnSeconds()).thenReturn(SantaseGameState.TURN_SECONDS);
 
-        game = mock(Game.class);
+        game = mock(SantaseGame.class);
         when(game.getId()).thenReturn(gameId);
         when(game.getTurnClock()).thenReturn(clock);
         when(games.findGameById(gameId)).thenReturn(Optional.of(game));
@@ -106,10 +106,10 @@ class SantaseTurnTimerTest {
     void downtimeIsNotThePlayersFault() {
         deadline.set(Instant.now().minusSeconds(5));
         doAnswer(_ -> {
-            deadline.set(Instant.now().plusSeconds(TurnClock.TURN_SECONDS));
+            deadline.set(Instant.now().plusSeconds(SantaseGameState.TURN_SECONDS));
             return null;
         }).when(clock).extendNextMoveTime();
-        when(games.findAllActiveGames(GameType.SANTASE)).thenReturn(List.of(game));
+        when(games.findAllActiveGames()).thenReturn(List.of(game));
 
         timers.rescheduleActiveGames();
 

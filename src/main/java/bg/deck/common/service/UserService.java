@@ -4,7 +4,6 @@ import bg.deck.common.util.AuthenticatedUser;
 import bg.deck.common.constant.Constants;
 import bg.deck.common.constant.ExceptionConstants;
 import bg.deck.common.constant.LogConstants;
-import bg.deck.common.enums.GameType;
 import bg.deck.common.enums.UserDeletionStatus;
 import bg.deck.common.exception.EmailNotConfirmedException;
 import bg.deck.common.exception.InvalidCredentialsException;
@@ -57,7 +56,7 @@ public class UserService {
         recordProviders.forEach(provider -> stats.put(provider.code(), provider.recordOf(username)));
         // The santase* fields and rank are the legacy shape, for the client that
         // is deployed right now.
-        GameStatsDTO santase = stats.get(GameType.SANTASE.name());
+        GameStatsDTO santase = stats.get(Constants.LEGACY_PROFILE_GAME);
         return ProfileResponse.builder()
                 .emailConfirmed(Boolean.TRUE.equals(user.getIsEmailConfirmed()))
                 .stats(stats)
