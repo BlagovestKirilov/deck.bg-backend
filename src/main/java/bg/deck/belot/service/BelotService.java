@@ -105,16 +105,22 @@ public class BelotService {
     }
 
     /**
-     * Sends this player their own view again — a reload, or a reconnect.
+     * This player's own view again — a reload, or a reconnect.
      *
-     * @return whether they are at a table at all; a player at none has nothing
-     *         to be sent, and the screen offers them the way to find one
+     * <p>Returned, so the screen can draw the table from the answer before its
+     * socket is up, and sent on the socket as well, for a client from before
+     * the answer carried it.
+     *
+     * @return their view, or nothing when they are at no table and the screen
+     *         offers them the way to find one
      */
     @Transactional(readOnly = true)
-    public boolean sendState(String username) {
-        Optional<BelotGame> table = belotTableService.tableOf(username);
-        table.ifPresent(seated -> tell(seated, username));
-        return table.isPresent();
+    public Optional<BelotStateResponse> sendState(String username) {
+        return belotTableService.tableOf(username).map(table -> {
+            BelotStateResponse view = viewFor(table, username);
+            webSocketService.notifyBelotUpdate(username, view);
+            return view;
+        });
     }
 
     /**
