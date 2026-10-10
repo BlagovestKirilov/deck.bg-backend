@@ -57,6 +57,17 @@ public class SantaseService {
         log.info(LogConstants.GOT_STATE_LOG, username);
     }
 
+    /**
+     * Points a player who opens the game back at the one they are already in.
+     *
+     * @return whether they have one; if so its id has just been sent on their
+     *         search topic, exactly as a search with a game in progress sends it
+     */
+    public boolean resumeActiveGame() {
+        String username = gameUtilService.getUsername();
+        return !gameUtilService.checkIfUserExistsAndIsAvailable(username, GameType.SANTASE);
+    }
+
     public void searchGame() {
         String username = gameUtilService.getUsername();
         log.info(LogConstants.GAME_SEARCH_START, username);

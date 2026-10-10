@@ -221,10 +221,21 @@ public class BelotService {
     }
 
     /**
+     * Gets up from a table still short of four — back to the games, or the
+     * page closed. The others at it are told a seat is free again. A table
+     * already being played is not left this way: that is {@link #surrender}.
+     */
+    @Transactional
+    public void leave(String username) {
+        belotTableService.leaveWaiting(username).ifPresent(this::tellEveryone);
+    }
+
+    /**
      * A player gives up, and the game goes to the other pair.
      *
-     * <p>The whole pair gives up with them, which is why the client confirms
-     * it in those words.
+     * <p>It costs whoever gave up twice the rating and gives their partner the
+     * win ({@link BelotStatsService#record}), which is what the client says
+     * before it asks.
      *
      * <p>Idempotent on purpose. A table that is already over — because their
      * partner pressed it a moment earlier, or because the last card fell — is

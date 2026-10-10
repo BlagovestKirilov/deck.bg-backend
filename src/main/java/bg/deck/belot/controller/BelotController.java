@@ -103,6 +103,13 @@ public class BelotController {
      *
      * <p>No body: the seat comes from the token, as everywhere else here.
      */
+    /** Get up from a table that is still waiting for its fourth player. */
+    @PostMapping("/leave")
+    public ResponseEntity<Void> leave() {
+        belotService.leave(AuthenticatedUser.username());
+        return ResponseEntity.accepted().build();
+    }
+
     @PostMapping("/surrender")
     public ResponseEntity<Void> surrender() {
         belotService.surrender(AuthenticatedUser.username());

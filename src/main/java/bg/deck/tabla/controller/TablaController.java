@@ -32,6 +32,17 @@ public class TablaController {
         return ResponseEntity.accepted().build();
     }
 
+    /**
+     * The game this player is already in, if any: 202 and its id on the search
+     * topic, or 204 when there is none and the screen offers a search.
+     */
+    @GetMapping("/active")
+    public ResponseEntity<Void> active() {
+        return tablaService.resumeActiveGame()
+                ? ResponseEntity.accepted().build()
+                : ResponseEntity.noContent().build();
+    }
+
     @GetMapping("/state")
     public ResponseEntity<Void> state() {
         tablaService.getState();

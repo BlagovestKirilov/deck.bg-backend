@@ -89,6 +89,49 @@ public class BelotTableService {
         return belotGameRepository.save(game);
     }
 
+    /**
+     * Gets this player up from a table that is still waiting for its fourth.
+     *
+     * <p>Only a table that has not started: once the cards are out, leaving is
+     * a surrender and goes through {@link #concede}. A table left with nobody
+     * at it is not kept — it would only be found again as the oldest table
+     * with room, by somebody who would then wait at it alone.
+     *
+     * @return the table they got up from, while somebody is still sitting at
+     *         it, so the others can be told there is a free seat again
+     */
+    @Transactional
+    public Optional<BelotGame> leaveWaiting(String username) {
+        // Asked on every closed socket, most of them nobody's at a waiting
+        // table: the lock is only taken for one who is, and the table read
+        // again under it, since the fourth may have sat down in between.
+        if (!isWaiting(username)) {
+            return Optional.empty();
+        }
+        takeTheMatchmakingLock();
+        Optional<BelotGame> seated = belotGameRepository.findUnfinishedGameOf(username);
+        if (seated.isEmpty() || seated.get().getStatus() != BelotGameStatus.WAITING) {
+            return Optional.empty();
+        }
+
+        BelotGame table = seated.get();
+        table.getSeats().removeIf(seat -> seat.getUsername().equals(username));
+        log.info("Belot: {} got up from table {} before it started, {} still seated",
+                username, table.getId(), table.getSeats().size());
+
+        if (table.getSeats().isEmpty()) {
+            belotGameRepository.delete(table);
+            return Optional.empty();
+        }
+        return Optional.of(belotGameRepository.save(table));
+    }
+
+    private boolean isWaiting(String username) {
+        return belotGameRepository.findUnfinishedGameOf(username)
+                .filter(game -> game.getStatus() == BelotGameStatus.WAITING)
+                .isPresent();
+    }
+
     private Optional<BelotGame> oldestTableWithRoom() {
         List<BelotGame> waiting = belotGameRepository.findByStatusOrderByCreatedAtAsc(BelotGameStatus.WAITING);
         return waiting.stream().filter(game -> !game.isFull()).findFirst();

@@ -55,6 +55,17 @@ public class TablaService {
        Matchmaking
        ------------------------------------------------------------------ */
 
+    /**
+     * Points a player who opens табла back at the game they are already in.
+     *
+     * @return whether they have one; if so its id has just been sent on their
+     *         search topic, exactly as a search with a game in progress sends it
+     */
+    public boolean resumeActiveGame() {
+        String username = gameUtilService.getUsername();
+        return !gameUtilService.checkIfUserExistsAndIsAvailable(username, GameType.TABLA);
+    }
+
     public void searchGame() {
         String username = gameUtilService.getUsername();
 
