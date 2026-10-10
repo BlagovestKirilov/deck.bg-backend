@@ -4,6 +4,7 @@ import bg.deck.belot.model.request.BelotBidRequest;
 import bg.deck.belot.model.request.BelotCutRequest;
 import bg.deck.belot.model.request.BelotPlayRequest;
 import bg.deck.belot.model.response.BelotProfileResponse;
+import bg.deck.belot.model.response.BelotStateResponse;
 import bg.deck.belot.service.BelotPlayerService;
 import bg.deck.belot.service.BelotStatsService;
 import bg.deck.belot.service.BelotService;
@@ -44,15 +45,16 @@ public class BelotController {
     }
 
     /**
-     * Send me my view again — a reload, or a socket that dropped. 204 when the
-     * player is at no table: there is nothing on its way, which is how the
-     * screen knows to offer a search rather than wait for a table.
+     * My view of my table — opening the screen, a reload, or a socket that
+     * dropped. 200 with the view, which also goes out on the socket; 204 when
+     * the player is at no table, which is how the screen knows to offer a
+     * search rather than wait for one.
      */
     @GetMapping("/state")
-    public ResponseEntity<Void> state() {
+    public ResponseEntity<BelotStateResponse> state() {
         return belotService.sendState(AuthenticatedUser.username())
-                ? ResponseEntity.accepted().build()
-                : ResponseEntity.noContent().build();
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.noContent().build());
     }
 
     /** Pass, bid, contra or recontra, when the bidding reaches this player. */

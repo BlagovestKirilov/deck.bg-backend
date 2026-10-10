@@ -126,8 +126,17 @@ class BelotViewTest {
     @Test
     @DisplayName("is sent to a player at the table, and a player at none is told there is nothing")
     void onlyAPlayerAtATableHasAView() {
-        assertTrue(belot.sendState(PLAYERS.getFirst()));
-        assertFalse(belot.sendState("passer-by"), "nobody of that name is sitting anywhere");
+        assertTrue(belot.sendState(PLAYERS.getFirst()).isPresent());
+        assertFalse(belot.sendState("passer-by").isPresent(), "nobody of that name is sitting anywhere");
+    }
+
+    @Test
+    @DisplayName("is the answer itself, the same view the socket is sent")
+    void theAnswerIsTheViewSent() {
+        String username = PLAYERS.getFirst();
+        BelotStateResponse answered = belot.sendState(username).orElseThrow();
+
+        verify(sockets).notifyBelotUpdate(username, answered);
     }
 
     private BelotStateResponse viewSentTo(String username) {

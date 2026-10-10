@@ -19,7 +19,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.Queue;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import bg.deck.common.service.AvailabilityService;
 import bg.deck.common.util.AuthenticatedUser;
@@ -59,12 +61,15 @@ public class TablaService {
     /**
      * Points a player who opens табла back at the game they are already in.
      *
-     * @return whether they have one; if so its id has just been sent on their
-     *         search topic, exactly as a search with a game in progress sends it
+     * @return the game's id, if they have one. It is also sent on their search
+     *         topic, exactly as a search with a game in progress sends it, for
+     *         a client that still waits for it there.
      */
-    public boolean resumeActiveGame() {
+    public Optional<UUID> resumeActiveGame() {
         String username = AuthenticatedUser.username();
-        return !tablaUtilService.checkIfUserExistsAndIsAvailable(username);
+        Optional<UUID> gameId = tablaUtilService.activeGameId(username);
+        gameId.ifPresent(id -> webSocketService.notifyGameSearch(username, TABLA, SearchGameResponse.started(id)));
+        return gameId;
     }
 
     public void searchGame() {
