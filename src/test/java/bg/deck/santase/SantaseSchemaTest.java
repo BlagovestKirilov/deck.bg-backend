@@ -122,6 +122,8 @@ class SantaseSchemaTest {
         assertThat(reread.getFirstPlayer().getUsername()).isEqualTo(Constants.DELETED_PLAYER);
         assertThat(reread.getSecondPlayer().getUsername()).isEqualTo("ninja2011");
         assertThat(games.findActiveGamesByUsername("petko91")).isEmpty();
+        assertThat(games.findActiveGameIdsByUsername("petko91")).isEmpty();
+        assertThat(games.findActiveGameIdsByUsername("ninja2011")).containsExactly(gameId);
     }
 
     @Test

@@ -102,18 +102,20 @@ public class TablaUtilService {
         return tablaGameRepository.save(game);
     }
 
+    /** The id of the game this player is in, if any. */
+    public Optional<UUID> activeGameId(String username) {
+        return tablaGameRepository.findActiveGameIdsByUsername(username).stream().findFirst();
+    }
+
     /**
      * True when the player is free to start a game. A player already in one is
      * pointed back at it on their search topic and is not free.
      */
     public boolean checkIfUserExistsAndIsAvailable(String username) {
-        Optional<TablaGame> game = tablaGameRepository.findActiveGamesByUsername(username).stream().findFirst();
-        if (game.isPresent()) {
-            webSocketService.notifyGameSearch(username, TablaService.TABLA,
-                    SearchGameResponse.started(game.get().getId()));
-            return false;
-        }
-        return true;
+        Optional<UUID> gameId = activeGameId(username);
+        gameId.ifPresent(id -> webSocketService.notifyGameSearch(username, TablaService.TABLA,
+                SearchGameResponse.started(id)));
+        return gameId.isEmpty();
     }
 
     /* ------------------------------------------------------------------

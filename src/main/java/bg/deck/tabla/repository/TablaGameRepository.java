@@ -21,6 +21,20 @@ public interface TablaGameRepository extends JpaRepository<TablaGame, UUID> {
             """)
     List<TablaGame> findActiveGamesByUsername(@Param("username") String username);
 
+    /**
+     * The id of the game this player is still in, newest first — the id alone,
+     * for the question asked each time a game screen opens, so the seats and
+     * the state are not loaded just to be thrown away.
+     */
+    @Query("""
+                 SELECT game.id FROM TablaGame game
+                 WHERE (game.firstPlayer.username = :username
+                    OR game.secondPlayer.username = :username)
+                 AND game.winner IS NULL
+                 ORDER BY game.createdAt DESC
+            """)
+    List<UUID> findActiveGameIdsByUsername(@Param("username") String username);
+
     /** Every game still being played: what the turn timer re-arms after a restart. */
     @Query("SELECT game FROM TablaGame game WHERE game.winner IS NULL")
     List<TablaGame> findAllActive();
