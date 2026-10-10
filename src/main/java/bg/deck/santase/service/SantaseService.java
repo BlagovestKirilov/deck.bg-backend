@@ -25,8 +25,8 @@ import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import bg.deck.common.service.AvailabilityService;
-import bg.deck.common.service.GameInactivityService;
 import bg.deck.common.service.GameUtilService;
+import bg.deck.common.util.AuthenticatedUser;
 import bg.deck.common.service.WebSocketService;
 
 @Log4j2
@@ -36,17 +36,18 @@ public class SantaseService {
     private final WebSocketService webSocketService;
     private final WebSocketUtilService webSocketUtilService;
     private final GameUtilService gameUtilService;
-    private final GameInactivityService gameInactivityService;
+    private final SantaseDealService santaseDealService;
+    private final SantaseTurnTimer santaseTurnTimer;
     private final AvailabilityService availabilityService;
 
     private final Queue<String> matchQueue = new ConcurrentLinkedQueue<>();
 
     public void getGameState() {
-        String username = gameUtilService.getUsername();
+        String username = AuthenticatedUser.username();
 
         log.info(LogConstants.GET_STATE_LOG, username);
 
-        Game game = gameUtilService.findGameByUsername(username);
+        Game game = santaseDealService.findGameByUsername(username);
 
         if (!game.getFirstPlayer().getUsername().equals(username) && !game.getSecondPlayer().getUsername().equals(username)) {
             throw new UserNotPartOfGameException(username);
@@ -64,12 +65,12 @@ public class SantaseService {
      *         search topic, exactly as a search with a game in progress sends it
      */
     public boolean resumeActiveGame() {
-        String username = gameUtilService.getUsername();
+        String username = AuthenticatedUser.username();
         return !gameUtilService.checkIfUserExistsAndIsAvailable(username, GameType.SANTASE);
     }
 
     public void searchGame() {
-        String username = gameUtilService.getUsername();
+        String username = AuthenticatedUser.username();
         log.info(LogConstants.GAME_SEARCH_START, username);
 
         // Nobody joins the queue for a game they are not being offered.
@@ -77,7 +78,7 @@ public class SantaseService {
         // lets the tables already being played finish.
         availabilityService.requireAvailable(GameType.SANTASE.name(), username);
 
-        if (!gameUtilService.checkIfUserExistsAndIsAvailable(username)) {
+        if (!gameUtilService.checkIfUserExistsAndIsAvailable(username, GameType.SANTASE)) {
             log.warn(LogConstants.GAME_SEARCH_USER_UNAVAILABLE, username);
             return;
         }
@@ -99,7 +100,7 @@ public class SantaseService {
             Player firstPlayer = gameUtilService.newPlayerFor(username);
             Player secondPlayer = gameUtilService.newPlayerFor(waitingPlayerUsername);
 
-            Game newGame = gameUtilService.startGame(firstPlayer, secondPlayer);
+            Game newGame = santaseDealService.startGame(firstPlayer, secondPlayer);
 
             log.info(LogConstants.GAME_SEARCH_MATCH_FOUND,
                     firstPlayer.getUsername(),
@@ -108,7 +109,7 @@ public class SantaseService {
 
             webSocketService.notifyGameSearch(List.of(firstPlayer.getUsername(), secondPlayer.getUsername()),
                     SearchGameResponse.started(newGame.getId()));
-            gameInactivityService.updateNextMoveTime(newGame);
+            santaseTurnTimer.update(newGame);
         }
     }
 
@@ -126,10 +127,10 @@ public class SantaseService {
 
     @Transactional
     public void playCard(CardRequest cardRequest) {
-        String username = gameUtilService.getUsername();
+        String username = AuthenticatedUser.username();
         log.info(LogConstants.PLAY_CARD_START, username, cardRequest.cardId());
 
-        Game game = gameUtilService.findGameByUsername(username);
+        Game game = santaseDealService.findGameByUsername(username);
         Player player = game.getPlayerByUsername(username);
         GameState state = game.getState();
 
@@ -143,7 +144,7 @@ public class SantaseService {
                 .findFirst()
                 .orElseThrow(() -> new CardNotFoundException(username));
 
-        gameUtilService.removeCardFromHand(game, player, cardForRemoval);
+        santaseDealService.removeCardFromHand(game, player, cardForRemoval);
         player.setPlayedCard(cardForRemoval);
         player.getHand().forEach(card -> card.setIsPlayable(true));
 
@@ -152,8 +153,8 @@ public class SantaseService {
                     game.getFirstPlayer().getPlayedCard(), game.getSecondPlayer().getPlayedCard());
 
             webSocketUtilService.updateGameStateWithTrickTaker(game,
-                    gameUtilService.determineWinner(game).getUsername());
-            gameUtilService.evaluateTrick(game);
+                    santaseDealService.determineWinner(game).getUsername());
+            santaseDealService.evaluateTrick(game);
         } else {
             log.info(LogConstants.PLAY_CARD_SUCCESS, username, cardForRemoval.getId());
             state.setInTurnPlayer(game.getOpponent(player));
@@ -162,15 +163,15 @@ public class SantaseService {
         gameUtilService.saveGame(game);
 
         webSocketUtilService.updateGameState(game);
-        gameInactivityService.updateNextMoveTime(game);
+        santaseTurnTimer.update(game);
     }
 
     @Transactional
     public void announceCombination(CardRequest cardRequest) {
-        String username = gameUtilService.getUsername();
+        String username = AuthenticatedUser.username();
         log.info(LogConstants.ANNOUNCE_START, username, cardRequest.cardId());
 
-        Game game = gameUtilService.findGameByUsername(username);
+        Game game = santaseDealService.findGameByUsername(username);
 
         Player player = game.getPlayerByUsername(username);
 
@@ -189,7 +190,7 @@ public class SantaseService {
                 .findFirst()
                 .orElseThrow(() -> new CardNotFoundException(username));
 
-        if (gameUtilService.checkTwentyForty(game, player, card)) {
+        if (santaseDealService.checkTwentyForty(game, player, card)) {
             log.info(LogConstants.ANNOUNCE_SUCCESS, username, player.getBonus());
 
             game.getState().extendNextMoveTime();
@@ -197,35 +198,35 @@ public class SantaseService {
 
             player.setBonus(null);
             gameUtilService.saveGame(game);
-            gameInactivityService.updateNextMoveTime(game);
+            santaseTurnTimer.update(game);
         }
     }
 
     @Transactional
     public void closeDeck() {
-        String username = gameUtilService.getUsername();
+        String username = AuthenticatedUser.username();
         log.info(LogConstants.CLOSE_DECK_START, username);
 
-        Game game = gameUtilService.findGame(username);
+        Game game = santaseDealService.findGame(username);
         Player player = game.getPlayerByUsername(username);
 
         GameState state = game.getState();
         state.getDeck().clear();
         state.setClosedByPlayer(player);
         state.extendNextMoveTime();
-        gameUtilService.saveGameState(state);
+        santaseDealService.saveGameState(state);
 
         log.info(LogConstants.CLOSE_DECK_SUCCESS, username);
 
         webSocketUtilService.updateGameState(game);
-        gameInactivityService.updateNextMoveTime(game);
+        santaseTurnTimer.update(game);
     }
 
     @Transactional
     public void replaceCard() {
-        String username = gameUtilService.getUsername();
+        String username = AuthenticatedUser.username();
 
-        Game game = gameUtilService.findGame(username);
+        Game game = santaseDealService.findGame(username);
         GameState state = game.getState();
         Player player = game.getPlayerByUsername(username);
 
@@ -249,19 +250,19 @@ public class SantaseService {
         state.getDeck().removeLast();
         state.getDeck().addLast(nineOfTrumps);
         state.extendNextMoveTime();
-        gameUtilService.saveGameState(state);
+        santaseDealService.saveGameState(state);
         log.info(LogConstants.REPLACE_CARD_SUCCESS, username, currentTrump.getRank());
 
         webSocketUtilService.updateGameState(game);
-        gameInactivityService.updateNextMoveTime(game);
+        santaseTurnTimer.update(game);
     }
 
     @Transactional
     public void finishDeal() {
-        String username = gameUtilService.getUsername();
+        String username = AuthenticatedUser.username();
         log.info(LogConstants.FINISH_DEAL_START, username);
 
-        Game game = gameUtilService.findGameByUsername(username);
+        Game game = santaseDealService.findGameByUsername(username);
         GameState state = game.getState();
         Player player = game.getPlayerByUsername(username);
 
@@ -298,17 +299,17 @@ public class SantaseService {
 
         webSocketUtilService.updateGameStateWithTrickWinner(game, trickWinner.getUsername());
 
-        gameUtilService.prepareNewState(game, trickWinner);
+        santaseDealService.prepareNewState(game, trickWinner);
         gameUtilService.saveGame(game);
 
         webSocketUtilService.updateGameState(game);
-        gameInactivityService.updateNextMoveTime(game);
+        santaseTurnTimer.update(game);
     }
 
     @Transactional
     public void surrender() {
-        String username = gameUtilService.getUsername();
-        Game game = gameUtilService.findGameByUsername(username);
+        String username = AuthenticatedUser.username();
+        Game game = santaseDealService.findGameByUsername(username);
 
         if (game.getWinner() != null) {
             return;
@@ -336,13 +337,13 @@ public class SantaseService {
 
         gameUtilService.saveGame(game);
         webSocketUtilService.updateGameState(game);
-        gameInactivityService.updateNextMoveTime(game);
+        santaseTurnTimer.update(game);
     }
 
     @Transactional
     public void inactivity() {
-        String username = gameUtilService.getUsername();
-        Game game = gameUtilService.findGameByUsername(username);
+        String username = AuthenticatedUser.username();
+        Game game = santaseDealService.findGameByUsername(username);
         Player player = game.getPlayerByUsername(username);
 
         // A report sent before the clock ran out still counts. It looks like a
@@ -364,13 +365,13 @@ public class SantaseService {
             log.warn(LogConstants.PLAYER_FORCED_SURRENDER_BY_INACTIVITY, username, game.getId());
             throw new PlayerInactivitySurrenderException();
         }
-        gameInactivityService.updateNextMoveTime(game);
+        santaseTurnTimer.update(game);
     }
 
     @Transactional
     public void extendNextMoveTime() {
-        String username = gameUtilService.getUsername();
-        Game game = gameUtilService.findGameByUsername(username);
+        String username = AuthenticatedUser.username();
+        Game game = santaseDealService.findGameByUsername(username);
         Player player = game.getPlayerByUsername(username);
 
         if (player.getInactivityCount() == 3) {
@@ -384,7 +385,7 @@ public class SantaseService {
         log.info(LogConstants.EXTEND_NEXT_MOVE_TIME, username, game.getId());
 
         gameUtilService.saveGame(game);
-        gameInactivityService.updateNextMoveTime(game);
+        santaseTurnTimer.update(game);
         // The opponent is watching this clock burn down: a fresh budget
         // has to reach their screen, or the bar sits empty while the player
         // it belongs to still has twenty seconds.

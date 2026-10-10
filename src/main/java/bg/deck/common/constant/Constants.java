@@ -6,8 +6,6 @@ import java.time.Duration;
 
 @UtilityClass
 public class Constants {
-    public static final String KING = "KING";
-    public static final String QUEEN = "QUEEN";
     public static final String NOTIFY_GAME_DESTINATION = "/topic/game/%s/%s";
     public static final String NOTIFY_GAME_SEARCH_DESTINATION = "/topic/game/%s";
     /**

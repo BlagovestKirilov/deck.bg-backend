@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 public interface GameRepository extends JpaRepository<Game, UUID> {
@@ -25,7 +26,18 @@ public interface GameRepository extends JpaRepository<Game, UUID> {
     List<Game> findActiveGamesByUsernameAndType(@Param("username") String username,
                                                 @Param("gameType") GameType gameType);
 
-    /** Every unfinished game across all types — powers the hub's resume badge. */
-    @Query("SELECT game FROM Game game WHERE game.winner IS NULL")
-    List<Game> findAllActive();
+    /** The game of this type the player is still in, if any. */
+    @Query("""
+                SELECT game.id FROM Game game
+                WHERE (game.firstPlayer.user.username = :username
+                   OR game.secondPlayer.user.username = :username)
+                AND game.gameType = :gameType
+                AND game.winner IS NULL
+            """)
+    Optional<UUID> findActiveGameIdByUsernameAndType(@Param("username") String username,
+                                                     @Param("gameType") GameType gameType);
+
+    /** Every unfinished game of one type: what that game's turn timer re-arms after a restart. */
+    @Query("SELECT game FROM Game game WHERE game.winner IS NULL AND game.gameType = :gameType")
+    List<Game> findAllActiveByType(@Param("gameType") GameType gameType);
 }

@@ -23,8 +23,8 @@ import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import bg.deck.common.service.AvailabilityService;
-import bg.deck.common.service.GameInactivityService;
 import bg.deck.common.service.GameUtilService;
+import bg.deck.common.util.AuthenticatedUser;
 import bg.deck.common.service.WebSocketService;
 
 /**
@@ -45,7 +45,7 @@ public class TablaService {
     private final TablaUtilService tablaUtilService;
     private final TablaDiceService diceService;
     private final GameUtilService gameUtilService;
-    private final GameInactivityService gameInactivityService;
+    private final TablaTurnTimer tablaTurnTimer;
     private final WebSocketService webSocketService;
     private final AvailabilityService availabilityService;
 
@@ -62,12 +62,12 @@ public class TablaService {
      *         search topic, exactly as a search with a game in progress sends it
      */
     public boolean resumeActiveGame() {
-        String username = gameUtilService.getUsername();
+        String username = AuthenticatedUser.username();
         return !gameUtilService.checkIfUserExistsAndIsAvailable(username, GameType.TABLA);
     }
 
     public void searchGame() {
-        String username = gameUtilService.getUsername();
+        String username = AuthenticatedUser.username();
 
         // Nobody joins the queue for a game they are not being offered.
         // Only the start is gated: switching табла off stops new games and
@@ -100,7 +100,7 @@ public class TablaService {
 
         webSocketService.notifyGameSearch(List.of(waiting, username), GameType.TABLA,
                 SearchGameResponse.started(game.getId()));
-        gameInactivityService.updateNextMoveTime(game);
+        tablaTurnTimer.update(game);
     }
 
     public void cancelSearch(String username) {
@@ -108,7 +108,7 @@ public class TablaService {
     }
 
     public void getState() {
-        String username = gameUtilService.getUsername();
+        String username = AuthenticatedUser.username();
         Game game = tablaUtilService.findActiveGame(username);
         tablaUtilService.push(game, username);
     }
@@ -123,21 +123,21 @@ public class TablaService {
      */
     @Transactional
     public void openingThrow() {
-        String username = gameUtilService.getUsername();
+        String username = AuthenticatedUser.username();
         Game game = tablaUtilService.findActiveGame(username);
         if (!tablaUtilService.isOpening(game)) {
             throw TablaException.openingOver();
         }
 
         if (tablaUtilService.openingThrow(game, game.getPlayerByUsername(username))) {
-            gameInactivityService.updateNextMoveTime(game);
+            tablaTurnTimer.update(game);
         }
         tablaUtilService.pushToBoth(game);
     }
 
     @Transactional
     public void roll() {
-        String username = gameUtilService.getUsername();
+        String username = AuthenticatedUser.username();
         Game game = tablaUtilService.findActiveGame(username);
         TablaGameState state = game.getTablaState();
         Player player = requireInTurn(game, username);
@@ -149,7 +149,7 @@ public class TablaService {
         Dice dice = diceService.roll(game.getServerSeed(), game.getId(), state.getTurnIndex());
         state.setTurnIndex(state.getTurnIndex() + 1);
         tablaUtilService.placeDice(game, player, dice);
-        gameInactivityService.updateNextMoveTime(game);
+        tablaTurnTimer.update(game);
 
         // A completely blocked roll used to pass the turn in the same request,
         // which wiped the dice before either player could see what was thrown.
@@ -161,7 +161,7 @@ public class TablaService {
 
     @Transactional
     public void move(MoveRequest request) {
-        String username = gameUtilService.getUsername();
+        String username = AuthenticatedUser.username();
         Game game = tablaUtilService.findActiveGame(username);
         TablaGameState state = game.getTablaState();
         Player player = requireInTurn(game, username);
@@ -204,7 +204,7 @@ public class TablaService {
 
     @Transactional
     public void undo() {
-        String username = gameUtilService.getUsername();
+        String username = AuthenticatedUser.username();
         Game game = tablaUtilService.findActiveGame(username);
         TablaGameState state = game.getTablaState();
         Player player = requireInTurn(game, username);
@@ -236,7 +236,7 @@ public class TablaService {
 
     @Transactional
     public void confirm() {
-        String username = gameUtilService.getUsername();
+        String username = AuthenticatedUser.username();
         Game game = tablaUtilService.findActiveGame(username);
         TablaGameState state = game.getTablaState();
         Player player = requireInTurn(game, username);
@@ -253,7 +253,7 @@ public class TablaService {
             Player winner = state.getInTurnPlayer();
             state.clearTurn();
             tablaUtilService.finishGame(game, winner, false);
-            gameInactivityService.cancel(game.getId());
+            tablaTurnTimer.cancel(game.getId());
             return;
         }
 
@@ -267,7 +267,7 @@ public class TablaService {
         state.clearTurn();
         state.setInTurnPlayer(next);
 
-        gameInactivityService.updateNextMoveTime(game);
+        tablaTurnTimer.update(game);
         tablaUtilService.pushToBoth(game);
     }
 
@@ -277,7 +277,7 @@ public class TablaService {
 
     @Transactional
     public void surrender() {
-        String username = gameUtilService.getUsername();
+        String username = AuthenticatedUser.username();
         Game game = tablaUtilService.findActiveGame(username);
 
         if (game.getWinner() != null) {
@@ -286,12 +286,12 @@ public class TablaService {
 
         Player opponent = game.getOpponentPlayerByUsername(username);
         tablaUtilService.finishGame(game, opponent, true);
-        gameInactivityService.cancel(game.getId());
+        tablaTurnTimer.cancel(game.getId());
     }
 
     @Transactional
     public void reportInactivity() {
-        String username = gameUtilService.getUsername();
+        String username = AuthenticatedUser.username();
         Game game = tablaUtilService.findActiveGame(username);
         // Deliberately unguarded: the client reads a 400 here as "allowance
         // spent" and forfeits, so a report racing the end of a turn must not
@@ -311,18 +311,18 @@ public class TablaService {
         // Re-arm against the persisted deadline. The deadline itself is NOT
         // pushed out here: the player is now inside the warning window and only
         // pressing Continue (extendTime) buys them a fresh turn.
-        gameInactivityService.updateNextMoveTime(game);
+        tablaTurnTimer.update(game);
         tablaUtilService.pushToBoth(game);
     }
 
     @Transactional
     public void extendTime() {
-        String username = gameUtilService.getUsername();
+        String username = AuthenticatedUser.username();
         Game game = tablaUtilService.findActiveGame(username);
         requireToAct(game, username);
 
         game.getTablaState().extendNextMoveTime();
-        gameInactivityService.updateNextMoveTime(game);
+        tablaTurnTimer.update(game);
         tablaUtilService.pushToBoth(game);
     }
 

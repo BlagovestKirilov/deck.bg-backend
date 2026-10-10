@@ -4,18 +4,21 @@ import bg.deck.santase.enums.Rank;
 import bg.deck.santase.enums.Suit;
 import bg.deck.santase.exception.NotInTurnException;
 import bg.deck.santase.model.Card;
+import bg.deck.common.enums.GameType;
 import bg.deck.common.model.Game;
 import bg.deck.santase.model.GameState;
 import bg.deck.common.model.Player;
 import bg.deck.common.model.User;
 import bg.deck.santase.model.request.CardRequest;
 import bg.deck.common.model.response.SearchGameResponse;
-import bg.deck.common.service.GameInactivityService;
 import bg.deck.common.service.AvailabilityService;
+import bg.deck.santase.service.SantaseDealService;
 import bg.deck.santase.service.SantaseService;
+import bg.deck.santase.service.SantaseTurnTimer;
 import bg.deck.common.service.GameUtilService;
 import bg.deck.common.service.WebSocketService;
 import bg.deck.santase.service.WebSocketUtilService;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -25,8 +28,11 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.InOrder;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -52,7 +58,9 @@ class SantaseServiceTest {
     @Mock
     private GameUtilService gameUtilService;
     @Mock
-    private GameInactivityService gameInactivityService;
+    private SantaseDealService santaseDealService;
+    @Mock
+    private SantaseTurnTimer santaseTurnTimer;
     @Mock
     private AvailabilityService availabilityService;
     @InjectMocks
@@ -80,6 +88,17 @@ class SantaseServiceTest {
                 .build();
     }
 
+    /** The name on the request, as the security context carries it. */
+    private static void signIn(String username) {
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken(username, null, List.of()));
+    }
+
+    @AfterEach
+    void signOut() {
+        SecurityContextHolder.clearContext();
+    }
+
     private Player createPlayer(String name) {
         User user = new User();
         user.setUsername(name);
@@ -91,34 +110,34 @@ class SantaseServiceTest {
     class SearchTests {
         @Test
         void searchGame_WhenQueueEmpty_AddsUserToQueue() {
-            when(gameUtilService.getUsername()).thenReturn(p1Name);
-            when(gameUtilService.checkIfUserExistsAndIsAvailable(p1Name)).thenReturn(true);
+            signIn(p1Name);
+            when(gameUtilService.checkIfUserExistsAndIsAvailable(p1Name, GameType.SANTASE)).thenReturn(true);
 
             santaseService.searchGame();
 
             verify(webSocketService).notifyGameSearch(eq(p1Name), any(SearchGameResponse.class));
-            verify(gameUtilService, never()).startGame(any(), any());
+            verify(santaseDealService, never()).startGame(any(), any());
         }
 
         @Test
         void searchGame_WhenPlayerInQueue_StartsNewGame() {
             // First player enters queue
-            when(gameUtilService.getUsername()).thenReturn(p1Name);
-            when(gameUtilService.checkIfUserExistsAndIsAvailable(p1Name)).thenReturn(true);
+            signIn(p1Name);
+            when(gameUtilService.checkIfUserExistsAndIsAvailable(p1Name, GameType.SANTASE)).thenReturn(true);
             santaseService.searchGame();
 
             // Second player enters queue
             reset(webSocketUtilService);
-            when(gameUtilService.getUsername()).thenReturn(p2Name);
-            when(gameUtilService.checkIfUserExistsAndIsAvailable(p2Name)).thenReturn(true);
+            signIn(p2Name);
+            when(gameUtilService.checkIfUserExistsAndIsAvailable(p2Name, GameType.SANTASE)).thenReturn(true);
             // A fresh seat is now created per game rather than reusing a per-user row.
             when(gameUtilService.newPlayerFor(p2Name)).thenReturn(p2);
             when(gameUtilService.newPlayerFor(p1Name)).thenReturn(p1);
-            when(gameUtilService.startGame(p2, p1)).thenReturn(game);
+            when(santaseDealService.startGame(p2, p1)).thenReturn(game);
 
             santaseService.searchGame();
 
-            verify(gameUtilService).startGame(any(), any());
+            verify(santaseDealService).startGame(any(), any());
             verify(webSocketService).notifyGameSearch(anyList(), any(SearchGameResponse.class));
         }
     }
@@ -134,14 +153,14 @@ class SantaseServiceTest {
             p1.getHand().add(card);
             CardRequest request = new CardRequest(card.getId());
 
-            when(gameUtilService.getUsername()).thenReturn(p1Name);
-            when(gameUtilService.findGameByUsername(p1Name)).thenReturn(game);
+            signIn(p1Name);
+            when(santaseDealService.findGameByUsername(p1Name)).thenReturn(game);
 
             santaseService.playCard(request);
 
             assertThat(p1.getPlayedCard()).isEqualTo(card);
             assertThat(state.getInTurnPlayer()).isEqualTo(p2);
-            verify(gameUtilService).removeCardFromHand(game, p1, card);
+            verify(santaseDealService).removeCardFromHand(game, p1, card);
             verify(gameUtilService).saveGame(game);
         }
 
@@ -153,25 +172,25 @@ class SantaseServiceTest {
             Card p1Card = new Card(UUID.randomUUID(), Suit.HEARTS, Rank.TEN, true, false);
             p1.getHand().add(p1Card);
 
-            when(gameUtilService.getUsername()).thenReturn(p1Name);
-            when(gameUtilService.findGameByUsername(p1Name)).thenReturn(game);
-            when(gameUtilService.determineWinner(game)).thenReturn(p1); // the ten beats the king
+            signIn(p1Name);
+            when(santaseDealService.findGameByUsername(p1Name)).thenReturn(game);
+            when(santaseDealService.determineWinner(game)).thenReturn(p1); // the ten beats the king
 
             santaseService.playCard(new CardRequest(p1Card.getId()));
 
             // Both screens are told whose the trick is while its two cards are
             // still out, and only then is it taken.
-            InOrder order = inOrder(webSocketUtilService, gameUtilService);
+            InOrder order = inOrder(webSocketUtilService, santaseDealService);
             order.verify(webSocketUtilService).updateGameStateWithTrickTaker(game, p1Name);
-            order.verify(gameUtilService).evaluateTrick(game);
+            order.verify(santaseDealService).evaluateTrick(game);
         }
 
         @Test
         void playCard_WrongTurn_ThrowsException() {
             // 1. Arrange: Setup state and inputs outside the assertion
             state.setInTurnPlayer(p2);
-            when(gameUtilService.getUsername()).thenReturn(p1Name);
-            when(gameUtilService.findGameByUsername(p1Name)).thenReturn(game);
+            signIn(p1Name);
+            when(santaseDealService.findGameByUsername(p1Name)).thenReturn(game);
 
             UUID randomId = UUID.randomUUID();
             CardRequest request = new CardRequest(randomId);
@@ -191,9 +210,9 @@ class SantaseServiceTest {
             Card king = new Card(UUID.randomUUID(), Suit.HEARTS, Rank.KING, true, false);
             p1.getHand().add(king);
 
-            when(gameUtilService.getUsername()).thenReturn(p1Name);
-            when(gameUtilService.findGameByUsername(p1Name)).thenReturn(game);
-            when(gameUtilService.checkTwentyForty(game, p1, king)).thenReturn(true);
+            signIn(p1Name);
+            when(santaseDealService.findGameByUsername(p1Name)).thenReturn(game);
+            when(santaseDealService.checkTwentyForty(game, p1, king)).thenReturn(true);
 
             santaseService.announceCombination(new CardRequest(king.getId()));
 
@@ -215,8 +234,8 @@ class SantaseServiceTest {
             p1.getHand().add(nineOfHearts);
 
             // 2. Stub the PUBLIC methods
-            when(gameUtilService.getUsername()).thenReturn(p1Name);
-            when(gameUtilService.findGame(p1Name)).thenReturn(game);
+            signIn(p1Name);
+            when(santaseDealService.findGame(p1Name)).thenReturn(game);
 
             // 3. Execute
             santaseService.replaceCard();
@@ -230,7 +249,7 @@ class SantaseServiceTest {
             assertThat(p1.getHand()).doesNotContain(nineOfHearts);
 
             // Verify persistence
-            verify(gameUtilService).saveGameState(state);
+            verify(santaseDealService).saveGameState(state);
             verify(webSocketUtilService).updateGameState(game);
         }
     }
@@ -244,22 +263,22 @@ class SantaseServiceTest {
             p2.setIsBlanked(false);
             p2.setScore(20);
 
-            when(gameUtilService.getUsername()).thenReturn(p1Name);
-            when(gameUtilService.findGameByUsername(p1Name)).thenReturn(game);
+            signIn(p1Name);
+            when(santaseDealService.findGameByUsername(p1Name)).thenReturn(game);
 
             santaseService.finishDeal();
 
             // P1 wins with 2 Result points because P2 is under 33 but not blanked
             assertThat(p1.getResult()).isEqualTo(2);
-            verify(gameUtilService).prepareNewState(game, p1);
+            verify(santaseDealService).prepareNewState(game, p1);
             verify(webSocketUtilService).updateGameState(any());
         }
 
         @Test
         void finishGame_Surrender_OpponentWins() {
             // 1. Setup: P1 is the one surrendering
-            when(gameUtilService.getUsername()).thenReturn(p1Name);
-            when(gameUtilService.findGameByUsername(p1Name)).thenReturn(game);
+            signIn(p1Name);
+            when(santaseDealService.findGameByUsername(p1Name)).thenReturn(game);
             // Note: We do NOT stub game.getOpponentPlayerByUsername()
             // because it's a real method on a real object.
 

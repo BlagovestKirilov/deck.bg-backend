@@ -1,5 +1,6 @@
 package bg.deck.common.service;
 
+import bg.deck.common.util.AuthenticatedUser;
 import bg.deck.common.constant.Constants;
 import bg.deck.common.constant.ExceptionConstants;
 import bg.deck.common.constant.LogConstants;
@@ -11,12 +12,10 @@ import bg.deck.common.exception.InvalidPasswordException;
 import bg.deck.common.model.EmailConfirmation;
 import bg.deck.common.model.User;
 import bg.deck.common.model.UserDeletion;
-import bg.deck.common.model.UserGameStats;
 import bg.deck.common.model.dto.GameStatsDTO;
 import bg.deck.common.model.request.ChangePasswordRequest;
 import bg.deck.common.model.request.UserDeletionRequest;
 import bg.deck.common.model.response.ProfileResponse;
-import bg.deck.common.util.RankLadder;
 import bg.deck.common.util.TokenFingerprint;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
@@ -25,6 +24,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -36,41 +36,39 @@ public class UserService {
 
     private final UserAccountService userAccountService;
     private final EmailConfirmationService emailConfirmationService;
-    private final GameUtilService gameUtilService;
     private final EmailService emailService;
     private final PasswordEncoder passwordEncoder;
     private final UserUtilService userUtilService;
     private final UserDeletionService userDeletionService;
+    /** Every game's record, in the order the profile lists them. */
+    private final List<GameRecordProvider> recordProviders;
 
     public ProfileResponse getProfile() {
-        String username = gameUtilService.getUsername();
+        String username = AuthenticatedUser.username();
 
         log.info(LogConstants.TRY_GET_PROFILE, username);
 
         User user = userAccountService.findByUsername(username)
                 .orElseThrow(() -> new InvalidCredentialsException(username));
 
+        // Each game gives its own record; the profile does not know which games
+        // there are.
         Map<String, GameStatsDTO> stats = new LinkedHashMap<>();
-        for (GameType type : GameType.values()) {
-            UserGameStats s = user.statsFor(type);
-            int remaining = RankLadder.placementGamesRemaining(s.totalGames());
-            stats.put(type.name(), new GameStatsDTO(
-                    s.getWins(), s.getLosses(), s.getRank().name(), remaining));
-        }
+        recordProviders.forEach(provider -> stats.put(provider.code(), provider.recordOf(username)));
         // The santase* fields and rank are the legacy shape, for the client that
         // is deployed right now.
-        UserGameStats santase = user.statsFor(GameType.SANTASE);
+        GameStatsDTO santase = stats.get(GameType.SANTASE.name());
         return ProfileResponse.builder()
                 .emailConfirmed(Boolean.TRUE.equals(user.getIsEmailConfirmed()))
                 .stats(stats)
-                .santaseWins(santase.getWins())
-                .santaseLosses(santase.getLosses())
-                .rank(santase.getRank().name())
+                .santaseWins(santase.wins())
+                .santaseLosses(santase.losses())
+                .rank(santase.rank())
                 .build();
     }
 
     public boolean confirmEmail() {
-        String username = gameUtilService.getUsername();
+        String username = AuthenticatedUser.username();
 
         log.info(LogConstants.EMAIL_CONFIRM_ATTEMPT, username);
 
@@ -93,7 +91,7 @@ public class UserService {
 
     @Transactional
     public void changePassword(ChangePasswordRequest changePasswordRequest) {
-        String username = gameUtilService.getUsername();
+        String username = AuthenticatedUser.username();
 
         log.info(LogConstants.PASSWORD_CHANGE_STARTED, username);
 
@@ -122,7 +120,7 @@ public class UserService {
 
     @Transactional
     public void sendUserDeletionEmail(UserDeletionRequest userDeletionRequest) {
-        String username = gameUtilService.getUsername();
+        String username = AuthenticatedUser.username();
 
         log.info(LogConstants.USER_DELETION_EMAIL_REQUESTED, username);
 

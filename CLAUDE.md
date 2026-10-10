@@ -5,23 +5,29 @@ Four packages: one per game, and one for what all of them use. Only
 entities from the application class's package down, so it has to be above
 all four.
 
-- `bg.deck.santase` — `controller`, `service`, `model` (`dto`, `request`,
-  `response`), `enums`, `exception`, `util`: the cards, the santase state and
-  its own errors.
+- `bg.deck.santase` — `controller`, `service`, `repository`, `model` (`dto`,
+  `request`, `response`), `enums`, `exception`, `util`: the cards, the santase
+  state, its rules (`SantaseDealService`), its turn clock (`SantaseTurnTimer`)
+  and its own errors.
 - `bg.deck.tabla` — `controller`, `service`, `model` (`dto`, `request`,
-  `response`), `engine` (the backgammon rules), `enums`, `exception`.
+  `response`), `engine` (the backgammon rules), `enums`, `exception`; its
+  turn clock is `TablaTurnTimer`.
 - `bg.deck.belot` — a package apart, with its own `controller`, `service`,
   `repository`, `model`, `config` and `engine` — see **The belot**
   **seam** below before writing anything in it.
 - `bg.deck.common`: `controller`, `service`, `scheduler`, `repository`,
   `model`, `security`, `config`, `constant`, `enums`, `exception`, `util` —
-  accounts, auth, email, availability, ranking, the websocket transport, and
-  the game core santase and tabla both stand on: `Game`, `Player`,
-  `TurnClock`, `GameUtilService`, `GameInactivityService` and every
-  repository. A game package may use `common`; `common` reaches
-  into santase and tabla only where that core already did (`Game` holds both
-  states, `GameUtilService` deals santase cards), which is history rather
-  than a pattern to repeat.
+  accounts, auth, email, availability, ranking, the websocket transport, the
+  timing every turn clock uses (`DeadlineTimer`), and the two-player table
+  santase and tabla still share: `Game`, `Player`, `TurnClock` and
+  `GameUtilService` (finding, saving, a seat, the winner — no game's rules).
+  A game package may use `common`; **`common` imports no game package**, and
+  `CommonStandsAloneTest` fails if it does. What common needs from a game it
+  gets through an interface the game implements (`GameRecordProvider` for
+  the profile), an exception base class (`GameRuleException`), or an event
+  the game listens to (`SessionDisconnectEvent`, `UserDeleted`). The only
+  files allowed are `Game`, `Player` and `TurnClock`, until santase and tabla
+  each get tables of their own in schemas `santase` and `tabla`.
 
 ## One repository, one service
 
@@ -36,7 +42,8 @@ that service.**
 | `ForgotPasswordRepository` | `ForgotPasswordService` |
 | `EmailConfirmationRepository` | `EmailConfirmationService` |
 | `UserDeletionRepository` | `UserDeletionService` |
-| `GameRepository`, `GameStateRepository` | `GameUtilService` |
+| `GameRepository` | `GameUtilService` |
+| `SantaseGameStateRepository` | `SantaseDealService` |
 | `DeletedUserRepository` | `UserUtilService` |
 | `AvailableServiceRepository` | `CacheService` |
 | `BelotPlayerRepository` | `BelotPlayerService` |
@@ -173,7 +180,7 @@ class.**
   `toString()`: a record prints every component, and its key must never
   reach a log.
 - Classes: `Config`, `SchedulingConfig`, `ExecutorConfig`, `DevCorsConfig`,
-  `WebSocketConfig`, `WebSocketEventListener`, `TemplateLoader`.
+  `WebSocketConfig`, `TemplateLoader`.
 
 The line is not taste. Spring proxies a `@Configuration` class with CGLIB,
 which subclasses it, and **a record is final** — a record annotated
@@ -213,8 +220,9 @@ Three things that look reasonable and are not:
   `belot.player_stats` and `GET /belot/profile`, and the profile page asks both.
 - **Do not widen `Game`.** Two seats, one state column per game type. Belot
   needs four seats and two teams, and has its own tables.
-- **Do not reuse `GameInactivityService`.** It branches on `GameType` and works
-  on `Game`. Belot has `BelotTurnTimer`, built on the same pattern: one
+- **Do not reuse santase's or табла's turn timer.** Each game has its own
+  (`SantaseTurnTimer`, `TablaTurnTimer`) on the shared `DeadlineTimer`, and
+  works on `Game`. Belot has `BelotTurnTimer`, built on the same pattern: one
   timer per table, set to the deadline the table was just sent, firing on a
   virtual thread. `BelotService` publishes the clock (`BelotTurnClock`) from
   the one place every change ends — `tellEveryone` — and the timer sets it

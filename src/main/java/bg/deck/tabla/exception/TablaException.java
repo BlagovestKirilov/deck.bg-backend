@@ -1,11 +1,13 @@
 package bg.deck.tabla.exception;
 
+import bg.deck.common.exception.GameRuleException;
+
 /**
  * Rule violations coming out of the табла endpoints. One type with named
  * factories rather than five near-identical classes, since they all map to the
  * same 400 response.
  */
-public class TablaException extends RuntimeException {
+public class TablaException extends GameRuleException {
 
     private TablaException(String message) {
         super(message);

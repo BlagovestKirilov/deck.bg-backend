@@ -17,13 +17,6 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 
 import java.time.Instant;
 import java.util.stream.Collectors;
-import bg.deck.santase.exception.CardNotFoundException;
-import bg.deck.santase.exception.CardNotPlayableException;
-import bg.deck.santase.exception.DeckSizeException;
-import bg.deck.santase.exception.NoCardForReplacingException;
-import bg.deck.santase.exception.NotFirstInTurnException;
-import bg.deck.santase.exception.NotInTurnException;
-import bg.deck.tabla.exception.TablaException;
 
 import static bg.deck.common.constant.Constants.CF_CONNECTING_IP;
 import static bg.deck.common.constant.ExceptionConstants.COMMA_DELIMITER;
@@ -35,21 +28,17 @@ import static bg.deck.common.constant.ExceptionConstants.VALIDATION_DETAILS_FORM
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    // A game's own refusals arrive as GameRuleException: every santase and
+    // табла rule exception extends it, so this list names no game package.
     @ExceptionHandler({
-            CardNotFoundException.class,
-            NoCardForReplacingException.class,
-            NotFirstInTurnException.class,
-            NotInTurnException.class,
+            GameRuleException.class,
             UserNotPartOfGameException.class,
-            CardNotPlayableException.class,
-            DeckSizeException.class,
             NoActiveGameFoundException.class,
             EmailConfirmationNotFoundException.class,
             EmailNotConfirmedException.class,
             UserNotFoundException.class,
             InvalidPasswordException.class,
-            PlayerInactivitySurrenderException.class,
-            TablaException.class
+            PlayerInactivitySurrenderException.class
     })
     public ResponseEntity<ErrorResponse> handleSecurityAndBusinessExceptions(RuntimeException ex, HttpServletRequest request) {
         log.warn(ExceptionConstants.LOG_FORMAT_SECURITY, ex.getMessage(), request.getHeader(CF_CONNECTING_IP), request.getRequestURI());

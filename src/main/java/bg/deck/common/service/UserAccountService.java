@@ -1,7 +1,6 @@
 package bg.deck.common.service;
 
 import bg.deck.common.constant.LogConstants;
-import bg.deck.common.enums.GameType;
 import bg.deck.common.exception.UserNotFoundException;
 import bg.deck.common.model.User;
 import bg.deck.common.repository.UserRepository;
@@ -10,7 +9,6 @@ import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Service;
 
 import java.util.Optional;
-import java.util.UUID;
 
 /**
  * The accounts themselves: the only place {@link UserRepository} is spoken to.
@@ -54,11 +52,6 @@ public class UserAccountService {
 
     public boolean existsByEmail(String email) {
         return userRepository.existsByEmail(email);
-    }
-
-    /** The game this player is still in, of that kind, if any. */
-    public Optional<UUID> findActiveGameId(String username, GameType gameType) {
-        return userRepository.findActiveGameIdByUsernameAndType(username, gameType);
     }
 
     public User save(User user) {

@@ -1,4 +1,4 @@
-package bg.deck.common;
+package bg.deck.santase;
 
 import bg.deck.santase.enums.Rank;
 import bg.deck.santase.enums.Suit;
@@ -8,7 +8,7 @@ import bg.deck.common.model.Game;
 import bg.deck.santase.model.GameState;
 import bg.deck.common.model.Player;
 import bg.deck.common.model.User;
-import bg.deck.common.service.GameUtilService;
+import bg.deck.santase.service.SantaseDealService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -16,9 +16,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContext;
-import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -28,14 +25,12 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-class GameUtilServiceTest {
+class SantaseDealServiceTest {
 
     @InjectMocks
-    private GameUtilService gameUtilService;
+    private SantaseDealService santaseDealService;
 
     private Player p1;
     private Player p2;
@@ -57,22 +52,6 @@ class GameUtilServiceTest {
     }
 
     @Nested
-    @DisplayName("Security Context Tests")
-    class SecurityTests {
-        @Test
-        void getUsername_ReturnsAuthenticatedName() {
-            Authentication authentication = mock(Authentication.class);
-            SecurityContext securityContext = mock(SecurityContext.class);
-
-            when(authentication.getName()).thenReturn("Alice");
-            when(securityContext.getAuthentication()).thenReturn(authentication);
-            SecurityContextHolder.setContext(securityContext);
-
-            assertThat(gameUtilService.getUsername()).isEqualTo("Alice");
-        }
-    }
-
-    @Nested
     @DisplayName("Card Rules (Santase 66) Tests")
     class RuleTests {
 
@@ -91,7 +70,7 @@ class GameUtilServiceTest {
             Card p1Club = Card.builder().id(UUID.randomUUID()).suit(Suit.CLUBS).rank(Rank.TEN).build();
             p1.getHand().addAll(List.of(p1Spade, p1Club));
 
-            assertThatThrownBy(() -> gameUtilService.removeCardFromHand(game, p1, p1Club))
+            assertThatThrownBy(() -> santaseDealService.removeCardFromHand(game, p1, p1Club))
                     .isInstanceOf(CardNotPlayableException.class);
         }
 
@@ -109,7 +88,7 @@ class GameUtilServiceTest {
             Card p1Club = Card.builder().id(UUID.randomUUID()).suit(Suit.CLUBS).rank(Rank.TEN).build();
             p1.getHand().addAll(List.of(p1Trump, p1Club));
 
-            assertThatThrownBy(() -> gameUtilService.removeCardFromHand(game, p1, p1Club))
+            assertThatThrownBy(() -> santaseDealService.removeCardFromHand(game, p1, p1Club))
                     .isInstanceOf(CardNotPlayableException.class);
         }
     }
@@ -128,7 +107,7 @@ class GameUtilServiceTest {
             Card queen = Card.builder().suit(Suit.CLUBS).rank(Rank.QUEEN).build();
             p1.getHand().addAll(List.of(king, queen));
 
-            boolean result = gameUtilService.checkTwentyForty(game, p1, king);
+            boolean result = santaseDealService.checkTwentyForty(game, p1, king);
 
             assertThat(result).isTrue();
             assertThat(p1.getScore()).isEqualTo(40);
@@ -147,7 +126,7 @@ class GameUtilServiceTest {
             p2.setIsBlanked(false);
             state.setClosedByPlayer(null);
 
-            gameUtilService.applyEndOfGameScore(game, p1);
+            santaseDealService.applyEndOfGameScore(game, p1);
 
             assertThat(p1.getResult()).isEqualTo(2);
         }
@@ -158,7 +137,7 @@ class GameUtilServiceTest {
             p2.setScore(0);
             p2.setIsBlanked(true);
 
-            gameUtilService.applyEndOfGameScore(game, p1);
+            santaseDealService.applyEndOfGameScore(game, p1);
 
             assertThat(p1.getResult()).isEqualTo(3);
         }

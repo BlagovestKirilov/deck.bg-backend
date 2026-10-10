@@ -1,7 +1,5 @@
 package bg.deck.common.model;
 
-import bg.deck.common.service.GameInactivityService;
-
 import java.time.Instant;
 import bg.deck.santase.model.GameState;
 import bg.deck.tabla.model.TablaGameState;
@@ -10,8 +8,8 @@ import bg.deck.tabla.model.TablaGameState;
  * The part of a game's state the turn timer cares about.
  *
  * <p>Implemented by both {@link GameState} (Santase) and {@link TablaGameState},
- * so {@link GameInactivityService} and the
- * inactivity-surrender path work for both games without branching on game type.
+ * so each game's turn timer reads the deadline the same way, and the
+ * inactivity-surrender path works for both games without branching on type.
  */
 public interface TurnClock {
 
