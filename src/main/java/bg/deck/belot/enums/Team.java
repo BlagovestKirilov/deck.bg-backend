@@ -1,4 +1,4 @@
-package bg.deck.belot.engine;
+package bg.deck.belot.enums;
 
 /** The two partnerships. Partners sit opposite, so the seats pair up N/S and W/E. */
 public enum Team {

@@ -1,7 +1,7 @@
 package bg.deck.belot;
 
 import bg.deck.belot.model.BelotGame;
-import bg.deck.belot.model.BelotGameStatus;
+import bg.deck.belot.enums.BelotGameStatus;
 import bg.deck.belot.model.BelotSeat;
 import bg.deck.belot.repository.BelotGameRepository;
 import bg.deck.belot.service.BelotMatchmakingService;

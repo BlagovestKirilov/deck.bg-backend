@@ -1,6 +1,6 @@
 package bg.deck.belot;
 
-import bg.deck.belot.engine.Seat;
+import bg.deck.belot.enums.Seat;
 import bg.deck.belot.model.BelotGame;
 import bg.deck.belot.model.BelotSeat;
 import bg.deck.belot.repository.BelotGameRepository;

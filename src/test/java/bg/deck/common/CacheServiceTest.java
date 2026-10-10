@@ -15,6 +15,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.caffeine.CaffeineCache;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import java.time.Duration;
@@ -33,9 +34,21 @@ import static org.mockito.Mockito.when;
  * the whole arrangement — the annotation, the manager, the class sitting apart
  * from its caller so the call is not a self-invocation — either works together
  * or does nothing at all, silently. A mock cannot tell the difference.
+ *
+ * <p>The whole application boots, so it gets a database of its own: left to
+ * {@code application.yml} it would reach for whatever {@code DB_URL_SANTASE}
+ * names on the machine running the build, and Liquibase would migrate it.
  */
 @DisplayName("The games on offer, cached")
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.MOCK)
+@TestPropertySource(properties = {
+        "spring.liquibase.enabled=false",
+        "spring.jpa.hibernate.ddl-auto=create-drop",
+        "spring.datasource.url=jdbc:h2:mem:cacheservice;DB_CLOSE_DELAY=-1;INIT=CREATE SCHEMA IF NOT EXISTS belot\\\\;CREATE SCHEMA IF NOT EXISTS santase\\\\;CREATE SCHEMA IF NOT EXISTS tabla",
+        "spring.datasource.username=sa",
+        "spring.datasource.password=",
+        "spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.H2Dialect",
+})
 class CacheServiceTest {
 
     @MockitoBean private AvailableServiceRepository availableServiceRepository;

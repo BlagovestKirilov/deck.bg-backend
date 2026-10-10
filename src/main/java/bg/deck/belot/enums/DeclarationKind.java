@@ -1,4 +1,4 @@
-package bg.deck.belot.engine;
+package bg.deck.belot.enums;
 
 /**
  * The kinds of declaration a hand can hold. RULES §7.

@@ -1,7 +1,7 @@
 package bg.deck.belot;
 
 import bg.deck.belot.engine.DealOutcome;
-import bg.deck.belot.engine.DealResult;
+import bg.deck.belot.enums.DealResult;
 import bg.deck.belot.engine.DealScorer;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;

@@ -1,4 +1,4 @@
-package bg.deck.belot.model;
+package bg.deck.belot.enums;
 
 /** Where a table is in its life: waiting for players, playing, over. */
 public enum BelotGameStatus {

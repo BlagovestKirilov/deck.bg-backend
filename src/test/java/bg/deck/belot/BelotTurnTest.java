@@ -2,10 +2,10 @@ package bg.deck.belot;
 
 import bg.deck.belot.config.BelotProperties;
 import bg.deck.belot.engine.BidAction;
-import bg.deck.belot.engine.Contract;
-import bg.deck.belot.engine.Seat;
+import bg.deck.belot.enums.Contract;
+import bg.deck.belot.enums.Seat;
 import bg.deck.belot.model.BelotDeal;
-import bg.deck.belot.model.BelotDealStatus;
+import bg.deck.belot.enums.BelotDealStatus;
 import bg.deck.belot.model.BelotGame;
 import bg.deck.belot.model.BelotSeat;
 import bg.deck.belot.repository.BelotDealRepository;

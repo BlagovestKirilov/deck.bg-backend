@@ -1,9 +1,9 @@
 package bg.deck.belot.service;
 
-import bg.deck.belot.engine.Seat;
-import bg.deck.belot.model.BelotForfeit;
+import bg.deck.belot.enums.Seat;
+import bg.deck.belot.enums.BelotForfeit;
 import bg.deck.belot.model.BelotGame;
-import bg.deck.belot.model.BelotGameStatus;
+import bg.deck.belot.enums.BelotGameStatus;
 import bg.deck.belot.model.BelotMatchmaking;
 import bg.deck.belot.model.BelotSeat;
 import bg.deck.belot.repository.BelotGameRepository;

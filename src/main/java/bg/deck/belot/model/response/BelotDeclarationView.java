@@ -1,10 +1,10 @@
 package bg.deck.belot.model.response;
 
 import bg.deck.belot.engine.Declaration;
-import bg.deck.belot.engine.DeclarationKind;
-import bg.deck.belot.engine.Rank;
-import bg.deck.belot.engine.Seat;
-import bg.deck.belot.engine.Suit;
+import bg.deck.belot.enums.DeclarationKind;
+import bg.deck.belot.enums.Rank;
+import bg.deck.belot.enums.Seat;
+import bg.deck.belot.enums.Suit;
 
 /**
  * Something a player holds that is worth announcing: a sequence, four of a

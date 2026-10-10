@@ -1,5 +1,9 @@
 package bg.deck.belot.engine;
 
+import bg.deck.belot.enums.Contract;
+import bg.deck.belot.enums.DeclarationKind;
+import bg.deck.belot.enums.Rank;
+import bg.deck.belot.enums.Suit;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;

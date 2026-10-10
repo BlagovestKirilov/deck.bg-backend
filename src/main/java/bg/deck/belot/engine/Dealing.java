@@ -1,5 +1,6 @@
 package bg.deck.belot.engine;
 
+import bg.deck.belot.enums.Seat;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumMap;

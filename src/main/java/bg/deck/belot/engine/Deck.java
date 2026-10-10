@@ -1,5 +1,7 @@
 package bg.deck.belot.engine;
 
+import bg.deck.belot.enums.Rank;
+import bg.deck.belot.enums.Suit;
 import java.util.ArrayList;
 import java.util.List;
 

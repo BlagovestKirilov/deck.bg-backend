@@ -1,6 +1,6 @@
 package bg.deck.belot.model.response;
 
-import bg.deck.belot.engine.Seat;
+import bg.deck.belot.enums.Seat;
 
 import java.time.Instant;
 

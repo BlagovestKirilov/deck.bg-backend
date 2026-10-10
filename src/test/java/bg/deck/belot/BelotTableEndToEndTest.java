@@ -1,13 +1,13 @@
 package bg.deck.belot;
 
 import bg.deck.belot.config.BelotProperties;
-import bg.deck.belot.engine.BidKind;
+import bg.deck.belot.enums.BidKind;
 import bg.deck.belot.engine.Card;
-import bg.deck.belot.engine.Seat;
+import bg.deck.belot.enums.Seat;
 import bg.deck.belot.model.BelotDeal;
-import bg.deck.belot.model.BelotDealStatus;
+import bg.deck.belot.enums.BelotDealStatus;
 import bg.deck.belot.model.BelotGame;
-import bg.deck.belot.model.BelotGameStatus;
+import bg.deck.belot.enums.BelotGameStatus;
 import bg.deck.belot.model.request.BelotBidRequest;
 import bg.deck.belot.model.request.BelotCutRequest;
 import bg.deck.belot.model.request.BelotPlayRequest;
@@ -116,7 +116,7 @@ class BelotTableEndToEndTest {
 
     /** Settles a contract: the first seat bids, the other three pass. */
     private void bidItUp(BelotGame table) {
-        belot.bid(whoseTurn(table), new BelotBidRequest(BidKind.BID, bg.deck.belot.engine.Contract.SPADES));
+        belot.bid(whoseTurn(table), new BelotBidRequest(BidKind.BID, bg.deck.belot.enums.Contract.SPADES));
         for (int i = 0; i < 3; i++) {
             belot.bid(whoseTurn(table), new BelotBidRequest(BidKind.PASS, null));
         }

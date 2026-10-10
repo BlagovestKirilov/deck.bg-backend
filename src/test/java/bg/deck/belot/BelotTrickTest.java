@@ -1,12 +1,12 @@
 package bg.deck.belot;
 
 import bg.deck.belot.engine.Card;
-import bg.deck.belot.engine.Contract;
+import bg.deck.belot.enums.Contract;
 import bg.deck.belot.engine.LegalMoves;
 import bg.deck.belot.engine.Play;
-import bg.deck.belot.engine.Rank;
-import bg.deck.belot.engine.Seat;
-import bg.deck.belot.engine.Suit;
+import bg.deck.belot.enums.Rank;
+import bg.deck.belot.enums.Seat;
+import bg.deck.belot.enums.Suit;
 import bg.deck.belot.engine.Trick;
 import bg.deck.belot.engine.TrickResolver;
 import org.junit.jupiter.api.DisplayName;

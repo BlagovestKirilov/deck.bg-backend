@@ -2,7 +2,7 @@ package bg.deck.belot;
 
 import bg.deck.belot.config.BelotProperties;
 import bg.deck.belot.model.BelotGame;
-import bg.deck.belot.model.BelotGameStatus;
+import bg.deck.belot.enums.BelotGameStatus;
 import bg.deck.belot.service.BelotDealService;
 import bg.deck.belot.service.BelotMatchmakingService;
 import bg.deck.belot.service.BelotPlayService;

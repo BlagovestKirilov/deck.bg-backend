@@ -1,7 +1,7 @@
 package bg.deck.belot.repository;
 
 import bg.deck.belot.model.BelotDeal;
-import bg.deck.belot.model.BelotDealStatus;
+import bg.deck.belot.enums.BelotDealStatus;
 import bg.deck.belot.model.BelotGame;
 import org.springframework.data.jpa.repository.JpaRepository;
 

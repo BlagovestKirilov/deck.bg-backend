@@ -1,4 +1,4 @@
-package bg.deck.belot.engine;
+package bg.deck.belot.enums;
 
 /**
  * The four places at the table, in the order play moves — counter-clockwise,

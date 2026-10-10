@@ -1,9 +1,9 @@
 package bg.deck.belot.model;
 
 import bg.deck.belot.engine.BidAction;
-import bg.deck.belot.engine.BidKind;
-import bg.deck.belot.engine.Contract;
-import bg.deck.belot.engine.Seat;
+import bg.deck.belot.enums.BidKind;
+import bg.deck.belot.enums.Contract;
+import bg.deck.belot.enums.Seat;
 import bg.deck.common.model.base.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

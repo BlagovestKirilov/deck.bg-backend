@@ -1,13 +1,13 @@
 package bg.deck.belot;
 
 import bg.deck.belot.engine.Card;
-import bg.deck.belot.engine.Contract;
+import bg.deck.belot.enums.Contract;
 import bg.deck.belot.engine.Declaration;
-import bg.deck.belot.engine.DeclarationKind;
+import bg.deck.belot.enums.DeclarationKind;
 import bg.deck.belot.engine.DeclarationScoring;
 import bg.deck.belot.engine.Declarations;
-import bg.deck.belot.engine.Rank;
-import bg.deck.belot.engine.Suit;
+import bg.deck.belot.enums.Rank;
+import bg.deck.belot.enums.Suit;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;

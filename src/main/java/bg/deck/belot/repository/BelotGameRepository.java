@@ -1,7 +1,7 @@
 package bg.deck.belot.repository;
 
 import bg.deck.belot.model.BelotGame;
-import bg.deck.belot.model.BelotGameStatus;
+import bg.deck.belot.enums.BelotGameStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
@@ -27,7 +27,7 @@ public interface BelotGameRepository extends JpaRepository<BelotGame, UUID> {
             select game from BelotGame game
               join game.seats seat
              where seat.username = :username
-               and game.status <> bg.deck.belot.model.BelotGameStatus.FINISHED
+               and game.status <> bg.deck.belot.enums.BelotGameStatus.FINISHED
             """)
     Optional<BelotGame> findUnfinishedGameOf(String username);
 }
