@@ -16,7 +16,7 @@ databaseChangeLog:
   # rather than taking that with it. No rollback: Liquibase refuses to roll
   # back through this changeset, which is the truth.
   - changeSet:
-      id: 041-drop-old-game-tables
+      id: 042-drop-old-game-tables
       author: Blagovest Kirilov
       comment: Drop the public game tables santase and табла no longer use
       changes:

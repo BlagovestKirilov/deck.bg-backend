@@ -93,7 +93,9 @@ databaseChangeLog:
   # a tag to roll back to.
   #   032-036  the records: santase.player_stats, tabla.player_stats
   #   037-040  the games: santase.game/seat/game_state/hand/deck, tabla.game/seat/game_state
-  #   041      drops the public tables 034-039 copied from. Not included yet:
+  #   041      belot.deal.cut_at and belot.seat.missed_turns as INTEGER, as
+  #            the entities map them (030 and 031 made them SMALLINT).
+  #   042      drops the public tables 034-039 copied from. Not included yet:
   #            it goes in a later release, once 032-040 have been live long
   #            enough that nobody will roll them back — see the file.
   - include:
@@ -122,3 +124,6 @@ databaseChangeLog:
 
   - include:
       file: db/changelog/changes/040-player-user-set-null.yaml
+
+  - include:
+      file: db/changelog/changes/041-belot-integer-columns.yaml

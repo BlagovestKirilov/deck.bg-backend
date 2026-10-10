@@ -275,7 +275,7 @@ let go of on `UserDeleted`.
 
 The old public tables santase and табла were copied out of (`game`,
 `player`, `game_state`, `tabla_game_state`, `player_hand`, `game_deck`,
-`user_game_stats`) are read by nothing. `041-drop-old-game-tables.yaml`
+`user_game_stats`) are read by nothing. `042-drop-old-game-tables.yaml`
 drops them and is deliberately not in the master changelog yet: it goes in a
 later release, once 032-040 have been live long enough that nobody will roll
 them back.

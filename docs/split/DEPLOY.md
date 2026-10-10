@@ -10,7 +10,7 @@ phases. Each phase is its own release, and each can be rolled back on its own.
 | B | 032–036 | Records: `santase.player_stats`, `tabla.player_stats` | copy, old table kept |
 | C1 | — | Entities split over the existing tables | none |
 | C2 | 037–040 | Game tables into `santase.*`, `tabla.*` | copy, old tables kept |
-| D | 041 | Drop the old `public` tables | irreversible |
+| D | 042 | Drop the old `public` tables | irreversible |
 
 Nothing is deployed until every phase is built. Phases still ship as
 separate releases, in order, because each one is the rollback point for the
