@@ -158,6 +158,17 @@ public class BelotPlayService {
         });
     }
 
+    /**
+     * The side that took all eight tricks of a played-out hand, or null — for
+     * a hand that was not, or was not played out.
+     */
+    public Team capotBy(BelotDeal deal) {
+        if (!deal.isPlayedOut() || deal.getContract() == null) {
+            return null;
+        }
+        return playedDeal(deal, deal.getContract()).capotBy();
+    }
+
     private PlayedDeal playedDeal(BelotDeal deal, Contract contract) {
         List<Trick> tricks = deal.tricks();
         List<Seat> winners = tricks.stream()

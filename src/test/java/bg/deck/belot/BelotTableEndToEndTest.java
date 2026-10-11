@@ -162,6 +162,8 @@ class BelotTableEndToEndTest {
         assertNotNull(first.getResult(), "the hand was counted");
         assertTrue(table.getNorthSouthScore() + table.getEastWestScore() + table.getHangingPoints() > 0,
                 "and the points went onto the sheet");
+        assertEquals(plays.capotBy(first), belot.sendState(whoseTurn(table)).orElseThrow().sheet().getFirst().capotBy(),
+                "the sheet says whether one side took every trick");
 
         BelotDeal next = deal(table);
         assertEquals(2, next.getDealNumber(), "the next hand is dealt without anybody asking");
