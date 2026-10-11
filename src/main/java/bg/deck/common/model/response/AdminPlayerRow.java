@@ -7,5 +7,5 @@ import java.time.Instant;
 
 /** An account, as the admin page lists it. */
 public record AdminPlayerRow(String username, String email, AccountRole role, Scope scope,
-                             boolean emailConfirmed, Instant createdAt) {
+                             boolean emailConfirmed, Instant createdAt, Instant lastLoginAt) {
 }

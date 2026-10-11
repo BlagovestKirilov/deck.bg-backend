@@ -132,3 +132,7 @@ databaseChangeLog:
   # An account is a USER or an ADMIN; ADMIN is set by hand, never by the API.
   - include:
       file: db/changelog/changes/043-admin-role.yaml
+
+  # When each account was last here: login and token refresh both set it.
+  - include:
+      file: db/changelog/changes/044-users-last-login.yaml

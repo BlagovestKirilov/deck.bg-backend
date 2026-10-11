@@ -43,7 +43,10 @@ public class AdminService {
     static final int MAX_PAGE_SIZE = 50;
 
     /** The fields the list may be sorted by. Anything else is refused rather than guessed at. */
-    static final Set<String> SORTABLE = Set.of("createdAt", "username");
+    static final Set<String> SORTABLE = Set.of("createdAt", "username", "lastLoginAt");
+
+    /** Sorted by, it puts the accounts that have never been seen at the end, either way. */
+    static final String LAST_LOGIN = "lastLoginAt";
 
     /** The list's order when the request names none: the newest accounts first. */
     static final Sort DEFAULT_SORT = Sort.by(Sort.Direction.DESC, "createdAt");
@@ -88,12 +91,19 @@ public class AdminService {
      * in the same instant keep their places from one page to the next.
      */
     static Pageable pageOf(Pageable requested) {
-        Sort asked = requested.getSort().isSorted() ? requested.getSort() : DEFAULT_SORT;
-        for (Sort.Order order : asked) {
+        Sort requestedSort = requested.getSort().isSorted() ? requested.getSort() : DEFAULT_SORT;
+        for (Sort.Order order : requestedSort) {
             if (!SORTABLE.contains(order.getProperty())) {
                 throw new BadRequestException("Players cannot be sorted by " + order.getProperty());
             }
         }
+        // Postgres puts NULL first in a descending order; nobody looking for who
+        // was here last wants a page of players who never came back. Spring
+        // Data carries nullsLast into the query (Hibernate leaves the clause out
+        // only where the database already sorts that way).
+        Sort asked = Sort.by(requestedSort.stream()
+                .map(order -> LAST_LOGIN.equals(order.getProperty()) ? order.nullsLast() : order)
+                .toList());
         Sort sort = asked.getOrderFor("username") == null
                 ? asked.and(Sort.by(Sort.Direction.ASC, "username"))
                 : asked;
@@ -130,6 +140,7 @@ public class AdminService {
                 AccountRole.of(user.getRole()),
                 user.getScope(),
                 Boolean.TRUE.equals(user.getIsEmailConfirmed()),
-                user.getCreatedAt());
+                user.getCreatedAt(),
+                user.getLastLoginAt());
     }
 }

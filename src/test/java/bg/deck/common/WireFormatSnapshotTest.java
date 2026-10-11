@@ -254,7 +254,7 @@ class WireFormatSnapshotTest {
         // The admin page.
         out.put("ServiceAvailability", new ServiceAvailability("BELOT", ServiceState.OFF, Scope.BETA));
         AdminPlayerRow account = new AdminPlayerRow("petko91", "petko@deck.bg", AccountRole.USER, Scope.BETA, true,
-                Instant.parse("2026-01-05T09:00:00Z"));
+                Instant.parse("2026-01-05T09:00:00Z"), Instant.parse("2026-10-10T19:30:00Z"));
         out.put("AdminPlayerRow", account);
         out.put("AdminPlayerPage", new AdminPlayerPage(List.of(account), 0, 20, 1, 1));
         out.put("AdminPlayerDetail", new AdminPlayerDetail(account, List.of(new AdminGameDetail(
