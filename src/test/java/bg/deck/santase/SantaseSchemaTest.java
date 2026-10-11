@@ -18,6 +18,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
 import org.springframework.context.annotation.Import;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
@@ -124,6 +125,21 @@ class SantaseSchemaTest {
         assertThat(games.findActiveGamesByUsername("petko91")).isEmpty();
         assertThat(games.findActiveGameIdsByUsername("petko91")).isEmpty();
         assertThat(games.findActiveGameIdsByUsername("ninja2011")).containsExactly(gameId);
+    }
+
+    @Test
+    @DisplayName("a player's finished games, for the admin page, leave out the one still being played")
+    void finishedGamesOnly() {
+        SantaseGame finished = newGame("petko91", "ninja2011");
+        finished.setWinner(finished.getFirstPlayer(), false);
+        UUID finishedId = games.save(finished).getId();
+        games.save(newGame("petko91", "gosho"));
+        flushAndClear();
+
+        assertThat(games.findFinishedGamesByUsername("petko91", PageRequest.of(0, 10)))
+                .extracting(SantaseGame::getId).containsExactly(finishedId);
+        assertThat(games.findFinishedGamesByUsername("gosho", PageRequest.of(0, 10)))
+                .isEmpty();
     }
 
     @Test

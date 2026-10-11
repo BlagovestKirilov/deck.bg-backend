@@ -1,6 +1,7 @@
 package bg.deck.santase.repository;
 
 import bg.deck.santase.model.SantaseGame;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -34,6 +35,16 @@ public interface SantaseGameRepository extends JpaRepository<SantaseGame, UUID> 
                  ORDER BY game.createdAt DESC
             """)
     List<UUID> findActiveGameIdsByUsername(@Param("username") String username);
+
+    /** The games this player has finished, newest first. */
+    @Query("""
+                 SELECT game FROM SantaseGame game
+                 WHERE (game.firstPlayer.username = :username
+                    OR game.secondPlayer.username = :username)
+                 AND game.winner IS NOT NULL
+                 ORDER BY game.createdAt DESC
+            """)
+    List<SantaseGame> findFinishedGamesByUsername(@Param("username") String username, Pageable page);
 
     /** Every game still being played: what the turn timer re-arms after a restart. */
     @Query("SELECT game FROM SantaseGame game WHERE game.winner IS NULL")

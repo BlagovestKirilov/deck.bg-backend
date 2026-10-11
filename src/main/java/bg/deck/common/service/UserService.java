@@ -4,6 +4,7 @@ import bg.deck.common.util.AuthenticatedUser;
 import bg.deck.common.constant.Constants;
 import bg.deck.common.constant.ExceptionConstants;
 import bg.deck.common.constant.LogConstants;
+import bg.deck.common.enums.Role;
 import bg.deck.common.enums.UserDeletionStatus;
 import bg.deck.common.exception.EmailNotConfirmedException;
 import bg.deck.common.exception.InvalidCredentialsException;
@@ -58,6 +59,7 @@ public class UserService {
         // is deployed right now.
         GameStatsDTO santase = stats.get(Constants.LEGACY_PROFILE_GAME);
         return ProfileResponse.builder()
+                .role(user.getRole() == Role.ROLE_ADMIN ? Constants.ADMIN : Constants.USER)
                 .emailConfirmed(Boolean.TRUE.equals(user.getIsEmailConfirmed()))
                 .stats(stats)
                 .santaseWins(santase.wins())

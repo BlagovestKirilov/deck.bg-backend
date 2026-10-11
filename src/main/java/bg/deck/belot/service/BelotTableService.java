@@ -11,6 +11,7 @@ import bg.deck.common.constant.Constants;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -77,6 +78,12 @@ public class BelotTableService {
     @Transactional(readOnly = true)
     public Optional<BelotGame> tableOf(String username) {
         return belotGameRepository.findUnfinishedGameOf(username);
+    }
+
+    /** The finished tables this player sat at, newest first. */
+    @Transactional(readOnly = true)
+    public List<BelotGame> finishedTablesOf(String username, int limit) {
+        return belotGameRepository.findFinishedGamesOf(username, PageRequest.of(0, limit));
     }
 
     @Transactional(readOnly = true)

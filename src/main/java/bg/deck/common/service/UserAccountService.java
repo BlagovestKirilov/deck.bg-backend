@@ -1,13 +1,25 @@
 package bg.deck.common.service;
 
 import bg.deck.common.constant.LogConstants;
+import bg.deck.common.enums.Role;
+import bg.deck.common.enums.Scope;
+import bg.deck.common.model.request.AdminPlayerFilter;
+import bg.deck.common.exception.NotFoundException;
 import bg.deck.common.exception.UserNotFoundException;
 import bg.deck.common.model.User;
 import bg.deck.common.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
+import jakarta.persistence.criteria.Predicate;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 
 /**
@@ -60,5 +72,55 @@ public class UserAccountService {
 
     public void delete(User user) {
         userRepository.delete(user);
+    }
+
+    /**
+     * Whether this account is an admin, as the database has it now — not as a
+     * token minted earlier says. Asked on every /admin request, so a role set
+     * or taken away by hand counts from the next request on.
+     */
+    public boolean isAdmin(String username) {
+        return username != null && userRepository.existsByUsernameAndRole(username, Role.ROLE_ADMIN);
+    }
+
+    /**
+     * One page of the accounts the filter lets through, in the page's order.
+     *
+     * <p>The name matches anywhere in the username, in any case, and
+     * {@code %} or {@code _} typed into it mean themselves. A part of the
+     * filter left empty lets every account through on that part.
+     */
+    @Transactional(readOnly = true)
+    public Page<User> find(AdminPlayerFilter filter, Pageable page) {
+        return userRepository.findAll(matching(filter), page);
+    }
+
+    private static Specification<User> matching(AdminPlayerFilter filter) {
+        return (root, query, cb) -> {
+            List<Predicate> where = new ArrayList<>();
+            if (filter.username() != null && !filter.username().isBlank()) {
+                String escaped = filter.username().strip().toLowerCase(Locale.ROOT)
+                        .replace("\\", "\\\\")
+                        .replace("%", "\\%")
+                        .replace("_", "\\_");
+                where.add(cb.like(cb.lower(root.get("username")), "%" + escaped + "%", '\\'));
+            }
+            if (filter.role() != null) {
+                where.add(cb.equal(root.get("role"), filter.role().role()));
+            }
+            if (filter.scope() != null) {
+                where.add(cb.equal(root.get("scope"), filter.scope()));
+            }
+            return cb.and(where.toArray(Predicate[]::new));
+        };
+    }
+
+    /** Sets how far into the site this account can see. */
+    @Transactional
+    public User setScope(String username, Scope scope) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new NotFoundException("No player " + username));
+        user.setScope(scope);
+        return userRepository.save(user);
     }
 }

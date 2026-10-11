@@ -361,7 +361,77 @@
         "rank" : "GOLD",
         "placementGamesRemaining" : 0
       }
-    }
+    },
+    "role" : "USER"
+  },
+  "ServiceAvailability" : {
+    "code" : "BELOT",
+    "state" : "OFF",
+    "requiredScope" : "BETA"
+  },
+  "AdminPlayerRow" : {
+    "username" : "petko91",
+    "email" : "petko@deck.bg",
+    "role" : "USER",
+    "scope" : "BETA",
+    "emailConfirmed" : true,
+    "createdAt" : "2026-01-05T09:00:00Z"
+  },
+  "AdminPlayerPage" : {
+    "players" : [ {
+      "username" : "petko91",
+      "email" : "petko@deck.bg",
+      "role" : "USER",
+      "scope" : "BETA",
+      "emailConfirmed" : true,
+      "createdAt" : "2026-01-05T09:00:00Z"
+    } ],
+    "page" : 0,
+    "size" : 20,
+    "total" : 1,
+    "totalPages" : 1
+  },
+  "AdminPlayerDetail" : {
+    "account" : {
+      "username" : "petko91",
+      "email" : "petko@deck.bg",
+      "role" : "USER",
+      "scope" : "BETA",
+      "emailConfirmed" : true,
+      "createdAt" : "2026-01-05T09:00:00Z"
+    },
+    "games" : [ {
+      "code" : "SANTASE",
+      "record" : {
+        "wins" : 18,
+        "losses" : 13,
+        "rating" : 1611,
+        "rank" : "GOLD"
+      },
+      "activeGameId" : "11111111-2222-3333-4444-555555555555",
+      "recent" : [ {
+        "gameId" : "11111111-2222-3333-4444-555555555555",
+        "finishedAt" : "2026-09-27T10:15:00Z",
+        "others" : [ "ninja2011" ],
+        "won" : true,
+        "surrendered" : false
+      } ]
+    } ]
+  },
+  "AdminScopeRequest" : {
+    "readsBack" : {
+      "scope" : "BETA"
+    },
+    "violationsWhenFull" : "[]",
+    "violationsWhenEmpty" : "[scope:NotNull]"
+  },
+  "AdminServiceRequest" : {
+    "readsBack" : {
+      "state" : "OFF",
+      "requiredScope" : "BETA"
+    },
+    "violationsWhenFull" : "[]",
+    "violationsWhenEmpty" : "[requiredScope:NotNull, state:NotNull]"
   },
   "CardRequest" : {
     "readsBack" : {

@@ -76,6 +76,7 @@ public class Constants {
     public static final String EMAIL_CONFIRMATION_LINK = "{{CONFIRMATION_LINK}}";
     public static final String EMAIL_CONFIRMATION_TEMPLATE = "/templates/email-confirmation.html";
     public static final String USER = "USER";
+    public static final String ADMIN = "ADMIN";
     public static final String PROD = "prod";
     public static final String CF_CONNECTING_IP = "CF-Connecting-IP";
     public static final String FORGOT_PASSWORD_SUBJECT = "Нова парола за DECK.bg";

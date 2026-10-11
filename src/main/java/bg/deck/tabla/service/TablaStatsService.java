@@ -3,6 +3,7 @@ package bg.deck.tabla.service;
 import bg.deck.tabla.model.TablaGame;
 import bg.deck.tabla.model.TablaSeat;
 import bg.deck.common.constant.Constants;
+import bg.deck.common.model.dto.AdminGameRecord;
 import bg.deck.common.model.dto.GameStatsDTO;
 import bg.deck.common.util.Elo;
 import bg.deck.common.util.RankLadder;
@@ -33,6 +34,14 @@ public class TablaStatsService {
                 .orElseGet(() -> new TablaPlayerStats(username));
         return new GameStatsDTO(stats.getWins(), stats.getLosses(), stats.getRank().name(),
                 RankLadder.placementGamesRemaining(stats.totalGames()));
+    }
+
+    /** This player's record for the admin page, rating included. Writes nothing. */
+    @Transactional(readOnly = true)
+    public AdminGameRecord adminRecord(String username) {
+        return tablaPlayerStatsRepository.findByUsername(username)
+                .orElseGet(() -> new TablaPlayerStats(username))
+                .adminRecord();
     }
 
     /**

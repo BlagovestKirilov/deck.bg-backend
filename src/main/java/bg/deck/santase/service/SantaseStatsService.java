@@ -3,6 +3,7 @@ package bg.deck.santase.service;
 import bg.deck.santase.model.SantaseGame;
 import bg.deck.santase.model.SantaseSeat;
 import bg.deck.common.constant.Constants;
+import bg.deck.common.model.dto.AdminGameRecord;
 import bg.deck.common.model.dto.GameStatsDTO;
 import bg.deck.common.util.Elo;
 import bg.deck.common.util.RankLadder;
@@ -34,6 +35,14 @@ public class SantaseStatsService {
                 .orElseGet(() -> new SantasePlayerStats(username));
         return new GameStatsDTO(stats.getWins(), stats.getLosses(), stats.getRank().name(),
                 RankLadder.placementGamesRemaining(stats.totalGames()));
+    }
+
+    /** This player's record for the admin page, rating included. Writes nothing. */
+    @Transactional(readOnly = true)
+    public AdminGameRecord adminRecord(String username) {
+        return santasePlayerStatsRepository.findByUsername(username)
+                .orElseGet(() -> new SantasePlayerStats(username))
+                .adminRecord();
     }
 
     /**

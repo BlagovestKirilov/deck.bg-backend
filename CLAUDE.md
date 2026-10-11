@@ -25,12 +25,13 @@ all four.
   accounts, auth, email, availability, the websocket transport, and what the
   games share as code, never as a table: the timing every turn clock uses
   (`DeadlineTimer`, `TurnClock`), the rating (`Elo`, `RankLadder`,
-  `BasePlayerStats`) and the profile's question to each game
-  (`GameRecordProvider`). A game package may use `common`; **`common` imports
-  no game package**, and `CommonStandsAloneTest` fails if it does. What
-  common needs from a game it gets through an interface the game implements
-  (`GameRecordProvider`), an exception base class (`GameRuleException`), or
-  an event the game listens to (`SessionDisconnectEvent`, `UserDeleted`).
+  `BasePlayerStats`), the profile's question to each game
+  (`GameRecordProvider`) and the admin page's (`GameAdminView`). A game
+  package may use `common`; **`common` imports no game package**, and
+  `CommonStandsAloneTest` fails if it does. What common needs from a game it
+  gets through an interface the game implements (`GameRecordProvider`,
+  `GameAdminView`), an exception base class (`GameRuleException`), or an
+  event the game listens to (`SessionDisconnectEvent`, `UserDeleted`).
 
 Every game works by the same three rules — see **The game seams** below
 before writing anything in one.
@@ -105,8 +106,10 @@ CacheService         → owns AvailableServiceRepository, @Cacheable read
 ```
 
 So `CacheService` is where a cached read lives, and the next one belongs
-there too. Nothing evicts by hand: the entry expires, which is what lets an
-`UPDATE` against the table take effect without a deploy.
+there too. An `UPDATE` against the table by hand takes effect when the entry
+expires, without a deploy. The one write that clears it at once is the admin
+page's (`CacheService.updateService`, `@CacheEvict`): an admin who switches a
+game off expects it gone on the next request.
 
 ### Adding a repository
 
@@ -289,6 +292,26 @@ that would have stopped production starting (fixed by 041).
 plan and what is still open; `docs/belot/DEPLOY.md` what belot needs on the
 server — the schema, its nginx zones and the security headers the site is
 missing; `docs/belot/SECURITY-REVIEW.md` belot against the OWASP Top 10:2025.
+
+## The admin role
+
+An account is `ROLE_USER` or `ROLE_ADMIN`, never both. An admin plays like
+anyone else (game routes are `hasAnyRole(USER, ADMIN)`) and also has
+`/admin/**` — `AdminController`, `AdminService`.
+
+- **The database decides who is an admin, not the token.** `/admin/**` is
+  guarded by an `AuthorizationManager` in `SecurityConfig` that asks
+  `UserAccountService.isAdmin` on every request, so a role set or taken away
+  by hand counts from the next request, whatever token the caller holds.
+- **Nothing grants the role.** It is set with an `UPDATE` in the database
+  (`docs/admin/DEPLOY.md`); there is no endpoint for it, so a stolen session
+  cannot make another admin. Keep it that way.
+- **Every admin write is logged** with who made it, the old value and the new.
+- **What each game shows the page** comes through `GameAdminView`
+  (`SantaseAdminView`, `TablaAdminView`, `BelotAdminView`), so common still
+  imports no game. Reads only: looking a player up writes no record or seat.
+
+`AdminAccessTest` pins the access rules through the real security chain.
 
 ## Everything else
 
