@@ -30,6 +30,8 @@ import bg.deck.belot.model.response.BelotStateResponse;
 import bg.deck.belot.model.response.BelotTrickView;
 import bg.deck.santase.model.dto.CardDTO;
 import bg.deck.santase.model.request.CardRequest;
+import bg.deck.common.model.request.AdminScopeRequest;
+import bg.deck.common.model.request.AdminServiceRequest;
 import bg.deck.common.model.request.ChangeForgottenPasswordRequest;
 import bg.deck.common.model.request.ChangePasswordRequest;
 import bg.deck.common.model.request.ConfirmDeletionRequest;
@@ -47,6 +49,16 @@ import bg.deck.santase.model.response.GameStateResponse;
 import bg.deck.common.model.dto.GameStatsDTO;
 import bg.deck.tabla.model.dto.HopDTO;
 import bg.deck.tabla.model.dto.OpeningThrowDTO;
+import bg.deck.common.enums.AccountRole;
+import bg.deck.common.enums.Scope;
+import bg.deck.common.enums.ServiceState;
+import bg.deck.common.model.dto.AdminGameRecord;
+import bg.deck.common.model.dto.AdminGameRow;
+import bg.deck.common.model.dto.ServiceAvailability;
+import bg.deck.common.model.response.AdminGameDetail;
+import bg.deck.common.model.response.AdminPlayerDetail;
+import bg.deck.common.model.response.AdminPlayerPage;
+import bg.deck.common.model.response.AdminPlayerRow;
 import bg.deck.common.model.response.ProfileResponse;
 import bg.deck.common.model.response.SearchGameResponse;
 import bg.deck.tabla.model.response.TablaStateResponse;
@@ -239,6 +251,19 @@ class WireFormatSnapshotTest {
         out.put("GameStatsDTO", stats);
         out.put("ProfileResponse", profile(stats));
 
+        // The admin page.
+        out.put("ServiceAvailability", new ServiceAvailability("BELOT", ServiceState.OFF, Scope.BETA));
+        AdminPlayerRow account = new AdminPlayerRow("petko91", "petko@deck.bg", AccountRole.USER, Scope.BETA, true,
+                Instant.parse("2026-01-05T09:00:00Z"));
+        out.put("AdminPlayerRow", account);
+        out.put("AdminPlayerPage", new AdminPlayerPage(List.of(account), 0, 20, 1, 1));
+        out.put("AdminPlayerDetail", new AdminPlayerDetail(account, List.of(new AdminGameDetail(
+                "SANTASE",
+                new AdminGameRecord(18, 13, 1611, "GOLD"),
+                ID,
+                List.of(new AdminGameRow(ID, Instant.parse("2026-09-27T10:15:00Z"), List.of("ninja2011"),
+                        true, false))))));
+
         return out;
     }
 
@@ -249,6 +274,7 @@ class WireFormatSnapshotTest {
                 .rank("GOLD")
                 .emailConfirmed(true)
                 .stats(Map.of("SANTASE", stats))
+                .role("USER")
                 .build();
     }
 
@@ -261,6 +287,8 @@ class WireFormatSnapshotTest {
      */
     private Map<String, JsonNode> requests() {
         Map<String, JsonNode> out = new LinkedHashMap<>();
+        read(out, AdminScopeRequest.class, "{\"scope\":\"BETA\"}");
+        read(out, AdminServiceRequest.class, "{\"state\":\"OFF\",\"requiredScope\":\"BETA\"}");
         read(out, CardRequest.class, "{\"cardId\":\"" + ID + "\"}");
         read(out, ChangeForgottenPasswordRequest.class, "{\"newPassword\":\"secret12\",\"token\":\"" + ID + "\"}");
         read(out, ChangePasswordRequest.class, "{\"currentPassword\":\"secret12\",\"newPassword\":\"secret34\"}");

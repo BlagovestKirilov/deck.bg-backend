@@ -7,7 +7,9 @@ import bg.deck.santase.model.SantaseGame;
 import bg.deck.santase.model.SantaseSeat;
 import bg.deck.santase.repository.SantaseGameRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
@@ -46,6 +48,12 @@ public class SantaseTableService {
 
     public SantaseGame saveGame(SantaseGame game) {
         return santaseGameRepository.save(game);
+    }
+
+    /** The games this player has finished, newest first. */
+    @Transactional(readOnly = true)
+    public List<SantaseGame> finishedGamesOf(String username, int limit) {
+        return santaseGameRepository.findFinishedGamesByUsername(username, PageRequest.of(0, limit));
     }
 
     /** The id of the game this player is in, if any. */

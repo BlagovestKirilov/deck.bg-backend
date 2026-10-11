@@ -6,14 +6,20 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
+import bg.deck.common.service.UserAccountService;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
+import org.springframework.security.authorization.AuthorizationDecision;
+import org.springframework.security.authorization.AuthorizationManager;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.access.intercept.RequestAuthorizationContext;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfigurationSource;
 
+import static bg.deck.common.constant.Constants.ADMIN;
 import static bg.deck.common.constant.Constants.USER;
 import static bg.deck.common.constant.ExceptionConstants.INVALID_TOKEN;
 
@@ -32,6 +38,7 @@ import static bg.deck.common.constant.ExceptionConstants.INVALID_TOKEN;
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final UserAccountService userAccountService;
 
     /**
      * Local development: CORS allowed.
@@ -98,11 +105,13 @@ public class SecurityConfig {
                         // health is exposed, and it answers UP or DOWN without
                         // saying anything about why.
                         .requestMatchers("/actuator/health").permitAll()
-                        .requestMatchers("/santase/**").hasRole(USER)
-                        .requestMatchers("/tabla/**").hasRole(USER)
-                        .requestMatchers("/belot/**").hasRole(USER)
+                        // An admin is a player too.
+                        .requestMatchers("/santase/**").hasAnyRole(USER, ADMIN)
+                        .requestMatchers("/tabla/**").hasAnyRole(USER, ADMIN)
+                        .requestMatchers("/belot/**").hasAnyRole(USER, ADMIN)
                         .requestMatchers("/user/confirm-deletion").permitAll()
-                        .requestMatchers("/user/**").hasRole(USER)
+                        .requestMatchers("/user/**").hasAnyRole(USER, ADMIN)
+                        .requestMatchers("/admin/**").access(isAdmin())
                         // The socket's handshake is open; the socket is not. A
                         // browser cannot put a header on a WebSocket handshake,
                         // which is why the token used to ride in the URL and
@@ -118,6 +127,29 @@ public class SecurityConfig {
                 )
                 .exceptionHandling(handling -> handling.authenticationEntryPoint(unauthorized()))
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+    }
+
+    /**
+     * The database decides who is an admin, not the token.
+     *
+     * <p>The role in a token is what it was when the token was minted, and a
+     * token lives for its whole lifetime: an admin demoted by hand would keep
+     * the admin page until it ran out, and somebody just made one would wait
+     * for a new token. Reading the role per request costs one indexed lookup,
+     * on a page a handful of people open.
+     *
+     * <p>No token at all is answered 401 like everywhere else; a player who is
+     * not an admin, 403.
+     */
+    private AuthorizationManager<RequestAuthorizationContext> isAdmin() {
+        return (authentication, context) -> {
+            var caller = authentication.get();
+            boolean admin = caller != null
+                    && caller.isAuthenticated()
+                    && !(caller instanceof AnonymousAuthenticationToken)
+                    && userAccountService.isAdmin(caller.getName());
+            return new AuthorizationDecision(admin);
+        };
     }
 
     /**

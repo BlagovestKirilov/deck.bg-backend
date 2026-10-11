@@ -1,0 +1,47 @@
+databaseChangeLog:
+  # An account is a USER or an ADMIN. users.role has had a check allowing
+  # ROLE_USER and nothing else, which would refuse the UPDATE that makes
+  # somebody an admin:
+  #
+  #   UPDATE public.users SET role = 'ROLE_ADMIN' WHERE username = '...';
+  #
+  # That UPDATE, by hand, is the only way an account becomes an admin; no
+  # endpoint grants it.
+  #
+  # The old check is found by what it constrains rather than by name, as in
+  # 036 and 040: its name is whatever the database that made it chose.
+  - changeSet:
+      id: 043-admin-role
+      author: Blagovest Kirilov
+      comment: users.role may be ROLE_ADMIN
+      changes:
+        - sql:
+            dbms: postgresql
+            splitStatements: false
+            sql: |
+              DO $$
+              DECLARE
+                  c record;
+              BEGIN
+                  FOR c IN SELECT con.conname
+                             FROM pg_constraint con
+                            WHERE con.conrelid = 'public.users'::regclass
+                              AND con.contype = 'c'
+                              AND pg_get_constraintdef(con.oid) ILIKE '%role%'
+                  LOOP
+                      EXECUTE format('ALTER TABLE public.users DROP CONSTRAINT %I', c.conname);
+                  END LOOP;
+                  ALTER TABLE public.users
+                      ADD CONSTRAINT users_role_check CHECK (role IN ('ROLE_USER', 'ROLE_ADMIN'));
+              END $$;
+      rollback:
+        - sql:
+            dbms: postgresql
+            splitStatements: false
+            sql: |
+              -- Admins go back to being players before the old check returns,
+              -- or it would refuse their rows.
+              UPDATE public.users SET role = 'ROLE_USER' WHERE role = 'ROLE_ADMIN';
+              ALTER TABLE public.users DROP CONSTRAINT users_role_check;
+              ALTER TABLE public.users
+                  ADD CONSTRAINT users_role_check CHECK (role = 'ROLE_USER');

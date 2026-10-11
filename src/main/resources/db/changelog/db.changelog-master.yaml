@@ -128,3 +128,7 @@ databaseChangeLog:
 
   - include:
       file: db/changelog/changes/042-drop-old-game-tables.yaml
+
+  # An account is a USER or an ADMIN; ADMIN is set by hand, never by the API.
+  - include:
+      file: db/changelog/changes/043-admin-role.yaml

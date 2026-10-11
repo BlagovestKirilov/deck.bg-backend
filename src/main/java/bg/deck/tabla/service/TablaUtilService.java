@@ -18,6 +18,7 @@ import bg.deck.tabla.engine.Hop;
 import bg.deck.tabla.enums.Side;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -100,6 +101,12 @@ public class TablaUtilService {
 
     public TablaGame saveGame(TablaGame game) {
         return tablaGameRepository.save(game);
+    }
+
+    /** The games this player has finished, newest first. */
+    @Transactional(readOnly = true)
+    public List<TablaGame> finishedGamesOf(String username, int limit) {
+        return tablaGameRepository.findFinishedGamesByUsername(username, PageRequest.of(0, limit));
     }
 
     /** The id of the game this player is in, if any. */

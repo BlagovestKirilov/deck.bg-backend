@@ -23,6 +23,9 @@ public record ProfileResponse(
         boolean emailConfirmed,
 
         /** Per-game record, keyed by game type: SANTASE, TABLA. */
-        Map<String, GameStatsDTO> stats
+        Map<String, GameStatsDTO> stats,
+
+        /** USER or ADMIN: whether the client offers the admin page. */
+        String role
 ) {
 }

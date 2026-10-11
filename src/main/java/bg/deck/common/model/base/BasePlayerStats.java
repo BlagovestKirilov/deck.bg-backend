@@ -1,6 +1,7 @@
 package bg.deck.common.model.base;
 
 import bg.deck.common.enums.Rank;
+import bg.deck.common.model.dto.AdminGameRecord;
 import bg.deck.common.util.RankLadder;
 import jakarta.persistence.Column;
 import jakarta.persistence.EnumType;
@@ -46,6 +47,11 @@ public abstract class BasePlayerStats extends BaseEntity {
 
     protected BasePlayerStats(String username) {
         this.username = username;
+    }
+
+    /** This record as the admin page shows it, rating included. */
+    public AdminGameRecord adminRecord() {
+        return new AdminGameRecord(wins, losses, rating, rank.name());
     }
 
     public int totalGames() {
