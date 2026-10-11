@@ -613,7 +613,8 @@ public class BelotService {
                 opponentDeclarations,
                 played.getCallerScore(),
                 played.getOpponentScore(),
-                played.getResult());
+                played.getResult(),
+                belotPlayService.capotBy(played));
     }
 
     /**

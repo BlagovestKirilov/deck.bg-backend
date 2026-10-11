@@ -30,6 +30,9 @@ import bg.deck.belot.enums.Team;
  * @param callerScore     game points written down for the calling side
  * @param opponentScore   game points written down for the other side
  * @param result          made, вътре or висящи
+ * @param capotBy         the side that took every trick, or null. Its ninety
+ *                        is inside that side's card points; named here so the
+ *                        count can show the tricks without it
  */
 public record BelotDealRow(
         int dealNumber,
@@ -43,6 +46,7 @@ public record BelotDealRow(
         int opponentDeclarations,
         Integer callerScore,
         Integer opponentScore,
-        DealResult result
+        DealResult result,
+        Team capotBy
 ) {
 }

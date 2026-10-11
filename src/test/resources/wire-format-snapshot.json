@@ -146,7 +146,8 @@
       "opponentDeclarations" : 0,
       "callerScore" : 10,
       "opponentScore" : 6,
-      "result" : "MADE"
+      "result" : "MADE",
+      "capotBy" : null
     }, {
       "dealNumber" : 2,
       "contract" : "NO_TRUMPS",
@@ -159,7 +160,8 @@
       "opponentDeclarations" : 50,
       "callerScore" : 0,
       "opponentScore" : 52,
-      "result" : "INSIDE"
+      "result" : "INSIDE",
+      "capotBy" : null
     } ],
     "lastTrick" : {
       "dealNumber" : 2,
