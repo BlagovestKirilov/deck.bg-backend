@@ -375,7 +375,8 @@
     "role" : "USER",
     "scope" : "BETA",
     "emailConfirmed" : true,
-    "createdAt" : "2026-01-05T09:00:00Z"
+    "createdAt" : "2026-01-05T09:00:00Z",
+    "lastLoginAt" : "2026-10-10T19:30:00Z"
   },
   "AdminPlayerPage" : {
     "players" : [ {
@@ -384,7 +385,8 @@
       "role" : "USER",
       "scope" : "BETA",
       "emailConfirmed" : true,
-      "createdAt" : "2026-01-05T09:00:00Z"
+      "createdAt" : "2026-01-05T09:00:00Z",
+      "lastLoginAt" : "2026-10-10T19:30:00Z"
     } ],
     "page" : 0,
     "size" : 20,
@@ -398,7 +400,8 @@
       "role" : "USER",
       "scope" : "BETA",
       "emailConfirmed" : true,
-      "createdAt" : "2026-01-05T09:00:00Z"
+      "createdAt" : "2026-01-05T09:00:00Z",
+      "lastLoginAt" : "2026-10-10T19:30:00Z"
     },
     "games" : [ {
       "code" : "SANTASE",

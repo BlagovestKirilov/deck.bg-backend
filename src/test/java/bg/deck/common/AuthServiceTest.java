@@ -103,6 +103,7 @@ class AuthServiceTest {
 
             verify(userAccountService).findByUsername(username);
             verify(userAccountService).save(testUser);
+            verify(userAccountService).markSeen(username);
             verify(jwtService).generateToken(testUser);
             verify(jwtService).generateRefreshToken(testUser);
         }
@@ -188,6 +189,7 @@ class AuthServiceTest {
 
             assertEquals("new-access-token", response.token());
             assertEquals("new-refresh-token", response.refreshToken());
+            verify(userAccountService).markSeen(username);
         }
 
         @Test
@@ -198,6 +200,7 @@ class AuthServiceTest {
             when(jwtService.isTokenValid(invalidToken)).thenReturn(false);
 
             assertThrows(InvalidTokenException.class, () -> authService.refreshToken(invalidToken));
+            verify(userAccountService, never()).markSeen(any());
         }
     }
 }

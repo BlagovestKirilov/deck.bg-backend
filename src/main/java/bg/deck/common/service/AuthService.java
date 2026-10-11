@@ -65,6 +65,7 @@ public class AuthService {
 
         user.setIpAddress(request.getHeader(CF_CONNECTING_IP));
         userAccountService.save(user);
+        userAccountService.markSeen(user.getUsername());
 
         return AuthResponse.builder()
                 .status(HttpStatus.OK.getReasonPhrase())
@@ -122,6 +123,8 @@ public class AuthService {
         if (username != null && jwtService.isTokenValid(refreshToken)) {
 
             log.info(LogConstants.SUCCESSFUL_REFRESH_TOKEN);
+            // A refresh is a visit: a player who stays signed in never logs in again.
+            userAccountService.markSeen(user.getUsername());
 
             return AuthResponse.builder()
                     .status(HttpStatus.OK.getReasonPhrase())

@@ -11,6 +11,8 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 
+import java.time.Instant;
+
 @Setter
 @Getter
 @RequiredArgsConstructor
@@ -33,4 +35,14 @@ public class User extends BaseUser {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private Scope scope = Scope.PUBLIC;
+
+    /**
+     * When this account was last here: a password login or a token refresh,
+     * whichever came last. Written only by {@code UserAccountService.markSeen},
+     * a one-column UPDATE, so it never carries a stale copy of the rest of the
+     * row back over a change made in the meantime. Empty for an account that
+     * has not been back since the column was added.
+     */
+    @Column(name = "last_login_at")
+    private Instant lastLoginAt;
 }

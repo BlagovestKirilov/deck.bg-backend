@@ -17,6 +17,7 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -113,6 +114,17 @@ public class UserAccountService {
             }
             return cb.and(where.toArray(Predicate[]::new));
         };
+    }
+
+    /**
+     * Notes that this account is here now — on a login, and on every token
+     * refresh, which is how a player who stays signed in keeps being seen.
+     * One column, by UPDATE: a whole-row save from here could carry a stale
+     * scope back over an admin's change made a moment before.
+     */
+    @Transactional
+    public void markSeen(String username) {
+        userRepository.markSeen(username, Instant.now());
     }
 
     /** Sets how far into the site this account can see. */

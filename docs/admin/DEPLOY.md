@@ -66,7 +66,7 @@ curl -s -o /dev/null -w "%{http_code}\n" https://deck.bg/api/admin/services
 |---|---|
 | `GET /admin/services` | every game: `{code, state, requiredScope}` |
 | `PUT /admin/services/{code}` `{state, requiredScope}` | the game as it is now; the catalogue cache is cleared, so players see it on their next request |
-| `GET /admin/players?username=&role=&scope=&page=&size=&sort=` | one page of accounts: `{players, page, size, total, totalPages}`. `username` matches part of the name in any case; `role` is USER or ADMIN; `scope` PUBLIC or BETA. Newest first by default; `sort` may be `createdAt` or `username` with `,asc` or `,desc` — anything else is 400. 8 a page, at most 50 |
+| `GET /admin/players?username=&role=&scope=&page=&size=&sort=` | one page of accounts: `{players, page, size, total, totalPages}`. `username` matches part of the name in any case; `role` is USER or ADMIN; `scope` PUBLIC or BETA. Newest first by default; `sort` may be `createdAt`, `username` or `lastLoginAt` with `,asc` or `,desc` — anything else is 400; by `lastLoginAt` the accounts never seen come last either way. Each account carries `lastLoginAt` — its last login or token refresh, null until it next comes back. 8 a page, at most 50 |
 | `GET /admin/players/{username}` | the account, and per game: record (with rating), the game in progress, the last 10 finished |
 | `PUT /admin/players/{username}/scope` `{scope}` | the account as it is now |
 

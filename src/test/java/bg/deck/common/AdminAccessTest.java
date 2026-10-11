@@ -156,6 +156,34 @@ class AdminAccessTest {
     }
 
     @Test
+    @DisplayName("shows when each player was last here, and sorts by it with the never-seen last")
+    void lastLogin() throws Exception {
+        mvc.perform(get("/admin/players").header("Authorization", bearer("boss")))
+                .andExpect(jsonPath("$.players[0].lastLoginAt").doesNotExist());
+
+        // Only boss has been back; petko91 never has.
+        accounts.markSeen("boss");
+
+        mvc.perform(get("/admin/players").param("sort", "lastLoginAt,desc")
+                        .header("Authorization", bearer("boss")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.players[0].username").value("boss"))
+                .andExpect(jsonPath("$.players[0].lastLoginAt").isNotEmpty())
+                .andExpect(jsonPath("$.players[1].username").value("petko91"))
+                .andExpect(jsonPath("$.players[1].lastLoginAt").doesNotExist());
+
+        // Ascending too: H2 sorts NULL low, so only a rendered NULLS LAST keeps
+        // petko91 second here — the same clause Postgres needs for desc.
+        mvc.perform(get("/admin/players").param("sort", "lastLoginAt,asc")
+                        .header("Authorization", bearer("boss")))
+                .andExpect(jsonPath("$.players[0].username").value("boss"))
+                .andExpect(jsonPath("$.players[1].username").value("petko91"));
+
+        mvc.perform(get("/admin/players/boss").header("Authorization", bearer("boss")))
+                .andExpect(jsonPath("$.account.lastLoginAt").isNotEmpty());
+    }
+
+    @Test
     @DisplayName("finds players by part of the username, in any case, and by role and access")
     void filtersPlayers() throws Exception {
         mvc.perform(get("/admin/players").param("username", "KO9").header("Authorization", bearer("boss")))

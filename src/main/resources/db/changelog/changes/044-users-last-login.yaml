@@ -1,0 +1,24 @@
+databaseChangeLog:
+  # When each account was last here: set on a password login and on every
+  # token refresh, so a player who stays signed in for weeks still counts as
+  # seen. Nullable with no default — the accounts that exist today have no
+  # such date to give, and get one on their next visit rather than a guess.
+  - changeSet:
+      id: 044-users-last-login
+      author: Blagovest Kirilov
+      comment: users.last_login_at, when the account last signed in or refreshed its token
+      changes:
+        - addColumn:
+            schemaName: public
+            tableName: users
+            columns:
+              - column:
+                  name: last_login_at
+                  type: TIMESTAMP WITH TIME ZONE
+                  constraints:
+                    nullable: true
+      rollback:
+        - dropColumn:
+            schemaName: public
+            tableName: users
+            columnName: last_login_at
