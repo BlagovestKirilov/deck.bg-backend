@@ -115,9 +115,7 @@ public class BelotPlayService {
     private void settle(BelotGame game, BelotDeal deal) {
         Contract contract = deal.getContract();
         PlayedDeal played = playedDeal(deal, contract);
-        Map<Seat, List<Card>> dealt = belotDealService.hands(game, deal);
-
-        Map<Team, List<Declaration>> declared = declarations(dealt, contract);
+        Map<Team, List<Declaration>> declared = byTeam(declarationsBySeat(game, deal));
         Map<Team, Integer> points = DealPoints.total(played, contract,
                 declared.get(Team.NORTH_SOUTH), declared.get(Team.EAST_WEST));
 
@@ -178,23 +176,24 @@ public class BelotPlayService {
     }
 
     /**
-     * What each side holds that is worth announcing.
+     * What each seat holds that is worth announcing, by seat.
      *
      * <p>Found in the hands rather than asked for. A declaration is in the
      * cards, and the cards are in the seed, so there is nothing for a player
      * to forget to claim and nothing for the server to take their word about.
-     */
-    /**
-     * What each seat holds that is worth announcing, by seat.
      *
      * <p>The dealt hand, not what is left of it: a sequence announced on the
      * first trick is still that player’s sequence when the cards have been
-     * played away.
+     * played away. Less any belote of all trumps that was thrown onto another
+     * suit's lead — what the table shows and what the hand scores both come
+     * from here, so neither can count one the other has dropped.
      */
     public Map<Seat, List<Declaration>> declarationsBySeat(BelotGame game, BelotDeal deal) {
+        Contract contract = deal.getContract();
+        List<Trick> tricks = deal.tricks();
         Map<Seat, List<Declaration>> bySeat = new EnumMap<>(Seat.class);
-        belotDealService.hands(game, deal).forEach(
-                (seat, hand) -> bySeat.put(seat, Declarations.in(hand, deal.getContract())));
+        belotDealService.hands(game, deal).forEach((seat, hand) -> bySeat.put(seat,
+                Declarations.standing(Declarations.in(hand, contract), seat, tricks, contract)));
         return bySeat;
     }
 
@@ -210,12 +209,12 @@ public class BelotPlayService {
                 .toList();
     }
 
-    private Map<Team, List<Declaration>> declarations(Map<Seat, List<Card>> hands, Contract contract) {
+    private static Map<Team, List<Declaration>> byTeam(Map<Seat, List<Declaration>> bySeat) {
         Map<Team, List<Declaration>> byTeam = new EnumMap<>(Team.class);
         byTeam.put(Team.NORTH_SOUTH, new ArrayList<>());
         byTeam.put(Team.EAST_WEST, new ArrayList<>());
 
-        hands.forEach((seat, hand) -> byTeam.get(Team.of(seat)).addAll(Declarations.in(hand, contract)));
+        bySeat.forEach((seat, declarations) -> byTeam.get(Team.of(seat)).addAll(declarations));
         return byTeam;
     }
 }

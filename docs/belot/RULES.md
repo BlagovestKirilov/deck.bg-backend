@@ -178,6 +178,15 @@ Rules:
 > **ANSWERED 15 — one per suit that holds both, so up to four.** In all trumps
 > every suit is a trump suit and a belot may be announced in any of them.
 > `Declarations.belotes`.
+>
+> **ANSWERED 16 — in all trumps, only onto its own suit.** The belote is said
+> with whichever of the king and queen is played first, and only onto a trick
+> led in that suit — the player's own lead included. Who led it does not
+> matter, partner or opponent: only the suit. A heart is led, the
+> player has none and throws the queen of spades while holding the king: the
+> spade belote is lost, and leading the king later does not bring it back. In
+> a suit contract nothing changes: cutting a club lead with the queen of
+> trumps still says it. `Declarations.standing`.
 
 ## 8. Scoring a deal
 

@@ -6,6 +6,9 @@ import bg.deck.belot.engine.Declaration;
 import bg.deck.belot.enums.DeclarationKind;
 import bg.deck.belot.engine.DeclarationScoring;
 import bg.deck.belot.engine.Declarations;
+import bg.deck.belot.engine.Play;
+import bg.deck.belot.engine.Trick;
+import bg.deck.belot.enums.Seat;
 import bg.deck.belot.enums.Rank;
 import bg.deck.belot.enums.Suit;
 import org.junit.jupiter.api.DisplayName;
@@ -240,6 +243,111 @@ class BelotDeclarationsTest {
 
             assertEquals(20, DeclarationScoring.scoreFor(List.of(belote), List.of(quarte)),
                     "assumed: the belote is not part of the sequence contest");
+        }
+    }
+
+    @Nested
+    @DisplayName("a belote in all trumps is said only onto its own suit")
+    class BeloteOnItsSuit {
+
+        private final Declaration spadeBelote =
+                new Declaration(DeclarationKind.BELOTE, Suit.SPADES, Rank.KING, 20);
+        private final Declaration terz =
+                new Declaration(DeclarationKind.TERZ, Suit.CLUBS, Rank.NINE, 20);
+
+        private static Play play(Seat seat, Rank rank, Suit suit) {
+            return new Play(seat, new Card(suit, rank));
+        }
+
+        private static Trick trick(Play... plays) {
+            return new Trick(List.of(plays));
+        }
+
+        @Test
+        @DisplayName("the queen thrown onto a heart lead loses it")
+        void lostOnAnotherSuit() {
+            List<Trick> tricks = List.of(trick(
+                    play(Seat.EAST, Rank.ACE, Suit.HEARTS),
+                    play(Seat.SOUTH, Rank.QUEEN, Suit.SPADES)));
+
+            assertEquals(List.of(terz), Declarations.standing(
+                    List.of(spadeBelote, terz), Seat.SOUTH, tricks, Contract.ALL_TRUMPS),
+                    "the belote goes; the terz is not touched");
+        }
+
+        @Test
+        @DisplayName("leading the king later does not bring it back")
+        void staysLost() {
+            List<Trick> tricks = List.of(
+                    trick(play(Seat.EAST, Rank.ACE, Suit.HEARTS), play(Seat.SOUTH, Rank.QUEEN, Suit.SPADES)),
+                    trick(play(Seat.SOUTH, Rank.KING, Suit.SPADES)));
+
+            assertEquals(List.of(), Declarations.standing(
+                    List.of(spadeBelote), Seat.SOUTH, tricks, Contract.ALL_TRUMPS));
+        }
+
+        @Test
+        @DisplayName("leading it says it")
+        void ownLead() {
+            List<Trick> tricks = List.of(trick(play(Seat.SOUTH, Rank.KING, Suit.SPADES)));
+
+            assertEquals(List.of(spadeBelote), Declarations.standing(
+                    List.of(spadeBelote), Seat.SOUTH, tricks, Contract.ALL_TRUMPS));
+        }
+
+        @Test
+        @DisplayName("following a spade lead says it")
+        void followingItsSuit() {
+            List<Trick> tricks = List.of(trick(
+                    play(Seat.EAST, Rank.SEVEN, Suit.SPADES),
+                    play(Seat.SOUTH, Rank.QUEEN, Suit.SPADES)));
+
+            assertEquals(List.of(spadeBelote), Declarations.standing(
+                    List.of(spadeBelote), Seat.SOUTH, tricks, Contract.ALL_TRUMPS));
+        }
+
+        @Test
+        @DisplayName("who led does not matter: a partner's heart lead loses it too")
+        void partnerLeadingAnotherSuit() {
+            List<Trick> tricks = List.of(trick(
+                    play(Seat.NORTH, Rank.ACE, Suit.HEARTS),
+                    play(Seat.EAST, Rank.SEVEN, Suit.HEARTS),
+                    play(Seat.SOUTH, Rank.QUEEN, Suit.SPADES)));
+
+            assertEquals(List.of(), Declarations.standing(
+                    List.of(spadeBelote), Seat.SOUTH, tricks, Contract.ALL_TRUMPS));
+        }
+
+        @Test
+        @DisplayName("who led does not matter: a partner's spade lead says it")
+        void partnerLeadingItsSuit() {
+            List<Trick> tricks = List.of(trick(
+                    play(Seat.NORTH, Rank.ACE, Suit.SPADES),
+                    play(Seat.EAST, Rank.SEVEN, Suit.SPADES),
+                    play(Seat.SOUTH, Rank.KING, Suit.SPADES)));
+
+            assertEquals(List.of(spadeBelote), Declarations.standing(
+                    List.of(spadeBelote), Seat.SOUTH, tricks, Contract.ALL_TRUMPS));
+        }
+
+        @Test
+        @DisplayName("still in hand, it can still be said")
+        void notPlayedYet() {
+            List<Trick> tricks = List.of(trick(play(Seat.EAST, Rank.ACE, Suit.HEARTS)));
+
+            assertEquals(List.of(spadeBelote), Declarations.standing(
+                    List.of(spadeBelote), Seat.SOUTH, tricks, Contract.ALL_TRUMPS));
+        }
+
+        @Test
+        @DisplayName("in a suit contract, cutting another suit's lead with it still says it")
+        void suitContractUnchanged() {
+            List<Trick> tricks = List.of(trick(
+                    play(Seat.EAST, Rank.ACE, Suit.CLUBS),
+                    play(Seat.SOUTH, Rank.QUEEN, Suit.SPADES)));
+
+            assertEquals(List.of(spadeBelote), Declarations.standing(
+                    List.of(spadeBelote), Seat.SOUTH, tricks, Contract.SPADES));
         }
     }
 }
