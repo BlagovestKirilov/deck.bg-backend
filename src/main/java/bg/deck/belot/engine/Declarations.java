@@ -3,6 +3,7 @@ package bg.deck.belot.engine;
 import bg.deck.belot.enums.Contract;
 import bg.deck.belot.enums.DeclarationKind;
 import bg.deck.belot.enums.Rank;
+import bg.deck.belot.enums.Seat;
 import bg.deck.belot.enums.Suit;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -46,6 +47,49 @@ public final class Declarations {
         // suit and it always scores, so it never gives way to anything.
         found.addAll(belotes(hand, contract));
         return List.copyOf(found);
+    }
+
+    /**
+     * What this seat's declarations come to once these tricks have been played.
+     * RULES §7, ANSWERED 16.
+     *
+     * <p>In all trumps a belote is said with whichever of its king and queen
+     * reaches the table first, and only onto a trick led in its suit — its
+     * own lead included. Thrown onto another suit's lead, the belote is not
+     * said, and the other card cannot say it later. In a suit contract it
+     * counts however its cards are played, cutting another suit's lead
+     * included. Nothing but a belote is touched.
+     *
+     * @param held   the seat's declarations, from its dealt hand
+     * @param seat   whose they are
+     * @param tricks the tricks of the hand so far, the one on the table included
+     */
+    public static List<Declaration> standing(List<Declaration> held, Seat seat, List<Trick> tricks,
+                                             Contract contract) {
+        if (contract != Contract.ALL_TRUMPS) {
+            return held;
+        }
+        return held.stream()
+                .filter(declaration -> declaration.kind() != DeclarationKind.BELOTE
+                        || saidOnItsSuit(declaration.suit(), seat, tricks))
+                .toList();
+    }
+
+    /**
+     * Whether the first of this seat's king and queen of the suit went onto a
+     * trick led in that suit. True while neither has been played: the belote
+     * can still be said.
+     */
+    private static boolean saidOnItsSuit(Suit suit, Seat seat, List<Trick> tricks) {
+        for (Trick trick : tricks) {
+            for (Play play : trick.plays()) {
+                if (play.seat() == seat && play.card().suit() == suit
+                        && (play.card().rank() == Rank.KING || play.card().rank() == Rank.QUEEN)) {
+                    return trick.ledSuit().orElseThrow() == suit;
+                }
+            }
+        }
+        return true;
     }
 
     /**
