@@ -1,5 +1,6 @@
 package bg.deck.belot;
 
+import bg.deck.belot.enums.DealResult;
 import bg.deck.belot.engine.BidAction;
 import bg.deck.belot.engine.Bidding;
 import bg.deck.belot.engine.Card;
@@ -141,14 +142,16 @@ class BelotSelfPlayFuzzTest {
 
     /**
      * The deal is accounted for: what goes on the sheet, plus anything left
-     * hanging for the next one, is the deal itself times the doubling.
+     * hanging for the next one, is the deal itself times the doubling — except
+     * a level deal under a contra, which hangs whole and is not doubled.
      *
      * <p>Висящи is why the hanging points belong in this sum — the fuzz's first
      * run found a level deal recording 8 of its 16 and called it a loss, when
      * the other 8 were sitting on the table waiting, exactly as they should.
      */
     private static void assertNothingIsLost(DealOutcome outcome, int callerPoints, int opponentPoints, int multiplier) {
-        int expected = DealRounding.nearest(callerPoints + opponentPoints) * multiplier;
+        boolean doubledLevel = outcome.result() == DealResult.HANGING && multiplier > 1;
+        int expected = DealRounding.nearest(callerPoints + opponentPoints) * (doubledLevel ? 1 : multiplier);
         RecordedScore recorded = outcome.recorded();
 
         assertEquals(expected, recorded.total() + outcome.hanging(),

@@ -3,6 +3,7 @@ package bg.deck.belot.service;
 import bg.deck.belot.engine.BidAction;
 import bg.deck.belot.engine.Bidding;
 import bg.deck.belot.engine.Card;
+import bg.deck.belot.engine.DealScorer;
 import bg.deck.belot.engine.Dealing;
 import bg.deck.belot.engine.Declaration;
 import bg.deck.belot.enums.DeclarationKind;
@@ -12,6 +13,7 @@ import bg.deck.belot.enums.Team;
 import bg.deck.belot.engine.Trick;
 import bg.deck.belot.model.BelotDeal;
 import bg.deck.belot.enums.BelotDealStatus;
+import bg.deck.belot.enums.DealResult;
 import bg.deck.belot.enums.BelotForfeit;
 import bg.deck.belot.model.BelotGame;
 import bg.deck.belot.enums.BelotGameStatus;
@@ -44,6 +46,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -556,10 +559,29 @@ public class BelotService {
      * than it saves.
      */
     private List<BelotDealRow> sheetOf(BelotGame table, List<BelotDeal> history) {
-        return history.stream()
-                .filter(played -> played.getResult() != null)
-                .map(played -> rowFor(table, played))
-                .toList();
+        // What is hanging between hands, followed down the sheet as the
+        // scorer followed it: a hand that hangs adds to it, the next hand
+        // that is decided takes all of it. Worked out from the deals as
+        // stored, so a sheet already played says it too.
+        int hanging = 0;
+        List<BelotDealRow> rows = new ArrayList<>();
+        for (BelotDeal played : history) {
+            if (played.getResult() == null) {
+                continue;
+            }
+            int carriedIn = 0;
+            int leftHanging = 0;
+            if (played.getResult() == DealResult.HANGING) {
+                hanging = DealScorer.leftHanging(played.getCallerPoints(), played.getOpponentPoints(),
+                        played.getDoubling().multiplier(), hanging);
+                leftHanging = hanging;
+            } else {
+                carriedIn = hanging;
+                hanging = 0;
+            }
+            rows.add(rowFor(table, played, carriedIn, leftHanging));
+        }
+        return List.copyOf(rows);
     }
 
     /**
@@ -590,7 +612,7 @@ public class BelotService {
      * both of those are on the deal. A game is a dozen hands, so the cost of
      * re-deriving them is a dozen shuffles of a known seed.
      */
-    private BelotDealRow rowFor(BelotGame table, BelotDeal played) {
+    private BelotDealRow rowFor(BelotGame table, BelotDeal played, int carriedIn, int leftHanging) {
         Team caller = played.getDeclarerSeat() == null ? null : Team.of(played.getDeclarerSeat());
 
         int callerDeclarations = 0;
@@ -614,7 +636,9 @@ public class BelotService {
                 played.getCallerScore(),
                 played.getOpponentScore(),
                 played.getResult(),
-                belotPlayService.capotBy(played));
+                belotPlayService.capotBy(played),
+                carriedIn,
+                leftHanging);
     }
 
     /**

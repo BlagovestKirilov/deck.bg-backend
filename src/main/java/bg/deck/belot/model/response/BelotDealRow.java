@@ -33,6 +33,13 @@ import bg.deck.belot.enums.Team;
  * @param capotBy         the side that took every trick, or null. Its ninety
  *                        is inside that side's card points; named here so the
  *                        count can show the tricks without it
+ * @param carriedIn       points left hanging by earlier hands that this hand
+ *                        paid out, to whichever side won it; already inside
+ *                        that side's score. 0 when nothing was hanging, and on
+ *                        a hand that hung itself — those wait for the next
+ * @param leftHanging     on a hand that hung, everything now waiting for the
+ *                        next hand: its callers' points and anything that was
+ *                        hanging before. 0 on any other hand
  */
 public record BelotDealRow(
         int dealNumber,
@@ -47,6 +54,8 @@ public record BelotDealRow(
         Integer callerScore,
         Integer opponentScore,
         DealResult result,
-        Team capotBy
+        Team capotBy,
+        int carriedIn,
+        int leftHanging
 ) {
 }

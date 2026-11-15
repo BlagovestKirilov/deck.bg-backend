@@ -200,8 +200,10 @@ Rules:
   record theirs.
 - **Contra / recontra** double or quadruple everything, bonuses included, and
   make the deal **all or nothing**: whichever side wins it records both sides'
-  points together, multiplied, and the other side records nothing. Points that
-  hang while doubled carry forward still doubled.
+  points together, multiplied, and the other side records nothing. A doubled
+  deal that is **level** is all or nothing too: nobody records anything, and
+  both sides' points hang together, **not doubled** — 81 to 81 under a contra
+  leaves 16 hanging. Hanging points are never doubled.
 
 > **ANSWERED — the two scores are rounded together, so the sheet adds up.**
 > Each goes to its nearest ten with a **five going down** (85 is 8). If the two

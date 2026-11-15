@@ -13,12 +13,15 @@ import bg.deck.belot.enums.DealResult;
  *   <li><b>вътре</b> — the others took more, and record <em>everything</em>,
  *       both sides' points together, while the callers record nothing;</li>
  *   <li><b>висящи</b> — level. The callers record nothing and their points wait
- *       for whoever wins the next deal; the others record theirs as usual.</li>
+ *       for whoever wins the next deal; the others record theirs as usual.
+ *       Under a contra the level deal is all or nothing like any doubled one:
+ *       nobody records anything, and both sides' points wait together —
+ *       not doubled, since the doubling was a bet that nobody won.</li>
  * </ul>
  *
  * <p>The points passed in are the finished ones: cards, declarations, the last
- * trick and capot. A contra doubles what goes on the sheet, and points left
- * hanging carry forward already doubled.
+ * trick and capot. A contra doubles what goes on the sheet; it never doubles
+ * what is left hanging.
  *
  * <p>A doubled deal is all or nothing: whoever wins it records both sides'
  * points together, doubled or quadrupled, and the losers record nothing.
@@ -80,14 +83,30 @@ public final class DealScorer {
 
     /**
      * Висящи. The callers write nothing down and their points stay on the table
-     * for the next deal; the others record theirs now.
+     * for the next deal; the others record theirs now. Doubled, nobody records
+     * anything: the whole deal waits, rounded as one number and not doubled.
      */
     private static DealOutcome hanging(int callerPoints, int opponentPoints, int multiplier, int carriedIn) {
-        RecordedScore recorded = DealRounding.split(callerPoints, opponentPoints);
+        int opponents = multiplier > 1 ? 0 : DealRounding.split(callerPoints, opponentPoints).opponents();
         return new DealOutcome(
                 DealResult.HANGING,
-                new RecordedScore(0, recorded.opponents() * multiplier),
-                // Already doubled, and anything hanging from before stays with it.
-                recorded.caller() * multiplier + carriedIn);
+                new RecordedScore(0, opponents),
+                leftHanging(callerPoints, opponentPoints, multiplier, carriedIn));
+    }
+
+    /**
+     * What a deal that hung leaves on the table for the next one, with
+     * anything hanging from before: the callers' points, or — under a contra
+     * or recontra — both sides' points together. Never doubled.
+     *
+     * <p>Public so the score sheet can say how many points each hanging hand
+     * left behind and which later hand took them, from the deals as stored,
+     * by the same arithmetic that scored them.
+     */
+    public static int leftHanging(int callerPoints, int opponentPoints, int multiplier, int carriedIn) {
+        int left = multiplier > 1
+                ? DealRounding.nearest(callerPoints + opponentPoints)
+                : DealRounding.split(callerPoints, opponentPoints).caller();
+        return left + carriedIn;
     }
 }

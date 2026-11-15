@@ -2,6 +2,9 @@ package bg.deck.belot;
 
 import bg.deck.belot.config.BelotProperties;
 import bg.deck.belot.enums.BidKind;
+import bg.deck.belot.enums.Contract;
+import bg.deck.belot.enums.DealResult;
+import bg.deck.belot.enums.Doubling;
 import bg.deck.belot.engine.Card;
 import bg.deck.belot.enums.Seat;
 import bg.deck.belot.model.BelotDeal;
@@ -11,6 +14,7 @@ import bg.deck.belot.enums.BelotGameStatus;
 import bg.deck.belot.model.request.BelotBidRequest;
 import bg.deck.belot.model.request.BelotCutRequest;
 import bg.deck.belot.model.request.BelotPlayRequest;
+import bg.deck.belot.model.response.BelotDealRow;
 import bg.deck.belot.service.BelotDealService;
 import bg.deck.belot.service.BelotMatchmakingService;
 import bg.deck.belot.service.BelotPlayService;
@@ -195,5 +199,46 @@ class BelotTableEndToEndTest {
 
         assertEquals(table.getId(), tables.tableOf("gosho").orElseThrow().getId());
         assertEquals(4, table.getSeats().size(), "and nobody is seated twice");
+    }
+
+    /** A hand counted the way the scorer counted it, written onto the current deal. */
+    private void counted(BelotGame table, Doubling doubling, int callerPoints, int opponentPoints,
+                         int callerScore, int opponentScore, DealResult result) {
+        BelotDeal hand = deal(table);
+        hand.setContract(Contract.HEARTS);
+        hand.setDeclarerSeat(Seat.NORTH);
+        hand.setDoubling(doubling);
+        hand.setCallerPoints(callerPoints);
+        hand.setOpponentPoints(opponentPoints);
+        hand.setCallerScore(callerScore);
+        hand.setOpponentScore(opponentScore);
+        hand.setResult(result);
+        hand.setStatus(BelotDealStatus.FINISHED);
+        deals.save(hand);
+    }
+
+    @Test
+    @DisplayName("the sheet says what each hanging hand left, and which hand took it")
+    void hangingIsFollowedDownTheSheet() {
+        BelotGame table = seatFour();
+
+        // 81 to 81: eight hang. Then 81 to 81 under a contra: the whole hand
+        // hangs, sixteen, not doubled — twenty-four in all. Then a hand made:
+        // it takes the twenty-four. Then one inside: nothing was hanging,
+        // nothing is carried.
+        counted(table, Doubling.NONE, 81, 81, 0, 8, DealResult.HANGING);
+        deals.dealNext(table);
+        counted(table, Doubling.CONTRA, 81, 81, 0, 0, DealResult.HANGING);
+        deals.dealNext(table);
+        counted(table, Doubling.NONE, 90, 72, 33, 7, DealResult.MADE);
+        deals.dealNext(table);
+        counted(table, Doubling.NONE, 60, 102, 0, 16, DealResult.INSIDE);
+
+        List<BelotDealRow> sheet = belot.sendState(PLAYERS.getFirst()).orElseThrow().sheet();
+
+        assertEquals(List.of(0, 0, 24, 0), sheet.stream().map(BelotDealRow::carriedIn).toList(),
+                "the hand that was made took everything hanging, and only that hand");
+        assertEquals(List.of(8, 24, 0, 0), sheet.stream().map(BelotDealRow::leftHanging).toList(),
+                "each hanging hand says what is waiting after it, the earlier eight included");
     }
 }
