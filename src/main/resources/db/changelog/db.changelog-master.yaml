@@ -136,3 +136,8 @@ databaseChangeLog:
   # When each account was last here: login and token refresh both set it.
   - include:
       file: db/changelog/changes/044-users-last-login.yaml
+
+  # What a belot player chose to announce with their first card, and whether
+  # they said a belote; null on every play before this, meaning as before.
+  - include:
+      file: db/changelog/changes/045-belot-play-choices.yaml

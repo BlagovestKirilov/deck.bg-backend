@@ -15,6 +15,7 @@ import bg.deck.belot.enums.BelotGameStatus;
 import bg.deck.belot.model.request.BelotBidRequest;
 import bg.deck.belot.model.request.BelotCutRequest;
 import bg.deck.belot.model.request.BelotPlayRequest;
+import bg.deck.belot.model.response.BelotAnnouncement;
 import bg.deck.belot.model.response.BelotBidView;
 import bg.deck.belot.enums.DeclarationKind;
 import bg.deck.belot.model.response.BelotDealRow;
@@ -183,7 +184,12 @@ class WireFormatSnapshotTest {
                         List.of(new BelotPlayedCard(Seat.NORTH, new Card(Suit.CLUBS, Rank.TEN)),
                                 new BelotPlayedCard(Seat.WEST, new Card(Suit.CLUBS, Rank.KING))),
                         null,
-                        List.of(new Card(Suit.CLUBS, Rank.SEVEN))),
+                        List.of(new Card(Suit.CLUBS, Rank.SEVEN)),
+                        List.of(new BelotAnnouncement("TERZ/HEARTS/KING",
+                                        List.of(new BelotDeclarationView(Seat.NORTH, DeclarationKind.TERZ,
+                                                Suit.HEARTS, Rank.KING, 20))),
+                                new BelotAnnouncement("NONE", List.of())),
+                        List.of(new Card(Suit.HEARTS, Rank.KING))),
                 new BelotTurnView(Seat.EAST, Instant.parse("2026-09-27T10:15:00Z"),
                         Instant.parse("2026-09-27T10:15:30Z")),
                 new BelotDeclarationsView(
@@ -193,9 +199,9 @@ class WireFormatSnapshotTest {
                                         Suit.HEARTS, Rank.KING, 20)),
                         20, 20),
                 List.of(new BelotDealRow(1, Contract.SPADES, Seat.NORTH, Team.NORTH_SOUTH,
-                        Doubling.NONE, 97, 65, 20, 0, 10, 6, DealResult.MADE, null),
+                        Doubling.NONE, 97, 65, 20, 0, 10, 6, DealResult.MADE, null, 0, 0),
                         new BelotDealRow(2, Contract.NO_TRUMPS, Seat.EAST, Team.EAST_WEST,
-                                Doubling.CONTRA, 120, 140, 0, 50, 0, 52, DealResult.INSIDE, null)),
+                                Doubling.CONTRA, 120, 140, 0, 50, 0, 52, DealResult.INSIDE, null, 0, 0)),
                 new BelotTrickView(2,
                         List.of(new BelotPlayedCard(Seat.EAST, new Card(Suit.HEARTS, Rank.ACE)),
                                 new BelotPlayedCard(Seat.NORTH, new Card(Suit.HEARTS, Rank.SEVEN)),
@@ -300,7 +306,8 @@ class WireFormatSnapshotTest {
         read(out, RegisterRequest.class, "{\"username\":\"petko91\",\"password\":\"secret12\",\"email\":\"petko@example.com\"}");
         read(out, UserDeletionRequest.class, "{\"password\":\"secret12\"}");
         read(out, BelotBidRequest.class, "{\"kind\":\"BID\",\"contract\":\"ALL_TRUMPS\"}");
-        read(out, BelotPlayRequest.class, "{\"card\":{\"suit\":\"SPADES\",\"rank\":\"ACE\"}}");
+        read(out, BelotPlayRequest.class,
+                "{\"card\":{\"suit\":\"SPADES\",\"rank\":\"ACE\"},\"announce\":\"NONE\",\"belote\":false}");
         read(out, BelotCutRequest.class, "{\"at\":12}");
 
         return out;

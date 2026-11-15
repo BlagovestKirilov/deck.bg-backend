@@ -1,0 +1,40 @@
+databaseChangeLog:
+  # What a player chose to say, kept on the card they said it with.
+  #
+  # announced is on a player's first card of a hand: which of the ways their
+  # hand can be announced they picked (the engine's Declarations.key), or NONE
+  # for nothing. belote is on the first king or queen of a belote: false when
+  # it was played without saying it.
+  #
+  # Additive and nullable, with no default: every play already stored carries
+  # null in both, and null means what the server did before this — the
+  # richest announcement, and every belote said. Hands already played, and a
+  # hand being played when this runs, score exactly as they did.
+  - changeSet:
+      id: 045-belot-play-choices
+      author: Blagovest Kirilov
+      comment: belot.play.announced and belot.play.belote, what a player chose to say
+      changes:
+        - addColumn:
+            schemaName: belot
+            tableName: play
+            columns:
+              - column:
+                  name: announced
+                  type: VARCHAR(200)
+                  constraints:
+                    nullable: true
+              - column:
+                  name: belote
+                  type: BOOLEAN
+                  constraints:
+                    nullable: true
+      rollback:
+        - dropColumn:
+            schemaName: belot
+            tableName: play
+            columns:
+              - column:
+                  name: announced
+              - column:
+                  name: belote

@@ -38,15 +38,105 @@ public final class Declarations {
      * притежаваните от тях комбинации".
      */
     public static List<Declaration> in(List<Card> hand, Contract contract) {
+        return in(hand, contract, null);
+    }
+
+    /**
+     * What this hand declares, as its player chose to announce it.
+     *
+     * @param chosen the {@link #key} of one of {@link #options}, as the player
+     *               picked it with their first card; null, or a key that is
+     *               not one of them, takes the richest — what a player who was
+     *               never asked would want
+     */
+    public static List<Declaration> in(List<Card> hand, Contract contract, String chosen) {
         if (contract == Contract.NO_TRUMPS) {
             return List.of();
         }
 
-        List<Declaration> found = new ArrayList<>(chosen(hand));
+        List<List<Declaration>> options = options(hand, contract);
+        List<Declaration> found = new ArrayList<>(options.stream()
+                .filter(option -> key(option).equals(chosen))
+                .findFirst()
+                .orElse(options.getFirst()));
         // A belote is not in the contest: it is two named cards of the trump
         // suit and it always scores, so it never gives way to anything.
         found.addAll(belotes(hand, contract));
         return List.copyOf(found);
+    }
+
+    /** The key of announcing nothing at all. */
+    public static final String NOTHING = "NONE";
+
+    /**
+     * Every way this hand may be announced, the richest first and announcing
+     * nothing last. RULES §7, ANSWERED 18.
+     *
+     * <p>A card may serve a carré or a sequence, not both, and which is the
+     * player's to say: four tens and 7 8 9 10 of spades is the four and a
+     * terz of 7 8 9, or the quarte alone. And a player may keep what they
+     * hold to themselves, so as not to tell the table their cards. A belote
+     * is not among these: it is said, or not, with its own card.
+     *
+     * <p>A hand with nothing to announce has one option, nothing.
+     */
+    public static List<List<Declaration>> options(List<Card> hand, Contract contract) {
+        if (contract == Contract.NO_TRUMPS) {
+            return List.of(List.of());
+        }
+        List<Declaration> carres = carres(hand);
+
+        // Every choice of fours, the sequences read again from what they
+        // leave. At most two fours fit in eight cards, so at most four.
+        List<List<Declaration>> found = new ArrayList<>();
+        List<Integer> fours = new ArrayList<>();
+        for (int taken = 0; taken < 1 << carres.size(); taken++) {
+            List<Declaration> option = new ArrayList<>();
+            Set<Card> spokenFor = new HashSet<>();
+            for (int i = 0; i < carres.size(); i++) {
+                if ((taken & 1 << i) != 0) {
+                    option.add(carres.get(i));
+                    spokenFor.addAll(carres.get(i).cards());
+                }
+            }
+            int carresTaken = option.size();
+            option.addAll(sequences(hand.stream().filter(card -> !spokenFor.contains(card)).toList()));
+            if (!option.isEmpty() && found.stream().noneMatch(seen -> key(seen).equals(key(option)))) {
+                found.add(option.stream().sorted(Comparator.comparingInt(Declaration::points).reversed()).toList());
+                fours.add(carresTaken);
+            }
+        }
+
+        // Richest first; between equals, the one with more fours, which are
+        // the rarer thing to hold.
+        List<Integer> order = new ArrayList<>();
+        for (int i = 0; i < found.size(); i++) {
+            order.add(i);
+        }
+        order.sort(Comparator.<Integer>comparingInt(i -> found.get(i).stream().mapToInt(Declaration::points).sum())
+                .thenComparingInt(fours::get)
+                .reversed());
+
+        List<List<Declaration>> options = new ArrayList<>();
+        order.forEach(i -> options.add(found.get(i)));
+        options.add(List.of());
+        return List.copyOf(options);
+    }
+
+    /**
+     * One way of announcing a hand, as a word a request can carry and a play
+     * can keep: each declaration as kind, suit and top card, or
+     * {@link #NOTHING}.
+     */
+    public static String key(List<Declaration> option) {
+        if (option.isEmpty()) {
+            return NOTHING;
+        }
+        return option.stream()
+                .map(declaration -> declaration.kind() + "/"
+                        + (declaration.suit() == null ? "-" : declaration.suit()) + "/" + declaration.topRank())
+                .sorted()
+                .collect(Collectors.joining(","));
     }
 
     /**
@@ -66,12 +156,22 @@ public final class Declarations {
      */
     public static List<Declaration> standing(List<Declaration> held, Seat seat, List<Trick> tricks,
                                              Contract contract) {
-        if (contract != Contract.ALL_TRUMPS) {
-            return held;
-        }
+        return standing(held, seat, tricks, contract, Set.of());
+    }
+
+    /**
+     * As above, less any belote its player chose not to say: one whose first
+     * king or queen was played with "без белот". A belote kept quiet is not
+     * said later with the other card either.
+     *
+     * @param declined the suits whose belote this seat chose not to say
+     */
+    public static List<Declaration> standing(List<Declaration> held, Seat seat, List<Trick> tricks,
+                                             Contract contract, Set<Suit> declined) {
         return held.stream()
                 .filter(declaration -> declaration.kind() != DeclarationKind.BELOTE
-                        || saidOnItsSuit(declaration.suit(), seat, tricks))
+                        || (!declined.contains(declaration.suit())
+                            && (contract != Contract.ALL_TRUMPS || saidOnItsSuit(declaration.suit(), seat, tricks))))
                 .toList();
     }
 
@@ -90,56 +190,6 @@ public final class Declarations {
             }
         }
         return true;
-    }
-
-    /**
-     * Sequences and fours, with no card counted twice.
-     *
-     * <p>"Ако една и съща карта участва едновременно в каре и поредица,
-     * играчът избира кое от двете да обяви" — four tens and 8 9 10 J of spades
-     * share the ten of spades, and only one of them may have it.
-     *
-     * <p>Declarations here are read off the hand rather than announced, so
-     * there is nobody to do the choosing. It is made for the player, and made
-     * the way they would want it: every choice of fours is tried, the
-     * sequences are read again from the cards the fours leave, and the
-     * richest result is kept. Reading them again is what a player does at the
-     * table — four tens and 7 8 9 10 of spades is the four and a terz of
-     * 7 8 9, not the four alone. Ties go to the hand with more fours, which
-     * are the rarer thing to hold.
-     *
-     * <p>A belote is not part of this: the king and queen of trumps count as a
-     * belote whatever else they are in.
-     */
-    private static List<Declaration> chosen(List<Card> hand) {
-        List<Declaration> carres = carres(hand);
-
-        List<Declaration> best = List.of();
-        int bestPoints = -1;
-        int bestCarres = -1;
-        // At most two fours fit in eight cards, so at most four choices.
-        for (int taken = 0; taken < 1 << carres.size(); taken++) {
-            List<Declaration> option = new ArrayList<>();
-            Set<Card> spokenFor = new HashSet<>();
-            for (int i = 0; i < carres.size(); i++) {
-                if ((taken & 1 << i) != 0) {
-                    option.add(carres.get(i));
-                    spokenFor.addAll(carres.get(i).cards());
-                }
-            }
-            int fours = option.size();
-            option.addAll(sequences(hand.stream().filter(card -> !spokenFor.contains(card)).toList()));
-
-            int points = option.stream().mapToInt(Declaration::points).sum();
-            if (points > bestPoints || (points == bestPoints && fours > bestCarres)) {
-                best = option;
-                bestPoints = points;
-                bestCarres = fours;
-            }
-        }
-        return best.stream()
-                .sorted(Comparator.comparingInt(Declaration::points).reversed())
-                .toList();
     }
 
     /** The longest run of three or more in each suit. */

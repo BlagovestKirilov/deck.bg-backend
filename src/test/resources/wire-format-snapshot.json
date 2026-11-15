@@ -110,6 +110,23 @@
       "yours" : [ {
         "suit" : "CLUBS",
         "rank" : "SEVEN"
+      } ],
+      "announcements" : [ {
+        "key" : "TERZ/HEARTS/KING",
+        "declarations" : [ {
+          "seat" : "NORTH",
+          "kind" : "TERZ",
+          "suit" : "HEARTS",
+          "topRank" : "KING",
+          "points" : 20
+        } ]
+      }, {
+        "key" : "NONE",
+        "declarations" : [ ]
+      } ],
+      "beloteCards" : [ {
+        "suit" : "HEARTS",
+        "rank" : "KING"
       } ]
     },
     "turn" : {
@@ -147,7 +164,9 @@
       "callerScore" : 10,
       "opponentScore" : 6,
       "result" : "MADE",
-      "capotBy" : null
+      "capotBy" : null,
+      "carriedIn" : 0,
+      "leftHanging" : 0
     }, {
       "dealNumber" : 2,
       "contract" : "NO_TRUMPS",
@@ -161,7 +180,9 @@
       "callerScore" : 0,
       "opponentScore" : 52,
       "result" : "INSIDE",
-      "capotBy" : null
+      "capotBy" : null,
+      "carriedIn" : 0,
+      "leftHanging" : 0
     } ],
     "lastTrick" : {
       "dealNumber" : 2,
@@ -527,7 +548,9 @@
       "card" : {
         "suit" : "SPADES",
         "rank" : "ACE"
-      }
+      },
+      "announce" : "NONE",
+      "belote" : false
     },
     "violationsWhenFull" : "[]",
     "violationsWhenEmpty" : "[card:NotNull]"

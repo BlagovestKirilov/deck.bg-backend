@@ -145,11 +145,29 @@ class BelotDealScoringTest {
         }
 
         @Test
-        @DisplayName("points that hang while doubled carry forward doubled")
-        void hangingStaysDoubled() {
+        @DisplayName("level under a contra: nobody records, and both sides' points hang, not doubled")
+        void contraLevelHangsEverything() {
             DealOutcome outcome = DealScorer.score(81, 81, 2, 0);
 
-            assertEquals(16, outcome.hanging(), "«всички точки (удвоени или учетворени) остават»");
+            assertEquals(DealResult.HANGING, outcome.result());
+            assertEquals(0, outcome.recorded().caller());
+            assertEquals(0, outcome.recorded().opponents(), "all or nothing, and nobody won");
+            assertEquals(16, outcome.hanging(), "8 and 8, rounded as one, not doubled");
+        }
+
+        @Test
+        @DisplayName("and the same under a recontra")
+        void recontraLevelHangsEverything() {
+            DealOutcome outcome = DealScorer.score(81, 81, 4, 0);
+
+            assertEquals(0, outcome.recorded().caller() + outcome.recorded().opponents());
+            assertEquals(16, outcome.hanging(), "a recontra does not multiply what hangs either");
+        }
+
+        @Test
+        @DisplayName("and adds to what was already hanging")
+        void contraLevelAddsToTheTable() {
+            assertEquals(24, DealScorer.score(81, 81, 2, 8).hanging());
         }
     }
 
