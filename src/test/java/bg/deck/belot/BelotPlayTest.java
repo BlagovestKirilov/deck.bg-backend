@@ -5,6 +5,9 @@ import bg.deck.belot.engine.Card;
 import bg.deck.belot.enums.Contract;
 import bg.deck.belot.engine.DealRounding;
 import bg.deck.belot.engine.Dealing;
+import bg.deck.belot.engine.Declaration;
+import bg.deck.belot.engine.Declarations;
+import bg.deck.belot.enums.DeclarationKind;
 import bg.deck.belot.enums.Seat;
 import bg.deck.belot.model.BelotDeal;
 import bg.deck.belot.enums.BelotDealStatus;
@@ -229,6 +232,67 @@ class BelotPlayTest {
             for (Seat seat : Seat.values()) {
                 assertTrue(play.handOf(table, deal, seat).isEmpty(), seat + " played everything");
             }
+        }
+    }
+
+    @Nested
+    @DisplayName("what a player chooses to say")
+    class Choosing {
+
+        @Test
+        @DisplayName("an announcement the hand was not offered is refused")
+        void anUnknownAnnouncementIsRefused() {
+            contractOf(Contract.ALL_TRUMPS);
+            Seat leader = play.toAct(deal);
+            Card card = play.legalFor(table, deal, leader).getFirst();
+
+            assertThrows(IllegalArgumentException.class,
+                    () -> play.play(table, deal, leader, card, "CARRE/-/NOT_A_RANK", null));
+            assertTrue(deal.getPlays().isEmpty(), "and nothing was played");
+        }
+
+        @Test
+        @DisplayName("announcing nothing leaves only the belotes to be counted")
+        void nothingIsCountedAsNothing() {
+            contractOf(Contract.ALL_TRUMPS);
+            for (int i = 0; i < Seat.values().length; i++) {
+                Seat seat = play.toAct(deal);
+                play.play(table, deal, seat, play.legalFor(table, deal, seat).getFirst(), Declarations.NOTHING, null);
+            }
+
+            play.declarationsBySeat(table, deal).forEach((seat, declared) -> assertTrue(
+                    declared.stream().allMatch(declaration -> declaration.kind() == DeclarationKind.BELOTE),
+                    seat + " announced nothing, yet " + declared + " counted"));
+        }
+
+        @Test
+        @DisplayName("a belote played without saying it is not counted")
+        void aBeloteKeptQuietIsNotCounted() {
+            // A seed whose first player holds a belote: they lead, so any of
+            // theirs would be said with its first card.
+            Seat leader = null;
+            for (int tries = 0; tries < 200; tries++) {
+                table.setServerSeed(seeds.newSeed());
+                deal = dealService.dealNext(table);
+                when(deals.findFirstByGameOrderByDealNumberDesc(table)).thenReturn(Optional.of(deal));
+                contractOf(Contract.ALL_TRUMPS);
+                leader = play.toAct(deal);
+                if (!play.beloteCards(table, deal, leader).isEmpty()) {
+                    break;
+                }
+            }
+            List<Card> belote = play.beloteCards(table, deal, leader);
+            assertFalse(belote.isEmpty(), "two hundred deals and not one belote to lead");
+            Card quiet = belote.getFirst();
+
+            play.play(table, deal, leader, quiet, null, false);
+
+            List<Declaration> declared = play.declarationsBySeat(table, deal).get(leader);
+            assertTrue(declared.stream().noneMatch(declaration -> declaration.kind() == DeclarationKind.BELOTE
+                            && declaration.suit() == quiet.suit()),
+                    "the " + quiet.suit() + " belote was kept quiet, yet " + declared + " counted");
+            assertTrue(play.beloteCards(table, deal, leader).isEmpty() || play.toAct(deal) != leader,
+                    "and it is not offered again");
         }
     }
 }

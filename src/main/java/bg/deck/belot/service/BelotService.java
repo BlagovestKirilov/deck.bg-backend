@@ -6,6 +6,7 @@ import bg.deck.belot.engine.Card;
 import bg.deck.belot.engine.DealScorer;
 import bg.deck.belot.engine.Dealing;
 import bg.deck.belot.engine.Declaration;
+import bg.deck.belot.engine.Declarations;
 import bg.deck.belot.enums.DeclarationKind;
 import bg.deck.belot.enums.Rank;
 import bg.deck.belot.enums.Seat;
@@ -23,6 +24,7 @@ import bg.deck.belot.model.event.BelotTurnClock;
 import bg.deck.belot.model.request.BelotBidRequest;
 import bg.deck.belot.model.request.BelotCutRequest;
 import bg.deck.belot.model.request.BelotPlayRequest;
+import bg.deck.belot.model.response.BelotAnnouncement;
 import bg.deck.belot.model.response.BelotBidView;
 import bg.deck.belot.model.response.BelotBiddingView;
 import bg.deck.belot.model.response.BelotDealRow;
@@ -214,7 +216,7 @@ public class BelotService {
         }
 
         try {
-            belotPlayService.play(table, deal, seat.getSeat(), request.card());
+            belotPlayService.play(table, deal, seat.getSeat(), request.card(), request.announce(), request.belote());
         } catch (IllegalArgumentException e) {
             throw new IllegalMoveException(e.getMessage(), e);
         }
@@ -532,7 +534,17 @@ public class BelotService {
                 trickNo,
                 trick.plays().stream().map(play -> new BelotPlayedCard(play.seat(), play.card())).toList(),
                 wonBy,
-                seat == null ? List.of() : belotPlayService.legalFor(table, deal, seat));
+                seat == null ? List.of() : belotPlayService.legalFor(table, deal, seat),
+                seat == null ? List.of() : announcementsFor(table, deal, seat),
+                seat == null ? List.of() : belotPlayService.beloteCards(table, deal, seat));
+    }
+
+    /** This seat's choices of announcement, as it is sent them. */
+    private List<BelotAnnouncement> announcementsFor(BelotGame table, BelotDeal deal, Seat seat) {
+        return belotPlayService.announcements(table, deal, seat).stream()
+                .map(option -> new BelotAnnouncement(Declarations.key(option),
+                        option.stream().map(declaration -> BelotDeclarationView.of(seat, declaration)).toList()))
+                .toList();
     }
 
     /**

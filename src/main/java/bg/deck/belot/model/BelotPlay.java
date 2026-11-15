@@ -55,6 +55,21 @@ public class BelotPlay extends BaseEntity {
     @Column(nullable = false, length = 10)
     private Rank rank;
 
+    /**
+     * On a player's first card of the hand: which way of announcing their hand
+     * they chose (Declarations.key), or NONE. Null — every play from before
+     * players could choose — means the richest.
+     */
+    @Column(length = 200)
+    private String announced;
+
+    /**
+     * On the first king or queen of a belote: false when it was played without
+     * saying it. Null means said, as every belote was before this.
+     */
+    @Column
+    private Boolean belote;
+
     public BelotPlay(int trickNo, int orderInTrick, Seat seat, Card card) {
         this.trickNo = trickNo;
         this.orderInTrick = orderInTrick;

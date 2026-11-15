@@ -22,6 +22,11 @@ import java.util.List;
  *                 leads the next
  * @param wonBy    who took the trick on the table, once it is complete
  * @param yours    what the player being sent this may play now
+ * @param announcements with this player's first card, the ways they may
+ *                 announce their hand — the richest first, nothing last; empty
+ *                 otherwise, and when there is nothing to announce
+ * @param beloteCards of {@code yours}, the cards that would say a belote; the
+ *                 player is asked whether to say it when playing one
  */
 public record BelotPlayView(
         Contract contract,
@@ -30,11 +35,15 @@ public record BelotPlayView(
         int trickNo,
         List<BelotPlayedCard> onTable,
         Seat wonBy,
-        List<Card> yours
+        List<Card> yours,
+        List<BelotAnnouncement> announcements,
+        List<Card> beloteCards
 ) {
 
     public BelotPlayView {
         onTable = List.copyOf(onTable);
         yours = List.copyOf(yours);
+        announcements = List.copyOf(announcements);
+        beloteCards = List.copyOf(beloteCards);
     }
 }

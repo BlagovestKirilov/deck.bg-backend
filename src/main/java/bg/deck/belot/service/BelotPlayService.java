@@ -11,7 +11,9 @@ import bg.deck.belot.engine.Declarations;
 import bg.deck.belot.engine.GameScorer;
 import bg.deck.belot.engine.LegalMoves;
 import bg.deck.belot.engine.PlayedDeal;
+import bg.deck.belot.enums.Rank;
 import bg.deck.belot.enums.Seat;
+import bg.deck.belot.enums.Suit;
 import bg.deck.belot.enums.Team;
 import bg.deck.belot.engine.Trick;
 import bg.deck.belot.engine.TrickResolver;
@@ -30,6 +32,9 @@ import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * The tricks: whose turn it is, what they may play, and what the deal comes to
@@ -94,12 +99,40 @@ public class BelotPlayService {
      * @throws IllegalArgumentException if the card cannot be played now
      */
     public BelotDeal play(BelotGame game, BelotDeal deal, Seat seat, Card card) {
+        return play(game, deal, seat, card, null, null);
+    }
+
+    /**
+     * Plays one card, with what its player chose to say as they played it.
+     *
+     * @param announce on a player's first card: which of {@link #announcements}
+     *                 they chose, by its key. Null takes the richest, which is
+     *                 what the table's clock picks for a player who ran out
+     * @param belote   on a card of {@link #beloteCards}: false to play it
+     *                 without saying the belote. Null says it
+     * @throws IllegalArgumentException if the card cannot be played now, or
+     *                                  the announcement is not one this hand has
+     */
+    public BelotDeal play(BelotGame game, BelotDeal deal, Seat seat, Card card, String announce, Boolean belote) {
         List<Card> legal = legalFor(game, deal, seat);
         if (!legal.contains(card)) {
             throw new IllegalArgumentException(seat + " cannot play " + card + "; legal: " + legal);
         }
 
-        deal.add(new BelotPlay(deal.currentTrickNumber(), deal.nextPlaceInTrick(), seat, card));
+        BelotPlay play = new BelotPlay(deal.currentTrickNumber(), deal.nextPlaceInTrick(), seat, card);
+        if (announce != null && deal.playedBy(seat).isEmpty()) {
+            List<String> known = Declarations.options(dealt(game, deal, seat), deal.getContract()).stream()
+                    .map(Declarations::key)
+                    .toList();
+            if (!known.contains(announce)) {
+                throw new IllegalArgumentException(seat + " cannot announce " + announce + "; may: " + known);
+            }
+            play.setAnnounced(announce);
+        }
+        if (Boolean.FALSE.equals(belote) && beloteCards(game, deal, seat).contains(card)) {
+            play.setBelote(false);
+        }
+        deal.add(play);
         deal.setTurnStartedAt(Instant.now());
 
         if (deal.isPlayedOut()) {
@@ -193,8 +226,79 @@ public class BelotPlayService {
         List<Trick> tricks = deal.tricks();
         Map<Seat, List<Declaration>> bySeat = new EnumMap<>(Seat.class);
         belotDealService.hands(game, deal).forEach((seat, hand) -> bySeat.put(seat,
-                Declarations.standing(Declarations.in(hand, contract), seat, tricks, contract)));
+                Declarations.standing(Declarations.in(hand, contract, announcedBy(deal, seat)),
+                        seat, tricks, contract, belotesKeptQuiet(deal, seat))));
         return bySeat;
+    }
+
+    /** What this seat chose to announce with its first card; null if it was not asked. */
+    private static String announcedBy(BelotDeal deal, Seat seat) {
+        return deal.getPlays().stream()
+                .filter(play -> play.getSeat() == seat)
+                .findFirst()
+                .map(BelotPlay::getAnnounced)
+                .orElse(null);
+    }
+
+    /** The suits whose belote this seat played without saying. */
+    private static Set<Suit> belotesKeptQuiet(BelotDeal deal, Seat seat) {
+        return deal.getPlays().stream()
+                .filter(play -> play.getSeat() == seat && Boolean.FALSE.equals(play.getBelote()))
+                .map(BelotPlay::getSuit)
+                .collect(Collectors.toSet());
+    }
+
+    /** The eight this seat was dealt, played or not. */
+    private List<Card> dealt(BelotGame game, BelotDeal deal, Seat seat) {
+        return belotDealService.hands(game, deal).get(seat);
+    }
+
+    /**
+     * The ways this seat may announce its hand, offered with its first card:
+     * the richest first, nothing last. Empty unless it is that seat's turn,
+     * its first card of the hand, and it has something to announce.
+     */
+    public List<List<Declaration>> announcements(BelotGame game, BelotDeal deal, Seat seat) {
+        if (legalFor(game, deal, seat).isEmpty() || !deal.playedBy(seat).isEmpty()) {
+            return List.of();
+        }
+        List<List<Declaration>> options = Declarations.options(dealt(game, deal, seat), deal.getContract());
+        return options.size() > 1 ? options : List.of();
+    }
+
+    /**
+     * The cards that would say a belote if this seat played them now: the
+     * king and queen of a belote neither of which has been played, when
+     * playing one would say it — in all trumps only onto a trick led in its
+     * suit, or as the lead. Empty unless it is that seat's turn.
+     */
+    public List<Card> beloteCards(BelotGame game, BelotDeal deal, Seat seat) {
+        List<Card> legal = legalFor(game, deal, seat);
+        if (legal.isEmpty()) {
+            return List.of();
+        }
+        Contract contract = deal.getContract();
+        List<Card> dealt = dealt(game, deal, seat);
+        List<Card> played = deal.playedBy(seat);
+        Optional<Suit> led = deal.currentTrick().ledSuit();
+
+        List<Card> cards = new ArrayList<>();
+        for (Suit suit : Suit.values()) {
+            Card king = new Card(suit, Rank.KING);
+            Card queen = new Card(suit, Rank.QUEEN);
+            boolean held = contract.isTrump(suit) && dealt.contains(king) && dealt.contains(queen);
+            boolean unsaid = !played.contains(king) && !played.contains(queen);
+            boolean onItsSuit = contract != Contract.ALL_TRUMPS || led.isEmpty() || led.get() == suit;
+            if (held && unsaid && onItsSuit) {
+                if (legal.contains(king)) {
+                    cards.add(king);
+                }
+                if (legal.contains(queen)) {
+                    cards.add(queen);
+                }
+            }
+        }
+        return List.copyOf(cards);
     }
 
     /** What one side scores from its announcements, once the other’s is weighed. */

@@ -110,6 +110,23 @@
       "yours" : [ {
         "suit" : "CLUBS",
         "rank" : "SEVEN"
+      } ],
+      "announcements" : [ {
+        "key" : "TERZ/HEARTS/KING",
+        "declarations" : [ {
+          "seat" : "NORTH",
+          "kind" : "TERZ",
+          "suit" : "HEARTS",
+          "topRank" : "KING",
+          "points" : 20
+        } ]
+      }, {
+        "key" : "NONE",
+        "declarations" : [ ]
+      } ],
+      "beloteCards" : [ {
+        "suit" : "HEARTS",
+        "rank" : "KING"
       } ]
     },
     "turn" : {
@@ -531,7 +548,9 @@
       "card" : {
         "suit" : "SPADES",
         "rank" : "ACE"
-      }
+      },
+      "announce" : "NONE",
+      "belote" : false
     },
     "violationsWhenFull" : "[]",
     "violationsWhenEmpty" : "[card:NotNull]"

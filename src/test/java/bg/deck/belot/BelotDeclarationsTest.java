@@ -16,6 +16,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -348,6 +349,79 @@ class BelotDeclarationsTest {
 
             assertEquals(List.of(spadeBelote), Declarations.standing(
                     List.of(spadeBelote), Seat.SOUTH, tricks, Contract.SPADES));
+        }
+    }
+
+    @Nested
+    @DisplayName("the player chooses what to announce")
+    class Choosing {
+
+        /** Four tens and 7 8 9 10 of spades: the ten of spades serves one or the other. */
+        private final List<Card> tensAndARun = hand(
+                card(Rank.TEN, Suit.SPADES), card(Rank.TEN, Suit.HEARTS),
+                card(Rank.TEN, Suit.DIAMONDS), card(Rank.TEN, Suit.CLUBS),
+                card(Rank.SEVEN, Suit.SPADES), card(Rank.EIGHT, Suit.SPADES), card(Rank.NINE, Suit.SPADES),
+                card(Rank.ACE, Suit.HEARTS));
+
+        @Test
+        @DisplayName("every split is offered, the richest first, and nothing last")
+        void theSplitsAndNothing() {
+            List<List<Declaration>> options = Declarations.options(tensAndARun, Contract.HEARTS);
+
+            assertEquals(3, options.size());
+            assertEquals(List.of(DeclarationKind.CARRE, DeclarationKind.TERZ),
+                    options.get(0).stream().map(Declaration::kind).toList(), "the four and a terz of 7 8 9, 120");
+            assertEquals(List.of(DeclarationKind.QUARTE),
+                    options.get(1).stream().map(Declaration::kind).toList(), "or 7 8 9 10, 50");
+            assertEquals(List.of(), options.get(2), "or nothing at all");
+            assertEquals(Declarations.NOTHING, Declarations.key(options.get(2)));
+        }
+
+        @Test
+        @DisplayName("not asked, the richest is taken — as before players could choose")
+        void notAskedTakesTheRichest() {
+            assertEquals(Declarations.in(tensAndARun, Contract.HEARTS),
+                    Declarations.in(tensAndARun, Contract.HEARTS, null));
+            assertEquals(120, Declarations.in(tensAndARun, Contract.HEARTS).stream()
+                    .mapToInt(Declaration::points).sum());
+        }
+
+        @Test
+        @DisplayName("the chosen split is the one counted")
+        void theChoiceCounts() {
+            String quarte = Declarations.key(Declarations.options(tensAndARun, Contract.HEARTS).get(1));
+
+            assertEquals(List.of(DeclarationKind.QUARTE), Declarations.in(tensAndARun, Contract.HEARTS, quarte)
+                    .stream().map(Declaration::kind).toList());
+        }
+
+        @Test
+        @DisplayName("announcing nothing keeps the hand quiet, but not a belote, which is said with its card")
+        void nothingButTheBelote() {
+            List<Card> terzAndBelote = hand(card(Rank.QUEEN, Suit.HEARTS), card(Rank.KING, Suit.HEARTS),
+                    card(Rank.ACE, Suit.HEARTS));
+
+            assertEquals(List.of(DeclarationKind.BELOTE),
+                    Declarations.in(terzAndBelote, Contract.HEARTS, Declarations.NOTHING)
+                            .stream().map(Declaration::kind).toList());
+        }
+
+        @Test
+        @DisplayName("a hand with nothing to announce has nothing to choose")
+        void nothingToChoose() {
+            assertEquals(List.of(List.of()), Declarations.options(
+                    hand(card(Rank.SEVEN, Suit.HEARTS), card(Rank.ACE, Suit.SPADES)), Contract.HEARTS));
+        }
+
+        @Test
+        @DisplayName("a belote played without saying it is gone, in a suit contract too")
+        void aBeloteKeptQuiet() {
+            Declaration belote = new Declaration(DeclarationKind.BELOTE, Suit.HEARTS, Rank.KING, 20);
+
+            assertEquals(List.of(), Declarations.standing(List.of(belote), bg.deck.belot.enums.Seat.SOUTH,
+                    List.of(), Contract.HEARTS, Set.of(Suit.HEARTS)));
+            assertEquals(List.of(belote), Declarations.standing(List.of(belote), bg.deck.belot.enums.Seat.SOUTH,
+                    List.of(), Contract.HEARTS, Set.of(Suit.SPADES)), "another suit's choice does not touch it");
         }
     }
 }

@@ -158,7 +158,7 @@ Rules:
 > cards left over, and the richest result is kept. Four tens and 7 8 9 10 of
 > spades is the four and a terz of 7 8 9; four tens and 8 9 10 J is the four
 > alone (100 over 50). The king and queen of trumps stay a belote whatever
-> else they are in. `Declarations.chosen`, `BelotRulesTableTest.aCardCountsOnce`,
+> else they are in. `Declarations.options` (the richest is the default — see ANSWERED 18), `BelotRulesTableTest.aCardCountsOnce`,
 > `theRestOfASequenceStillCounts`, `theRichestSplitIsChosen`.
 >
 > **ANSWERED 6 — yes, always.** A belote is two named cards of the trump suit
@@ -187,6 +187,16 @@ Rules:
 > spade belote is lost, and leading the king later does not bring it back. In
 > a suit contract nothing changes: cutting a club lead with the queen of
 > trumps still says it. `Declarations.standing`.
+>
+> **ANSWERED 18 — the player chooses what to say.** With their first card a
+> player picks which way to announce their hand — four tens and 7 8 9 10 of
+> spades as the four and a terz, or as the quarte — or announces nothing, to
+> keep their cards to themselves. A belote is chosen with its own card: the
+> first king or queen of it may be played "без белот", and then it is not said
+> later with the other card either. Not asked (an older client, or the clock
+> playing for a player who ran out), the richest is announced and every belote
+> said, as before. Stored on the play (`belot.play.announced`, `.belote`).
+> `Declarations.options`, `BelotPlayService.announcements`, `beloteCards`.
 
 ## 8. Scoring a deal
 
