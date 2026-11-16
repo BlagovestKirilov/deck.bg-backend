@@ -10,6 +10,7 @@ import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -44,9 +45,9 @@ public final class Declarations {
     /**
      * What this hand declares, as its player chose to announce it.
      *
-     * @param chosen the {@link #key} of one of {@link #options}, as the player
-     *               picked it with their first card; null, or a key that is
-     *               not one of them, takes the richest — what a player who was
+     * @param chosen the {@link #key} of what the player ticked with their first
+     *               card — see {@link #choose}; null, or a choice this hand
+     *               cannot make, takes the richest — what a player who was
      *               never asked would want
      */
     public static List<Declaration> in(List<Card> hand, Contract contract, String chosen) {
@@ -54,11 +55,8 @@ public final class Declarations {
             return List.of();
         }
 
-        List<List<Declaration>> options = options(hand, contract);
-        List<Declaration> found = new ArrayList<>(options.stream()
-                .filter(option -> key(option).equals(chosen))
-                .findFirst()
-                .orElse(options.getFirst()));
+        List<Declaration> found = new ArrayList<>(choose(hand, contract, chosen)
+                .orElseGet(() -> options(hand, contract).getFirst()));
         // A belote is not in the contest: it is two named cards of the trump
         // suit and it always scores, so it never gives way to anything.
         found.addAll(belotes(hand, contract));
@@ -67,6 +65,37 @@ public final class Declarations {
 
     /** The key of announcing nothing at all. */
     public static final String NOTHING = "NONE";
+
+    /**
+     * The declarations a key names, if this hand can announce them together:
+     * any of them, as long as no card serves two — any part of one of its
+     * {@link #options}. The player ticks them one by one, so a terz on its own
+     * out of a carré and a terz is a choice too.
+     *
+     * @return empty for a key this hand cannot announce, and for no key
+     */
+    public static Optional<List<Declaration>> choose(List<Card> hand, Contract contract, String chosen) {
+        if (chosen == null) {
+            return Optional.empty();
+        }
+        if (NOTHING.equals(chosen)) {
+            return Optional.of(List.of());
+        }
+        List<String> named = List.of(chosen.split(","));
+        Set<String> wanted = new HashSet<>(named);
+        if (wanted.size() != named.size()) {
+            return Optional.empty();
+        }
+        for (List<Declaration> option : options(hand, contract)) {
+            List<Declaration> picked = option.stream()
+                    .filter(declaration -> wanted.contains(key(List.of(declaration))))
+                    .toList();
+            if (picked.size() == wanted.size()) {
+                return Optional.of(picked);
+            }
+        }
+        return Optional.empty();
+    }
 
     /**
      * Every way this hand may be announced, the richest first and announcing

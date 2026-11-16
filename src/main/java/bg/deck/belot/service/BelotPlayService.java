@@ -121,11 +121,8 @@ public class BelotPlayService {
 
         BelotPlay play = new BelotPlay(deal.currentTrickNumber(), deal.nextPlaceInTrick(), seat, card);
         if (announce != null && deal.playedBy(seat).isEmpty()) {
-            List<String> known = Declarations.options(dealt(game, deal, seat), deal.getContract()).stream()
-                    .map(Declarations::key)
-                    .toList();
-            if (!known.contains(announce)) {
-                throw new IllegalArgumentException(seat + " cannot announce " + announce + "; may: " + known);
+            if (Declarations.choose(dealt(game, deal, seat), deal.getContract(), announce).isEmpty()) {
+                throw new IllegalArgumentException(seat + " cannot announce " + announce);
             }
             play.setAnnounced(announce);
         }
