@@ -1,5 +1,6 @@
 package bg.deck.belot.controller;
 
+import bg.deck.common.model.request.ReactionRequest;
 import bg.deck.belot.model.request.BelotBidRequest;
 import bg.deck.belot.model.request.BelotCutRequest;
 import bg.deck.belot.model.request.BelotPlayRequest;
@@ -109,6 +110,12 @@ public class BelotController {
     @PostMapping("/leave")
     public ResponseEntity<Void> leave() {
         belotService.leave(AuthenticatedUser.username());
+        return ResponseEntity.accepted().build();
+    }
+
+    @PostMapping("/react")
+    public ResponseEntity<Void> react(@Valid @RequestBody ReactionRequest request) {
+        belotService.react(AuthenticatedUser.username(), request.reaction());
         return ResponseEntity.accepted().build();
     }
 

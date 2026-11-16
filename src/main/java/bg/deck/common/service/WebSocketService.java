@@ -1,5 +1,6 @@
 package bg.deck.common.service;
 
+import bg.deck.common.model.response.ReactionResponse;
 import bg.deck.common.model.response.SearchGameResponse;
 import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
@@ -13,6 +14,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import static bg.deck.common.constant.Constants.NOTIFY_BELOT_DESTINATION;
 import static bg.deck.common.constant.Constants.NOTIFY_GAME_DESTINATION;
 import static bg.deck.common.constant.Constants.NOTIFY_GAME_SEARCH_DESTINATION;
+import static bg.deck.common.constant.Constants.NOTIFY_REACTION_DESTINATION;
 import static bg.deck.common.constant.Constants.NOTIFY_SEARCH_BY_GAME_DESTINATION;
 
 /**
@@ -49,6 +51,12 @@ public class WebSocketService {
     public void notifyBelotUpdate(String username, Object state) {
         String destination = String.format(NOTIFY_BELOT_DESTINATION, username);
         enqueueMessage(username, () -> messagingTemplate.convertAndSend(destination, state));
+    }
+
+    /** A reaction somebody at this player's table sent, in any game. */
+    public void notifyReaction(String username, ReactionResponse reaction) {
+        String destination = String.format(NOTIFY_REACTION_DESTINATION, username);
+        enqueueMessage(username, () -> messagingTemplate.convertAndSend(destination, reaction));
     }
 
     public void notifyGameSearch(String username, SearchGameResponse searchGameResponse) {

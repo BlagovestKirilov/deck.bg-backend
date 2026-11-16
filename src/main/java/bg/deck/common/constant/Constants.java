@@ -26,6 +26,13 @@ public class Constants {
      */
     public static final String NOTIFY_BELOT_DESTINATION = "/topic/belot/%s";
 
+    /**
+     * Reactions, per player and shared by every game: a topic of their own,
+     * so a game's state handler never sees one and no game's state changes
+     * shape. Ends in the username, as every topic must.
+     */
+    public static final String NOTIFY_REACTION_DESTINATION = "/topic/reactions/%s";
+
     /** The one cache: the games on offer. @see bg.deck.common.config.CacheConfig */
     public static final String SERVICES_CACHE = "services";
 

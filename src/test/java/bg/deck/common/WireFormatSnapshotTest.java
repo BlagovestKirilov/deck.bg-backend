@@ -61,7 +61,10 @@ import bg.deck.common.model.response.AdminPlayerDetail;
 import bg.deck.common.model.response.AdminPlayerPage;
 import bg.deck.common.model.response.AdminPlayerRow;
 import bg.deck.common.model.response.ProfileResponse;
+import bg.deck.common.model.response.ReactionResponse;
 import bg.deck.common.model.response.SearchGameResponse;
+import bg.deck.common.model.request.ReactionRequest;
+import bg.deck.common.enums.Reaction;
 import bg.deck.tabla.model.response.TablaStateResponse;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validation;
@@ -211,6 +214,7 @@ class WireFormatSnapshotTest {
                 12,
                 91, 64, 0));
 
+        out.put("ReactionResponse", new ReactionResponse("petko91", Reaction.RED_CARD));
         out.put("SearchGameResponse.waiting", SearchGameResponse.waiting());
         out.put("SearchGameResponse.started", SearchGameResponse.started(ID));
 
@@ -309,6 +313,7 @@ class WireFormatSnapshotTest {
         read(out, BelotPlayRequest.class,
                 "{\"card\":{\"suit\":\"SPADES\",\"rank\":\"ACE\"},\"announce\":\"NONE\",\"belote\":false}");
         read(out, BelotCutRequest.class, "{\"at\":12}");
+        read(out, ReactionRequest.class, "{\"reaction\":\"LAUGH\"}");
 
         return out;
     }
