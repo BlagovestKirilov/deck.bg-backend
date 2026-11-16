@@ -396,6 +396,23 @@ class BelotDeclarationsTest {
         }
 
         @Test
+        @DisplayName("any of them may be ticked alone, a terz out of a carré and a terz")
+        void onePartOfASplit() {
+            assertEquals(List.of(DeclarationKind.TERZ),
+                    Declarations.in(tensAndARun, Contract.HEARTS, "TERZ/SPADES/NINE")
+                            .stream().map(Declaration::kind).toList());
+        }
+
+        @Test
+        @DisplayName("but not two that would need the same card")
+        void notTwoThatShareACard() {
+            assertTrue(Declarations.choose(tensAndARun, Contract.HEARTS, "CARRE/-/TEN,QUARTE/SPADES/TEN").isEmpty(),
+                    "the ten of spades cannot be in the four and the quarte both");
+            assertTrue(Declarations.choose(tensAndARun, Contract.HEARTS, "TERZ/SPADES/NINE,TERZ/SPADES/NINE").isEmpty(),
+                    "nor the same one twice");
+        }
+
+        @Test
         @DisplayName("announcing nothing keeps the hand quiet, but not a belote, which is said with its card")
         void nothingButTheBelote() {
             List<Card> terzAndBelote = hand(card(Rank.QUEEN, Suit.HEARTS), card(Rank.KING, Suit.HEARTS),
