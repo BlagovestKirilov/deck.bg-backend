@@ -2,6 +2,7 @@ package bg.deck.belot;
 
 import bg.deck.belot.engine.BidAction;
 import bg.deck.belot.engine.Card;
+import bg.deck.belot.engine.CardPoints;
 import bg.deck.belot.enums.Contract;
 import bg.deck.belot.engine.DealRounding;
 import bg.deck.belot.engine.Dealing;
@@ -263,6 +264,46 @@ class BelotPlayTest {
             play.declarationsBySeat(table, deal).forEach((seat, declared) -> assertTrue(
                     declared.stream().allMatch(declaration -> declaration.kind() == DeclarationKind.BELOTE),
                     seat + " announced nothing, yet " + declared + " counted"));
+        }
+
+        @Test
+        @DisplayName("a hand where nobody announces anything and every belote is kept quiet scores its cards only")
+        void quietHandsScoreTheCardsAlone() {
+            // A hundred deals of all trumps, where declarations are most
+            // common. Each player unticks everything with their first card and
+            // plays every belote card without saying it; what the hand is
+            // written down for must then be the cards, the last ten and a
+            // capot — not one point of any terz, carré or belote they held.
+            int handsWithSomethingToSay = 0;
+            for (int hand = 0; hand < 100; hand++) {
+                table.setServerSeed(seeds.newSeed());
+                deal = dealService.dealNext(table);
+                when(deals.findFirstByGameOrderByDealNumberDesc(table)).thenReturn(Optional.of(deal));
+                contractOf(Contract.ALL_TRUMPS);
+
+                boolean held = dealService.hands(table, deal).values().stream()
+                        .anyMatch(cards -> !Declarations.in(cards, Contract.ALL_TRUMPS).isEmpty());
+                if (held) {
+                    handsWithSomethingToSay++;
+                }
+
+                while (!deal.isPlayedOut()) {
+                    Seat seat = play.toAct(deal);
+                    Card card = play.legalFor(table, deal, seat).getFirst();
+                    String announce = deal.playedBy(seat).isEmpty() ? Declarations.NOTHING : null;
+                    Boolean belote = play.beloteCards(table, deal, seat).contains(card) ? Boolean.FALSE : null;
+                    play.play(table, deal, seat, card, announce, belote);
+                }
+
+                int capot = play.capotBy(deal) != null ? CardPoints.CAPOT : 0;
+                assertEquals(CardPoints.dealTotal(Contract.ALL_TRUMPS) + capot,
+                        deal.getCallerPoints() + deal.getOpponentPoints(),
+                        "hand " + hand + ": nothing was said, so nothing but the cards may be counted");
+                play.declarationsBySeat(table, deal).forEach((seat, declared) ->
+                        assertTrue(declared.isEmpty(), seat + " said nothing, yet " + declared + " counted"));
+            }
+            assertTrue(handsWithSomethingToSay > 20,
+                    "only " + handsWithSomethingToSay + " of 100 hands held anything to announce — the test proves little");
         }
 
         @Test
