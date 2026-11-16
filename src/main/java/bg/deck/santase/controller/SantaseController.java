@@ -1,5 +1,6 @@
 package bg.deck.santase.controller;
 
+import bg.deck.common.model.request.ReactionRequest;
 import bg.deck.common.model.response.SearchGameResponse;
 import bg.deck.santase.model.request.CardRequest;
 import bg.deck.santase.service.SantaseService;
@@ -71,6 +72,12 @@ public class SantaseController {
     @PostMapping("/finish-deal")
     public ResponseEntity<Void> finishDeal() {
         santaseService.finishDeal();
+        return ResponseEntity.accepted().build();
+    }
+
+    @PostMapping("/react")
+    public ResponseEntity<Void> react(@Valid @RequestBody ReactionRequest request) {
+        santaseService.react(request.reaction());
         return ResponseEntity.accepted().build();
     }
 

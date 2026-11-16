@@ -218,6 +218,10 @@
     "eastWestScore" : 64,
     "hangingPoints" : 0
   },
+  "ReactionResponse" : {
+    "from" : "petko91",
+    "reaction" : "RED_CARD"
+  },
   "SearchGameResponse.waiting" : {
     "status" : "WAITING"
   },
@@ -561,5 +565,12 @@
     },
     "violationsWhenFull" : "[]",
     "violationsWhenEmpty" : "[at:NotNull]"
+  },
+  "ReactionRequest" : {
+    "readsBack" : {
+      "reaction" : "LAUGH"
+    },
+    "violationsWhenFull" : "[]",
+    "violationsWhenEmpty" : "[reaction:NotNull]"
   }
 }

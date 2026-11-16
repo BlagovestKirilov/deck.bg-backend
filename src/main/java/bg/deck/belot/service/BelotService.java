@@ -1,5 +1,7 @@
 package bg.deck.belot.service;
 
+import bg.deck.common.enums.Reaction;
+import bg.deck.common.service.ReactionService;
 import bg.deck.belot.engine.BidAction;
 import bg.deck.belot.engine.Bidding;
 import bg.deck.belot.engine.Card;
@@ -87,6 +89,7 @@ public class BelotService {
     private final BelotPlayerService belotPlayerService;
     private final BelotStatsService belotStatsService;
     private final AvailabilityService availabilityService;
+    private final ReactionService reactionService;
     private final WebSocketService webSocketService;
     private final ApplicationEventPublisher eventPublisher;
 
@@ -251,6 +254,17 @@ public class BelotService {
      * left alone rather than refused.
      */
     @Transactional
+    /**
+     * A reaction to the table: all four see it. Nothing happens for a player
+     * at no table, or at one that has finished.
+     */
+    public void react(String username, Reaction reaction) {
+        belotTableService.tableOf(username)
+                .filter(table -> table.getStatus() != BelotGameStatus.FINISHED)
+                .ifPresent(table -> reactionService.send(username,
+                        table.getSeats().stream().map(BelotSeat::getUsername).toList(), reaction));
+    }
+
     public void surrender(String username) {
         Optional<BelotGame> seated = belotTableService.tableOf(username);
         if (seated.isEmpty() || seated.get().getStatus() == BelotGameStatus.FINISHED) {

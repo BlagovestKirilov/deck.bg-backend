@@ -1,5 +1,6 @@
 package bg.deck.belot;
 
+import bg.deck.common.service.ReactionService;
 import bg.deck.belot.engine.BidAction;
 import bg.deck.belot.enums.Contract;
 import bg.deck.belot.engine.Card;
@@ -90,7 +91,7 @@ class BelotViewTest {
 
     private final BelotService belot =
             new BelotService(tables, dealService, playService, turnService, players, statsService,
-                    availability, sockets, event -> { });
+                    availability, new ReactionService(sockets), sockets, event -> { });
 
     private BelotGame table;
     private BelotDeal deal;

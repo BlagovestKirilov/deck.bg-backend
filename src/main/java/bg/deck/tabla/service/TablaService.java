@@ -1,5 +1,7 @@
 package bg.deck.tabla.service;
 
+import bg.deck.common.enums.Reaction;
+import bg.deck.common.service.ReactionService;
 import bg.deck.common.constant.LogConstants;
 import bg.deck.common.exception.PlayerInactivitySurrenderException;
 import bg.deck.tabla.exception.TablaException;
@@ -51,6 +53,7 @@ public class TablaService {
     private final TablaTurnTimer tablaTurnTimer;
     private final WebSocketService webSocketService;
     private final AvailabilityService availabilityService;
+    private final ReactionService reactionService;
 
     private final Queue<String> matchQueue = new ConcurrentLinkedQueue<>();
 
@@ -281,6 +284,14 @@ public class TablaService {
        ------------------------------------------------------------------ */
 
     @Transactional
+    /** A reaction to the table: both players see it. */
+    public void react(Reaction reaction) {
+        String username = AuthenticatedUser.username();
+        TablaGame game = tablaUtilService.findActiveGame(username);
+        reactionService.send(username,
+                List.of(game.getFirstPlayer().getUsername(), game.getSecondPlayer().getUsername()), reaction);
+    }
+
     public void surrender() {
         String username = AuthenticatedUser.username();
         TablaGame game = tablaUtilService.findActiveGame(username);

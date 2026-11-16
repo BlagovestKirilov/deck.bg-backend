@@ -1,5 +1,6 @@
 package bg.deck.tabla.controller;
 
+import bg.deck.common.model.request.ReactionRequest;
 import bg.deck.common.model.response.SearchGameResponse;
 import bg.deck.tabla.model.request.MoveRequest;
 import bg.deck.tabla.service.TablaService;
@@ -78,6 +79,12 @@ public class TablaController {
     @PostMapping("/confirm")
     public ResponseEntity<Void> confirm() {
         tablaService.confirm();
+        return ResponseEntity.accepted().build();
+    }
+
+    @PostMapping("/react")
+    public ResponseEntity<Void> react(@Valid @RequestBody ReactionRequest request) {
+        tablaService.react(request.reaction());
         return ResponseEntity.accepted().build();
     }
 

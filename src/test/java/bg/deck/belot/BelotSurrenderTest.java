@@ -1,5 +1,6 @@
 package bg.deck.belot;
 
+import bg.deck.common.service.ReactionService;
 import bg.deck.belot.config.BelotProperties;
 import bg.deck.belot.enums.BidKind;
 import bg.deck.belot.enums.Contract;
@@ -55,7 +56,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @DataJpaTest
 @EnableConfigurationProperties(BelotProperties.class)
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@Import({BelotService.class, BelotTableService.class, BelotMatchmakingService.class, BelotDealService.class, BelotPlayService.class,
+@Import({BelotService.class, ReactionService.class, BelotTableService.class, BelotMatchmakingService.class, BelotDealService.class, BelotPlayService.class,
         BelotTurnService.class, BelotPlayerService.class, BelotSeedService.class, BelotStatsService.class})
 @TestPropertySource(properties = {
         "spring.liquibase.enabled=false",

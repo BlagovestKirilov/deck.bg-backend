@@ -1,5 +1,7 @@
 package bg.deck.santase.service;
 
+import bg.deck.common.enums.Reaction;
+import bg.deck.common.service.ReactionService;
 import bg.deck.common.constant.LogConstants;
 import bg.deck.santase.enums.Rank;
 import bg.deck.santase.exception.CardNotFoundException;
@@ -44,6 +46,7 @@ public class SantaseService {
     private final SantaseDealService santaseDealService;
     private final SantaseTurnTimer santaseTurnTimer;
     private final AvailabilityService availabilityService;
+    private final ReactionService reactionService;
 
     private final Queue<String> matchQueue = new ConcurrentLinkedQueue<>();
 
@@ -315,6 +318,14 @@ public class SantaseService {
     }
 
     @Transactional
+    /** A reaction to the table: both players see it. */
+    public void react(Reaction reaction) {
+        String username = AuthenticatedUser.username();
+        SantaseGame game = santaseDealService.findGameByUsername(username);
+        reactionService.send(username,
+                List.of(game.getFirstPlayer().getUsername(), game.getSecondPlayer().getUsername()), reaction);
+    }
+
     public void surrender() {
         String username = AuthenticatedUser.username();
         SantaseGame game = santaseDealService.findGameByUsername(username);
