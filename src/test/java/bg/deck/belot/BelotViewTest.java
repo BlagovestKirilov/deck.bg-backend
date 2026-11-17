@@ -255,6 +255,12 @@ class BelotViewTest {
                 "the deck has not been cut");
         assertEquals(deal.cutter(), turnService.toAct(deal).orElseThrow(), "it is the cutter's turn");
         assertNull(viewNowFor(PLAYERS.getFirst()).cutAt(), "and every screen is told it is waiting for the cut");
+        PLAYERS.forEach(name -> {
+            assertTrue(viewNowFor(name).yourHand().isEmpty(), "nobody sees their next hand before the cut");
+            assertTrue(viewNowFor(name).bidding().yours().isEmpty(), "nor is offered a call they could not make");
+            viewNowFor(name).seats().forEach(seat ->
+                    assertEquals(0, seat.cardsLeft(), "and nobody holds a card yet"));
+        });
 
         Seat notTheCutter = deal.cutter().next();
         assertThrows(IllegalMoveException.class,
@@ -263,6 +269,8 @@ class BelotViewTest {
 
         belot.cut(nameAt(deal.cutter()), new BelotCutRequest(12));
         assertEquals(12, viewNowFor(PLAYERS.getFirst()).cutAt(), "every screen is told where it was cut");
+        assertEquals(5, viewNowFor(PLAYERS.getFirst()).yourHand().size(), "and the five are dealt once it is cut");
+        assertFalse(viewNowFor(nameAt(first)).bidding().yours().isEmpty(), "and the first bidder may call");
         belot.bid(nameAt(first), new BelotBidRequest(BidKind.PASS, null));
         assertEquals(1, deal.getBids().size(), "and the bidding opens");
     }

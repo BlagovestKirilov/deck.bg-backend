@@ -436,12 +436,18 @@ public class BelotService {
 
         List<Card> hand = List.of();
         if (deal.isPresent() && seat != null) {
-            // Five while the bidding is on, then what is left of the eight —
-            // and nothing once the hand is over. A finished deal still has
-            // the eight it was dealt, and sending those back put a full hand
-            // in front of a player whose game had just ended.
+            // Nothing until the deck is cut, five while the bidding is on, then
+            // what is left of the eight — and nothing once the hand is over.
+            // The deck is cut before it is dealt: sending the five while the
+            // cut was awaited showed a player their next hand early wherever
+            // the screen did not hide it (reduced motion, or the last hand's
+            // result still up when the new deal arrived). A finished deal
+            // still has the eight it was dealt, and sending those back put a
+            // full hand in front of a player whose game had just ended.
             hand = switch (deal.get().getStatus()) {
-                case BIDDING -> belotDealService.visibleHand(table, deal.get(), seat);
+                case BIDDING -> deal.get().isAwaitingCut()
+                        ? List.of()
+                        : belotDealService.visibleHand(table, deal.get(), seat);
                 case PLAYING -> belotPlayService.handOf(table, deal.get(), seat);
                 case THROWN_IN, FINISHED, ABANDONED -> List.of();
             };
@@ -482,7 +488,8 @@ public class BelotService {
      */
     private int cardsLeft(java.util.Optional<BelotDeal> deal, Seat seat) {
         return deal.map(current -> switch (current.getStatus()) {
-            case BIDDING -> Dealing.BEFORE_BIDDING;
+            // Nobody holds a card before the deck is cut and dealt.
+            case BIDDING -> current.isAwaitingCut() ? 0 : Dealing.BEFORE_BIDDING;
             case PLAYING -> Dealing.HAND_SIZE - current.playedBy(seat).size();
             // A hand that is over, however it ended: nobody is holding
             // anything at the table any more.
@@ -503,7 +510,10 @@ public class BelotService {
         }
         Bidding bidding = deal.bidding();
 
-        List<BelotBidView> yours = bidding.toAct() == seat
+        // No call is open to anybody until the deck is cut: a bid then is
+        // refused, so offering one put live-looking buttons in front of the
+        // first bidder wherever the screen did not cover them with the cut.
+        List<BelotBidView> yours = bidding.toAct() == seat && !deal.isAwaitingCut()
                 ? bidding.legalActions().stream().map(BelotBidView::of).toList()
                 : List.of();
 
