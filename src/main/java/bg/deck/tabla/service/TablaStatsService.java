@@ -51,6 +51,10 @@ public class TablaStatsService {
      */
     @Transactional
     public void record(TablaGame game) {
+        // A game between friends, from a challenge, counts for neither.
+        if (game.isFriendly()) {
+            return;
+        }
         TablaSeat winner = game.getWinner();
         TablaPlayerStats won = recordOf(winner);
         TablaPlayerStats lost = recordOf(game.getOpponent(winner));

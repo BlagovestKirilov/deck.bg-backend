@@ -45,6 +45,6 @@ class PublicSchemaTest {
                 .getResultList();
 
         assertThat(tables).isEqualTo(List.of("available_service", "deleted_users", "email_confirmation",
-                "forgot_password", "user_deletion", "users"));
+                "forgot_password", "friendship", "user_deletion", "users"));
     }
 }

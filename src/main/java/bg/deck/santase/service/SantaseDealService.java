@@ -45,6 +45,11 @@ public class SantaseDealService {
 
     @Transactional
     public SantaseGame startGame(SantaseSeat firstPlayer, SantaseSeat secondPlayer) {
+        return startGame(firstPlayer, secondPlayer, false);
+    }
+
+    /** A new game; a friendly one, from a challenge, counts for neither player. */
+    public SantaseGame startGame(SantaseSeat firstPlayer, SantaseSeat secondPlayer, boolean friendly) {
         SantaseGameState gameState = SantaseGameState.builder().build();
         firstPlayer.setResult(0);
         secondPlayer.setResult(0);
@@ -55,6 +60,7 @@ public class SantaseDealService {
                 .firstPlayer(firstPlayer)
                 .secondPlayer(secondPlayer)
                 .state(gameState)
+                .friendly(friendly)
                 .build();
 
         prepareNewState(game, null);

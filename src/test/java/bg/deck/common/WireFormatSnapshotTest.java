@@ -62,8 +62,20 @@ import bg.deck.common.model.response.AdminPlayerPage;
 import bg.deck.common.model.response.AdminPlayerRow;
 import bg.deck.common.model.response.ProfileResponse;
 import bg.deck.common.model.response.ReactionResponse;
+import bg.deck.common.model.response.ChallengeAcceptedResponse;
+import bg.deck.common.model.response.ChallengeView;
+import bg.deck.common.model.response.FriendEvent;
+import bg.deck.common.model.response.FriendRequestView;
+import bg.deck.common.model.response.FriendView;
+import bg.deck.common.model.response.FriendsResponse;
+import bg.deck.common.model.response.FriendSearchResponse;
+import bg.deck.common.model.response.FriendSearchHit;
+import bg.deck.common.enums.FriendRelation;
+import bg.deck.common.enums.FriendEventType;
 import bg.deck.common.model.response.SearchGameResponse;
 import bg.deck.common.model.request.ReactionRequest;
+import bg.deck.common.model.request.AddFriendRequest;
+import bg.deck.common.model.request.ChallengeRequest;
 import bg.deck.common.enums.Reaction;
 import bg.deck.tabla.model.response.TablaStateResponse;
 import jakarta.validation.ConstraintViolation;
@@ -215,6 +227,19 @@ class WireFormatSnapshotTest {
                 91, 64, 0));
 
         out.put("ReactionResponse", new ReactionResponse("petko91", Reaction.RED_CARD));
+        ChallengeView challenge = new ChallengeView(ID, "petko91", "gosho", "SANTASE",
+                Instant.parse("2026-11-21T19:30:00Z"));
+        out.put("FriendsResponse", new FriendsResponse(
+                List.of(new FriendView("gosho", true, "TABLA",
+                        Map.of("SANTASE", new GameStatsDTO(12, 7, "GOLD", 0)))),
+                List.of(new FriendRequestView(ID, "ivan")),
+                List.of(new FriendRequestView(ID, "ninja2011")),
+                challenge, null));
+        out.put("FriendEvent", FriendEvent.about(FriendEventType.CHALLENGE, challenge, "petko91"));
+        out.put("FriendEventStarted", FriendEvent.started("SANTASE", ID, "gosho"));
+        out.put("ChallengeAcceptedResponse", new ChallengeAcceptedResponse("TABLA", ID));
+        out.put("FriendSearchResponse", new FriendSearchResponse(
+                List.of(new FriendSearchHit("player1", FriendRelation.RECEIVED)), true));
         out.put("SearchGameResponse.waiting", SearchGameResponse.waiting());
         out.put("SearchGameResponse.started", SearchGameResponse.started(ID));
 
@@ -314,6 +339,8 @@ class WireFormatSnapshotTest {
                 "{\"card\":{\"suit\":\"SPADES\",\"rank\":\"ACE\"},\"announce\":\"NONE\",\"belote\":false}");
         read(out, BelotCutRequest.class, "{\"at\":12}");
         read(out, ReactionRequest.class, "{\"reaction\":\"LAUGH\"}");
+        read(out, AddFriendRequest.class, "{\"username\":\"gosho\"}");
+        read(out, ChallengeRequest.class, "{\"username\":\"gosho\",\"game\":\"SANTASE\"}");
 
         return out;
     }

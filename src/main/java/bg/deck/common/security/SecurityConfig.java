@@ -109,6 +109,7 @@ public class SecurityConfig {
                         .requestMatchers("/santase/**").hasAnyRole(USER, ADMIN)
                         .requestMatchers("/tabla/**").hasAnyRole(USER, ADMIN)
                         .requestMatchers("/belot/**").hasAnyRole(USER, ADMIN)
+                        .requestMatchers("/friends/**").hasAnyRole(USER, ADMIN)
                         .requestMatchers("/user/confirm-deletion").permitAll()
                         .requestMatchers("/user/**").hasAnyRole(USER, ADMIN)
                         .requestMatchers("/admin/**").access(isAdmin())

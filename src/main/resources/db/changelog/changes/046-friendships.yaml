@@ -1,0 +1,88 @@
+databaseChangeLog:
+  # Friends: one row per pair, made when one player asks the other. PENDING
+  # until the other accepts, then ACCEPTED. Nothing is deleted by the game: a
+  # request turned down is REJECTED, one taken back CANCELLED, an ended
+  # friendship REMOVED, and asking again reuses the row. Both ends are
+  # accounts, so the keys point at users and go with them: deleting an
+  # account deletes its friendships.
+  # A new table only — nothing that exists is changed.
+  - changeSet:
+      id: 046-friendships
+      author: Blagovest Kirilov
+      comment: public.friendship, a friend request and, once accepted, the friendship
+      changes:
+        - createTable:
+            schemaName: public
+            tableName: friendship
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  constraints:
+                    nullable: false
+                    primaryKey: true
+                    primaryKeyName: friendship_pkey
+              - column:
+                  name: created_at
+                  type: TIMESTAMP WITH TIME ZONE
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: TIMESTAMP WITH TIME ZONE
+                  constraints:
+                    nullable: false
+              - column:
+                  name: requester_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: addressee_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: status
+                  type: VARCHAR(20)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: responded_at
+                  type: TIMESTAMP WITH TIME ZONE
+                  constraints:
+                    nullable: true
+        - addUniqueConstraint:
+            schemaName: public
+            tableName: friendship
+            columnNames: requester_id, addressee_id
+            constraintName: friendship_pair_unique
+        - addForeignKeyConstraint:
+            baseTableSchemaName: public
+            baseTableName: friendship
+            baseColumnNames: requester_id
+            constraintName: friendship_requester_fk
+            referencedTableSchemaName: public
+            referencedTableName: users
+            referencedColumnNames: id
+            onDelete: CASCADE
+        - addForeignKeyConstraint:
+            baseTableSchemaName: public
+            baseTableName: friendship
+            baseColumnNames: addressee_id
+            constraintName: friendship_addressee_fk
+            referencedTableSchemaName: public
+            referencedTableName: users
+            referencedColumnNames: id
+            onDelete: CASCADE
+        - createIndex:
+            schemaName: public
+            tableName: friendship
+            indexName: friendship_addressee_idx
+            columns:
+              - column:
+                  name: addressee_id
+      rollback:
+        - dropTable:
+            schemaName: public
+            tableName: friendship

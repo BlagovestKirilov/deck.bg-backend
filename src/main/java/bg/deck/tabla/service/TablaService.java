@@ -3,6 +3,8 @@ package bg.deck.tabla.service;
 import bg.deck.common.enums.Reaction;
 import bg.deck.common.service.ReactionService;
 import bg.deck.common.constant.LogConstants;
+import bg.deck.common.constant.ExceptionConstants;
+import bg.deck.common.exception.BadRequestException;
 import bg.deck.common.exception.PlayerInactivitySurrenderException;
 import bg.deck.tabla.exception.TablaException;
 import bg.deck.tabla.model.TablaGame;
@@ -109,6 +111,37 @@ public class TablaService {
         webSocketService.notifyGameSearch(List.of(waiting, username), TABLA,
                 SearchGameResponse.started(game.getId()));
         tablaTurnTimer.update(game);
+    }
+
+    /**
+     * Two friends' game, from an accepted challenge: a game that counts for
+     * neither. Either is taken out of the search queue first; a player who
+     * has sat down at another game meanwhile stops it.
+     *
+     * @return the new game's id
+     */
+    public UUID startFriendly(String challenger, String challenged) {
+        matchQueue.remove(challenger);
+        matchQueue.remove(challenged);
+        if (!tablaUtilService.checkIfUserExistsAndIsAvailable(challenger)
+                || !tablaUtilService.checkIfUserExistsAndIsAvailable(challenged)) {
+            throw new BadRequestException(ExceptionConstants.CHALLENGE_PLAYER_BUSY);
+        }
+
+        TablaSeat first = tablaSeatService.newSeatFor(challenger);
+        TablaSeat second = tablaSeatService.newSeatFor(challenged);
+        TablaGame game = tablaUtilService.startGame(first, second, true);
+        log.info("Friendly табла: {} vs {} ({})", challenger, challenged, game.getId());
+
+        webSocketService.notifyGameSearch(List.of(challenger, challenged), TABLA,
+                SearchGameResponse.started(game.getId()));
+        tablaTurnTimer.update(game);
+        return game.getId();
+    }
+
+    /** True while this player waits in the search queue for an opponent. */
+    public boolean isSearching(String username) {
+        return matchQueue.contains(username);
     }
 
     public void cancelSearch(String username) {

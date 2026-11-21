@@ -62,6 +62,11 @@ public class TablaUtilService {
      */
     @Transactional
     public TablaGame startGame(TablaSeat firstPlayer, TablaSeat secondPlayer) {
+        return startGame(firstPlayer, secondPlayer, false);
+    }
+
+    /** A new game; a friendly one, from a challenge, counts for neither player. */
+    public TablaGame startGame(TablaSeat firstPlayer, TablaSeat secondPlayer, boolean friendly) {
         firstPlayer.setInactivityCount(0);
         secondPlayer.setInactivityCount(0);
 
@@ -79,6 +84,7 @@ public class TablaUtilService {
                 .state(state)
                 .serverSeed(seed)
                 .serverSeedHash(diceService.hash(seed))
+                .friendly(friendly)
                 .build();
 
         game = tablaGameRepository.save(game);

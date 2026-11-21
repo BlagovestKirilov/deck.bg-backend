@@ -1,0 +1,44 @@
+databaseChangeLog:
+  # A game two friends started by a challenge: it moves no rating and no
+  # record. Not null with a default of false, so every game that exists — and
+  # every one matchmaking starts — stays an ordinary ranked game.
+  - changeSet:
+      id: 047-santase-friendly-games
+      author: Blagovest Kirilov
+      comment: santase.game.friendly, a game between friends that does not count
+      changes:
+        - addColumn:
+            schemaName: santase
+            tableName: game
+            columns:
+              - column:
+                  name: friendly
+                  type: BOOLEAN
+                  defaultValueBoolean: false
+                  constraints:
+                    nullable: false
+      rollback:
+        - dropColumn:
+            schemaName: santase
+            tableName: game
+            columnName: friendly
+  - changeSet:
+      id: 047-tabla-friendly-games
+      author: Blagovest Kirilov
+      comment: tabla.game.friendly, a game between friends that does not count
+      changes:
+        - addColumn:
+            schemaName: tabla
+            tableName: game
+            columns:
+              - column:
+                  name: friendly
+                  type: BOOLEAN
+                  defaultValueBoolean: false
+                  constraints:
+                    nullable: false
+      rollback:
+        - dropColumn:
+            schemaName: tabla
+            tableName: game
+            columnName: friendly

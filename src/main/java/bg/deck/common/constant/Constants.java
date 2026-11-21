@@ -33,6 +33,13 @@ public class Constants {
      */
     public static final String NOTIFY_REACTION_DESTINATION = "/topic/reactions/%s";
 
+    /**
+     * What happens among a player's friends — requests, challenges, a game a
+     * challenge started — on a topic of their own, which the hub listens to.
+     * Ends in the username, as every topic must.
+     */
+    public static final String NOTIFY_FRIENDS_DESTINATION = "/topic/friends/%s";
+
     /** The one cache: the games on offer. @see bg.deck.common.config.CacheConfig */
     public static final String SERVICES_CACHE = "services";
 

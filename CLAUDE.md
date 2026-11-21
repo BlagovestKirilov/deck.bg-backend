@@ -26,7 +26,9 @@ all four.
   games share as code, never as a table: the timing every turn clock uses
   (`DeadlineTimer`, `TurnClock`), the rating (`Elo`, `RankLadder`,
   `BasePlayerStats`), the profile's question to each game
-  (`GameRecordProvider`) and the admin page's (`GameAdminView`). A game
+  (`GameRecordProvider`), the admin page's (`GameAdminView`) and the friends
+  list's (`PlayingProvider` — is this player at a table — and
+  `ChallengeStarter` — seat two friends at a friendly game). A game
   package may use `common`; **`common` imports no game package**, and
   `CommonStandsAloneTest` fails if it does. What common needs from a game it
   gets through an interface the game implements (`GameRecordProvider`,
@@ -62,6 +64,7 @@ that service.**
 | `BelotDealRepository` | `BelotDealService` |
 | `BelotPlayerStatsRepository` | `BelotStatsService` |
 | `BelotMatchmakingRepository` | `BelotMatchmakingService` |
+| `FriendshipRepository` | `FriendshipService` |
 
 Check it in one line — every repository must print `1`:
 
