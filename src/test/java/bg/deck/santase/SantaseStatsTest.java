@@ -71,6 +71,18 @@ class SantaseStatsTest {
     }
 
     @Test
+    @DisplayName("a game between friends, from a challenge, writes no record and moves no rating")
+    void aFriendlyGameCountsForNeither() {
+        SantaseGame game = gameWonBy("petko91", "gosho");
+        game.setFriendly(true);
+
+        stats.record(game);
+        flush();
+
+        assertThat(records.count()).isZero();
+    }
+
+    @Test
     @DisplayName("a second result adds to the same record")
     void aSecondResultAddsUp() {
         stats.record(gameWonBy("petko91", "gosho"));

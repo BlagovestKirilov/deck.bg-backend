@@ -28,6 +28,23 @@ public class ExceptionConstants {
     public static final String PLAYER_NOT_IN_TURN = "Player: %s is not in turn.";
     public static final String PLAYER_NOT_FIRST_IN_TURN = "Player: %s is not first in turn.";
     public static final String CARD_NOT_FOUND = "Card not found in player %s hand.";
+
+    /* Friends and challenges: said to the player, so in Bulgarian. */
+    public static final String FRIEND_NOT_FOUND = "Няма играч с това име.";
+    public static final String FRIEND_SELF = "Не можете да добавите себе си.";
+    public static final String FRIEND_ALREADY = "Вече сте приятели.";
+    public static final String FRIEND_ALREADY_ASKED = "Поканата за приятелство вече е изпратена.";
+    public static final String FRIEND_REQUEST_GONE = "Поканата за приятелство вече не е активна.";
+    public static final String FRIEND_ASKED_TOO_SOON = "%s отказа поканата ви. Можете да опитате отново след %d дни.";
+    public static final String FRIEND_NOT_A_FRIEND = "Този играч не е ваш приятел.";
+    public static final String CHALLENGE_NOT_FRIENDS = "Можете да каните само приятели.";
+    public static final String CHALLENGE_YOU_ARE_PLAYING = "Вече сте в игра.";
+    public static final String CHALLENGE_OFFLINE = "%s не е на линия.";
+    public static final String CHALLENGE_BUSY = "%s в момента играе.";
+    public static final String CHALLENGE_ALREADY_OPEN = "Вече има отворена покана за игра.";
+    public static final String CHALLENGE_GONE = "Поканата за игра вече не е активна.";
+    public static final String CHALLENGE_GAME_UNKNOWN = "На тази игра не може да се кани.";
+    public static final String CHALLENGE_PLAYER_BUSY = "Някой от двамата вече е в игра.";
     public static final String CARD_NOT_FOUND_FOR_REPLACING = "Card not found for replacing for player %s.";
     public static final String NO_ACTIVE_GAME = "No active game found for %s.";
     public static final String DECK_SIZE_EXCEPTION = "Deck size must be greater than %s and less than %s.";

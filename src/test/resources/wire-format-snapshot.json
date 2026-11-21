@@ -222,6 +222,64 @@
     "from" : "petko91",
     "reaction" : "RED_CARD"
   },
+  "FriendsResponse" : {
+    "friends" : [ {
+      "username" : "gosho",
+      "online" : true,
+      "playing" : "TABLA",
+      "ranks" : {
+        "SANTASE" : {
+          "wins" : 12,
+          "losses" : 7,
+          "rank" : "GOLD",
+          "placementGamesRemaining" : 0
+        }
+      }
+    } ],
+    "incoming" : [ {
+      "id" : "11111111-2222-3333-4444-555555555555",
+      "username" : "ivan"
+    } ],
+    "outgoing" : [ {
+      "id" : "11111111-2222-3333-4444-555555555555",
+      "username" : "ninja2011"
+    } ],
+    "incomingChallenge" : {
+      "id" : "11111111-2222-3333-4444-555555555555",
+      "from" : "petko91",
+      "to" : "gosho",
+      "game" : "SANTASE",
+      "expiresAt" : "2026-11-21T19:30:00Z"
+    }
+  },
+  "FriendEvent" : {
+    "type" : "CHALLENGE",
+    "from" : "petko91",
+    "challenge" : {
+      "id" : "11111111-2222-3333-4444-555555555555",
+      "from" : "petko91",
+      "to" : "gosho",
+      "game" : "SANTASE",
+      "expiresAt" : "2026-11-21T19:30:00Z"
+    }
+  },
+  "FriendEventStarted" : {
+    "type" : "GAME_STARTED",
+    "from" : "gosho",
+    "game" : "SANTASE",
+    "gameId" : "11111111-2222-3333-4444-555555555555"
+  },
+  "ChallengeAcceptedResponse" : {
+    "game" : "TABLA",
+    "gameId" : "11111111-2222-3333-4444-555555555555"
+  },
+  "FriendSearchResponse" : {
+    "players" : [ {
+      "username" : "player1",
+      "relation" : "RECEIVED"
+    } ],
+    "more" : true
+  },
   "SearchGameResponse.waiting" : {
     "status" : "WAITING"
   },
@@ -572,5 +630,20 @@
     },
     "violationsWhenFull" : "[]",
     "violationsWhenEmpty" : "[reaction:NotNull]"
+  },
+  "AddFriendRequest" : {
+    "readsBack" : {
+      "username" : "gosho"
+    },
+    "violationsWhenFull" : "[]",
+    "violationsWhenEmpty" : "[username:NotBlank]"
+  },
+  "ChallengeRequest" : {
+    "readsBack" : {
+      "username" : "gosho",
+      "game" : "SANTASE"
+    },
+    "violationsWhenFull" : "[]",
+    "violationsWhenEmpty" : "[game:NotBlank, username:NotBlank]"
   }
 }

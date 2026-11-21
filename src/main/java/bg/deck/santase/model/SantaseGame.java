@@ -4,6 +4,7 @@ import bg.deck.common.exception.UserNotPartOfGameException;
 import bg.deck.common.model.TurnClock;
 import bg.deck.common.model.base.BaseEntity;
 import jakarta.persistence.CascadeType;
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToOne;
@@ -48,6 +49,11 @@ public class SantaseGame extends BaseEntity {
     private SantaseSeat surrenderPlayer;
 
     private Instant finishedAt;
+
+    /** Started by a challenge between friends: it moves no rating and no record. */
+    @Column(nullable = false)
+    @Builder.Default
+    private boolean friendly = false;
 
     public SantaseSeat getPlayerByUsername(String username) {
         if (username.equals(firstPlayer.getUsername())) {

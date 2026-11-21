@@ -1,5 +1,6 @@
 package bg.deck.common.service;
 
+import bg.deck.common.model.response.FriendEvent;
 import bg.deck.common.model.response.ReactionResponse;
 import bg.deck.common.model.response.SearchGameResponse;
 import jakarta.annotation.PreDestroy;
@@ -12,6 +13,7 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static bg.deck.common.constant.Constants.NOTIFY_BELOT_DESTINATION;
+import static bg.deck.common.constant.Constants.NOTIFY_FRIENDS_DESTINATION;
 import static bg.deck.common.constant.Constants.NOTIFY_GAME_DESTINATION;
 import static bg.deck.common.constant.Constants.NOTIFY_GAME_SEARCH_DESTINATION;
 import static bg.deck.common.constant.Constants.NOTIFY_REACTION_DESTINATION;
@@ -57,6 +59,12 @@ public class WebSocketService {
     public void notifyReaction(String username, ReactionResponse reaction) {
         String destination = String.format(NOTIFY_REACTION_DESTINATION, username);
         enqueueMessage(username, () -> messagingTemplate.convertAndSend(destination, reaction));
+    }
+
+    /** Something that happened among this player's friends. */
+    public void notifyFriends(String username, FriendEvent event) {
+        String destination = String.format(NOTIFY_FRIENDS_DESTINATION, username);
+        enqueueMessage(username, () -> messagingTemplate.convertAndSend(destination, event));
     }
 
     public void notifyGameSearch(String username, SearchGameResponse searchGameResponse) {

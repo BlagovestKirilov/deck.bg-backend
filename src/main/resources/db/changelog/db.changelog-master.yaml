@@ -141,3 +141,11 @@ databaseChangeLog:
   # they said a belote; null on every play before this, meaning as before.
   - include:
       file: db/changelog/changes/045-belot-play-choices.yaml
+
+  # Friends: a request, and once accepted the friendship. A new table.
+  - include:
+      file: db/changelog/changes/046-friendships.yaml
+
+  # A game between friends, started by a challenge: it does not count.
+  - include:
+      file: db/changelog/changes/047-friendly-games.yaml

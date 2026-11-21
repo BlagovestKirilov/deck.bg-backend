@@ -52,6 +52,10 @@ public class SantaseStatsService {
      */
     @Transactional
     public void record(SantaseGame game) {
+        // A game between friends, from a challenge, counts for neither.
+        if (game.isFriendly()) {
+            return;
+        }
         SantaseSeat winner = game.getWinner();
         SantasePlayerStats won = recordOf(winner);
         SantasePlayerStats lost = recordOf(game.getOpponent(winner));

@@ -8,6 +8,8 @@ import bg.deck.santase.exception.CardNotFoundException;
 import bg.deck.santase.exception.NoCardForReplacingException;
 import bg.deck.santase.exception.NotFirstInTurnException;
 import bg.deck.santase.exception.NotInTurnException;
+import bg.deck.common.constant.ExceptionConstants;
+import bg.deck.common.exception.BadRequestException;
 import bg.deck.common.exception.PlayerInactivitySurrenderException;
 import bg.deck.common.exception.UserNotPartOfGameException;
 import bg.deck.santase.model.Card;
@@ -122,6 +124,37 @@ public class SantaseService {
                     SearchGameResponse.started(newGame.getId()));
             santaseTurnTimer.update(newGame);
         }
+    }
+
+    /**
+     * Two friends' game, from an accepted challenge: a game that counts for
+     * neither. Either is taken out of the search queue first; a player who
+     * has sat down at another game meanwhile stops it.
+     *
+     * @return the new game's id
+     */
+    public UUID startFriendly(String challenger, String challenged) {
+        matchQueue.remove(challenger);
+        matchQueue.remove(challenged);
+        if (!santaseTableService.checkIfUserExistsAndIsAvailable(challenger)
+                || !santaseTableService.checkIfUserExistsAndIsAvailable(challenged)) {
+            throw new BadRequestException(ExceptionConstants.CHALLENGE_PLAYER_BUSY);
+        }
+
+        SantaseSeat firstPlayer = santaseSeatService.newSeatFor(challenged);
+        SantaseSeat secondPlayer = santaseSeatService.newSeatFor(challenger);
+        SantaseGame newGame = santaseDealService.startGame(firstPlayer, secondPlayer, true);
+        log.info("Friendly сантасе: {} vs {} ({})", challenger, challenged, newGame.getId());
+
+        webSocketService.notifyGameSearch(List.of(challenger, challenged), SANTASE,
+                SearchGameResponse.started(newGame.getId()));
+        santaseTurnTimer.update(newGame);
+        return newGame.getId();
+    }
+
+    /** True while this player waits in the search queue for an opponent. */
+    public boolean isSearching(String username) {
+        return matchQueue.contains(username);
     }
 
     public void cancelSearchGame(String username) {

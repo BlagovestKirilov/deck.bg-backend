@@ -56,6 +56,11 @@ public class TablaGame extends BaseEntity {
 
     private Instant finishedAt;
 
+    /** Started by a challenge between friends: it moves no rating and no record. */
+    @Column(nullable = false)
+    @Builder.Default
+    private boolean friendly = false;
+
     public TablaSeat getPlayerByUsername(String username) {
         if (username.equals(firstPlayer.getUsername())) {
             return firstPlayer;

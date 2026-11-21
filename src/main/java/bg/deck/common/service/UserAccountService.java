@@ -12,6 +12,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import jakarta.persistence.criteria.Predicate;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
@@ -39,6 +40,30 @@ public class UserAccountService {
 
     public Optional<User> findByUsername(String username) {
         return userRepository.findByUsername(username);
+    }
+
+    /**
+     * The account a player means by a name typed in any case: the exact name
+     * first, then the one account that matches ignoring case. Two accounts
+     * differing only in case are both left alone — the name must be exact.
+     */
+    @Transactional(readOnly = true)
+    public Optional<User> findByUsernameAnyCase(String username) {
+        Optional<User> exact = userRepository.findByUsername(username);
+        if (exact.isPresent()) {
+            return exact;
+        }
+        List<User> matches = userRepository.findAllByUsernameIgnoreCase(username);
+        return matches.size() == 1 ? Optional.of(matches.getFirst()) : Optional.empty();
+    }
+
+    /** Usernames starting with what was typed, any case, alphabetically. */
+    @Transactional(readOnly = true)
+    public List<String> usernamesStartingWith(String prefix, int limit) {
+        return userRepository.findByUsernameStartingWithIgnoreCaseOrderByUsernameAsc(prefix, PageRequest.of(0, limit))
+                .stream()
+                .map(User::getUsername)
+                .toList();
     }
 
     public Optional<User> findByEmail(String email) {

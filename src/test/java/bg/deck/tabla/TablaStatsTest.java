@@ -69,6 +69,20 @@ class TablaStatsTest {
         assertThat(records.findByUsername("gosho")).isEmpty();
     }
 
+    @Test
+    @DisplayName("a game between friends, from a challenge, writes no record and moves no rating")
+    void aFriendlyGameCountsForNeither() {
+        TablaSeat won = seat("petko91");
+        TablaSeat lost = seat("gosho");
+        TablaGame game = TablaGame.builder().firstPlayer(won).secondPlayer(lost).friendly(true).build();
+        game.setWinner(won, true);
+
+        stats.record(game);
+        entityManager.flush();
+
+        assertThat(records.count()).isZero();
+    }
+
     private static TablaSeat seat(String username) {
         TablaSeat player = TablaSeat.builder().username(username).build();
         try {
