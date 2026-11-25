@@ -8,8 +8,10 @@ import bg.deck.belot.model.BelotMatchmaking;
 import bg.deck.belot.model.BelotSeat;
 import bg.deck.belot.repository.BelotGameRepository;
 import bg.deck.common.constant.Constants;
+import bg.deck.common.model.event.PlayingChanged;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
@@ -38,6 +40,7 @@ public class BelotTableService {
     private final BelotGameRepository belotGameRepository;
     private final BelotMatchmakingService belotMatchmakingService;
     private final BelotSeedService belotSeedService;
+    private final ApplicationEventPublisher events;
 
     /**
      * Sits this player down: back at their own table if they have one, at the
@@ -70,6 +73,7 @@ public class BelotTableService {
             // first to speak is the one who has been waiting longest.
             table.setDealerSeat(seat);
             log.info("Belot: table {} is full, {} deals first", table.getId(), seat);
+            events.publishEvent(playersOf(table));
         }
         return belotGameRepository.save(table);
     }
@@ -198,6 +202,7 @@ public class BelotTableService {
         game.setForfeit(how);
         game.setForfeitedBy(seat.getUsername());
         belotGameRepository.save(game);
+        events.publishEvent(playersOf(game));
 
         log.info("Belot: {} {} table {}, so it goes to {} ({}-{})",
                 seat.getUsername(), how == BelotForfeit.INACTIVITY ? "ran out of time three times at" : "conceded",
@@ -249,5 +254,10 @@ public class BelotTableService {
             belotGameRepository.save(game);
         }
         return renamed;
+    }
+
+    /** All four, for their friends to hear they sat down or got up. */
+    static PlayingChanged playersOf(BelotGame table) {
+        return new PlayingChanged(table.getSeats().stream().map(BelotSeat::getUsername).toList());
     }
 }

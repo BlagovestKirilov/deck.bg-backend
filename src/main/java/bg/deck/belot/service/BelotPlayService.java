@@ -24,6 +24,7 @@ import bg.deck.belot.enums.BelotGameStatus;
 import bg.deck.belot.model.BelotPlay;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -53,6 +54,7 @@ public class BelotPlayService {
 
     private final BelotDealService belotDealService;
     private final BelotStatsService belotStatsService;
+    private final ApplicationEventPublisher events;
 
     /**
      * Whose turn it is to play.
@@ -181,6 +183,7 @@ public class BelotPlayService {
             game.setWinnerTeam(winner);
             game.setStatus(BelotGameStatus.FINISHED);
             belotStatsService.record(game);
+            events.publishEvent(BelotTableService.playersOf(game));
             log.info("Belot: table {} goes to {} ({}–{})", game.getId(), winner,
                     game.getNorthSouthScore(), game.getEastWestScore());
         });

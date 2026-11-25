@@ -16,8 +16,10 @@ import bg.deck.tabla.engine.Dice;
 import bg.deck.tabla.enums.GameResultKind;
 import bg.deck.tabla.engine.Hop;
 import bg.deck.tabla.enums.Side;
+import bg.deck.common.model.event.PlayingChanged;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
@@ -48,6 +50,7 @@ public class TablaUtilService {
     private final WebSocketService webSocketService;
     private final TablaStatsService tablaStatsService;
     private final TablaDiceService diceService;
+    private final ApplicationEventPublisher events;
 
     /* ------------------------------------------------------------------
        Lifecycle
@@ -92,7 +95,9 @@ public class TablaUtilService {
         // Nobody is on turn yet: each player throws one die first, with the same
         // time — and the same warning — as any turn.
         state.extendNextMoveTime();
-        return tablaGameRepository.save(game);
+        TablaGame saved = tablaGameRepository.save(game);
+        events.publishEvent(playersOf(saved));
+        return saved;
     }
 
     /** The game with this id, if it is still there. */
@@ -326,6 +331,13 @@ public class TablaUtilService {
         tablaStatsService.record(game);
         tablaGameRepository.save(game);
         pushToBoth(game);
+        events.publishEvent(playersOf(game));
+    }
+
+    /** Both players, for their friends to hear they sat down or got up. */
+    private static PlayingChanged playersOf(TablaGame game) {
+        return new PlayingChanged(List.of(
+                game.getFirstPlayer().getUsername(), game.getSecondPlayer().getUsername()));
     }
 
     /**

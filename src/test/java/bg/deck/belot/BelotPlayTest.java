@@ -52,7 +52,7 @@ class BelotPlayTest {
     private final BelotSeedService seeds = new BelotSeedService();
     private final BelotDealService dealService = new BelotDealService(deals, seeds);
     private final BelotStatsService statsService = mock(BelotStatsService.class);
-    private final BelotPlayService play = new BelotPlayService(dealService, statsService);
+    private final BelotPlayService play = new BelotPlayService(dealService, statsService, event -> { });
 
     private BelotGame table;
     private BelotDeal deal;

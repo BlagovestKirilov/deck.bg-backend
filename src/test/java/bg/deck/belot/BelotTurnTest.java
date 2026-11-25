@@ -48,7 +48,7 @@ class BelotTurnTest {
     private final BelotSeedService seeds = new BelotSeedService();
     private final BelotDealService dealService = new BelotDealService(deals, seeds);
     private final BelotStatsService statsService = mock(BelotStatsService.class);
-    private final BelotPlayService playService = new BelotPlayService(dealService, statsService);
+    private final BelotPlayService playService = new BelotPlayService(dealService, statsService, event -> { });
     private final BelotTurnService turns = new BelotTurnService(
             dealService, playService, new BelotProperties(TIMEOUT, Duration.ZERO,
                     Duration.ofSeconds(8), Duration.ZERO, Duration.ZERO));

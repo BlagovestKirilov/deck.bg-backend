@@ -14,8 +14,10 @@ import bg.deck.santase.exception.NotInTurnException;
 import bg.deck.santase.model.Card;
 import bg.deck.santase.model.SantaseGameState;
 import bg.deck.santase.repository.SantaseGameStateRepository;
+import bg.deck.common.model.event.PlayingChanged;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -42,6 +44,7 @@ public class SantaseDealService {
     private final SantaseGameStateRepository gameStateRepository;
     private final WebSocketUtilService webSocketUtilService;
     private final SantaseStatsService santaseStatsService;
+    private final ApplicationEventPublisher events;
 
     @Transactional
     public SantaseGame startGame(SantaseSeat firstPlayer, SantaseSeat secondPlayer) {
@@ -64,7 +67,9 @@ public class SantaseDealService {
                 .build();
 
         prepareNewState(game, null);
-        return santaseTableService.saveGame(game);
+        SantaseGame saved = santaseTableService.saveGame(game);
+        events.publishEvent(playersOf(saved));
+        return saved;
     }
 
     /** This player's сантасе game in progress. */
@@ -397,6 +402,13 @@ public class SantaseDealService {
     public void finishGame(SantaseGame game, SantaseSeat winner, boolean opponentSurrendered) {
         santaseTableService.setGameWinner(game, winner, opponentSurrendered);
         santaseStatsService.record(game);
+        events.publishEvent(playersOf(game));
+    }
+
+    /** Both players, for their friends to hear they sat down or got up. */
+    private static PlayingChanged playersOf(SantaseGame game) {
+        return new PlayingChanged(List.of(
+                game.getFirstPlayer().getUsername(), game.getSecondPlayer().getUsername()));
     }
 
     @Transactional

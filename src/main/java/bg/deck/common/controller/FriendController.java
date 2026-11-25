@@ -50,35 +50,35 @@ public class FriendController {
     public ResponseEntity<FriendsResponse> request(@Valid @RequestBody AddFriendRequest request) {
         String me = AuthenticatedUser.username();
         friendshipService.request(me, request.username());
-        return ResponseEntity.ok(friendsService.pageOf(me));
+        return ResponseEntity.ok(friendsService.changedBy(me));
     }
 
     @PostMapping("/requests/{id}/accept")
     public ResponseEntity<FriendsResponse> accept(@PathVariable UUID id) {
         String me = AuthenticatedUser.username();
         friendshipService.accept(me, id);
-        return ResponseEntity.ok(friendsService.pageOf(me));
+        return ResponseEntity.ok(friendsService.changedBy(me));
     }
 
     @PostMapping("/requests/{id}/decline")
     public ResponseEntity<FriendsResponse> decline(@PathVariable UUID id) {
         String me = AuthenticatedUser.username();
         friendshipService.decline(me, id);
-        return ResponseEntity.ok(friendsService.pageOf(me));
+        return ResponseEntity.ok(friendsService.changedBy(me));
     }
 
     @DeleteMapping("/{username}")
     public ResponseEntity<FriendsResponse> remove(@PathVariable String username) {
         String me = AuthenticatedUser.username();
         friendshipService.remove(me, username);
-        return ResponseEntity.ok(friendsService.pageOf(me));
+        return ResponseEntity.ok(friendsService.changedBy(me));
     }
 
     @PostMapping("/challenges")
     public ResponseEntity<FriendsResponse> challenge(@Valid @RequestBody ChallengeRequest request) {
         String me = AuthenticatedUser.username();
         challengeService.challenge(me, request.username(), request.game());
-        return ResponseEntity.ok(friendsService.pageOf(me));
+        return ResponseEntity.ok(friendsService.changedBy(me));
     }
 
     @PostMapping("/challenges/{id}/accept")
@@ -90,13 +90,13 @@ public class FriendController {
     public ResponseEntity<FriendsResponse> declineChallenge(@PathVariable UUID id) {
         String me = AuthenticatedUser.username();
         challengeService.decline(me, id);
-        return ResponseEntity.ok(friendsService.pageOf(me));
+        return ResponseEntity.ok(friendsService.changedBy(me));
     }
 
     @DeleteMapping("/challenges/{id}")
     public ResponseEntity<FriendsResponse> cancelChallenge(@PathVariable UUID id) {
         String me = AuthenticatedUser.username();
         challengeService.cancel(me, id);
-        return ResponseEntity.ok(friendsService.pageOf(me));
+        return ResponseEntity.ok(friendsService.changedBy(me));
     }
 }
