@@ -238,6 +238,25 @@ public class FriendshipService {
      * Sends it once the change is committed: the screen reads the list again
      * on hearing it, and must find the change there.
      */
+    /**
+     * Everyone this player is linked to — friends, and anyone with a request
+     * open either way. Read before an account is deleted, since the rows go
+     * with it.
+     */
+    public List<String> everyoneLinkedTo(String me) {
+        FriendLinks links = linksOf(me);
+        List<String> linked = new ArrayList<>(links.friends());
+        links.incoming().forEach(request -> linked.add(request.username()));
+        links.outgoing().forEach(request -> linked.add(request.username()));
+        return linked;
+    }
+
+    /** Tells each of them this player is gone, so they drop out of their lists. */
+    public void tellGone(String me, List<String> linked) {
+        FriendEvent gone = FriendEvent.of(FriendEventType.REMOVED, me);
+        linked.forEach(other -> tell(other, gone));
+    }
+
     private void tell(String username, FriendEvent event) {
         if (TransactionSynchronizationManager.isSynchronizationActive()) {
             TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {

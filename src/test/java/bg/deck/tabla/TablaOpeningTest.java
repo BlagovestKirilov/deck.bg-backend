@@ -320,7 +320,7 @@ class TablaOpeningTest {
     }
 
     private TablaUtilService service(TablaDiceService dice) {
-        return new TablaUtilService(tablaGameRepository, mock(WebSocketService.class), mock(TablaStatsService.class), dice);
+        return new TablaUtilService(tablaGameRepository, mock(WebSocketService.class), mock(TablaStatsService.class), dice, event -> { });
     }
 
     /** A seed whose first opening throw is — or is not — a tie, for this game id. */

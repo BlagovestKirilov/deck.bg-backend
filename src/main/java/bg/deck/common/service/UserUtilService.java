@@ -10,6 +10,8 @@ import lombok.extern.log4j.Log4j2;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+
 @Log4j2
 @RequiredArgsConstructor
 @Service
@@ -19,6 +21,7 @@ public class UserUtilService {
     private final ForgotPasswordService forgotPasswordService;
     private final UserDeletionService userDeletionService;
     private final UserAccountService userAccountService;
+    private final FriendshipService friendshipService;
     private final ApplicationEventPublisher events;
     private final UserMapper userMapper;
 
@@ -40,7 +43,10 @@ public class UserUtilService {
         userDeletionService.reassignToDeletedUser(user, deletedUser);
 
         String username = user.getUsername();
+        // Read before the delete: the friendships go with the account.
+        List<String> linked = friendshipService.everyoneLinkedTo(username);
         userAccountService.delete(user);
+        friendshipService.tellGone(username, linked);
 
         // Anything with a schema of its own clears itself. Calling a game
         // from here would put a public-schema class in charge of that game's

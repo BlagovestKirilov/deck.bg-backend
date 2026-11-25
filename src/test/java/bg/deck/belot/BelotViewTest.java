@@ -79,7 +79,7 @@ class BelotViewTest {
     private final BelotSeedService seeds = new BelotSeedService();
     private final BelotDealService dealService = new BelotDealService(deals, seeds);
     private final BelotStatsService statsService = mock(BelotStatsService.class);
-    private final BelotPlayService playService = new BelotPlayService(dealService, statsService);
+    private final BelotPlayService playService = new BelotPlayService(dealService, statsService, event -> { });
     private final BelotTurnService turnService = new BelotTurnService(dealService, playService,
             new BelotProperties(Duration.ofSeconds(45),
                     Duration.ofMillis(1600), Duration.ofSeconds(8), Duration.ZERO, Duration.ZERO));

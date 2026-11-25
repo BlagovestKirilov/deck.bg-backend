@@ -20,5 +20,11 @@ public enum FriendEventType {
     /** Nobody answered the challenge in time. */
     CHALLENGE_EXPIRED,
     /** The challenge was accepted and the game is on. */
-    GAME_STARTED
+    GAME_STARTED,
+    /**
+     * A friend came, went, or moved between the lobby and a table: the list's
+     * "here" and "playing" are to be read again. Said instead of every screen
+     * asking on a timer.
+     */
+    PRESENCE
 }

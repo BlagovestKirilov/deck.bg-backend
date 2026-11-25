@@ -50,7 +50,7 @@ class TablaBlockedTimeoutTest {
                 tablaGameRepository,
                 mock(WebSocketService.class),
                 mock(TablaStatsService.class),
-                mock(TablaDiceService.class));
+                mock(TablaDiceService.class), event -> { });
 
         // A player's name comes from the account behind the seat.
         white = seat("petko91");
