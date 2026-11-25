@@ -26,5 +26,10 @@ public enum FriendEventType {
      * "here" and "playing" are to be read again. Said instead of every screen
      * asking on a timer.
      */
-    PRESENCE
+    PRESENCE,
+    /**
+     * This player changed something themself, from one of their screens: the
+     * others they have open read the list again. Says nothing to show.
+     */
+    SYNC
 }

@@ -1,7 +1,9 @@
 package bg.deck.common.service;
 
+import bg.deck.common.enums.FriendEventType;
 import bg.deck.common.model.dto.FriendLinks;
 import bg.deck.common.model.dto.GameStatsDTO;
+import bg.deck.common.model.response.FriendEvent;
 import bg.deck.common.model.response.FriendView;
 import bg.deck.common.model.response.FriendsResponse;
 import lombok.RequiredArgsConstructor;
@@ -25,6 +27,17 @@ public class FriendsService {
     private final ChallengeService challengeService;
     private final PresenceService presenceService;
     private final List<GameRecordProvider> records;
+    private final WebSocketService webSocketService;
+
+    /**
+     * The page after this player changed something, and word to every other
+     * screen they have open, so a second tab is not left showing what was.
+     * The one that made the change reads its answer and, once more, the word.
+     */
+    public FriendsResponse changedBy(String me) {
+        webSocketService.notifyFriends(me, FriendEvent.of(FriendEventType.SYNC, me));
+        return pageOf(me);
+    }
 
     public FriendsResponse pageOf(String me) {
         FriendLinks links = friendshipService.linksOf(me);
