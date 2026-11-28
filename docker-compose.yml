@@ -1,6 +1,11 @@
-# Deployed to /home/ubuntu/santase. Amarok lives in /home/ubuntu/app and both
-# projects declare services called "frontend" and "backend", so they must never
-# share a directory: whichever deployed last would own the compose file there.
+# Deployed to /home/ubuntu/santase on the Hetzner server (docs/hetzner/MIGRATE.md).
+# Amarok lives in /home/ubuntu/app and both projects declare services called
+# "frontend" and "backend", so they must never share a directory: whichever
+# deployed last would own the compose file there.
+#
+# Postgres is not here: it runs as its own project in /home/ubuntu/db, on the
+# external network db_network, which the backend joins to reach it as
+# "postgres". Deploying this file never touches the database.
 name: santase
 
 services:
@@ -18,13 +23,20 @@ services:
     container_name: santase_backend
     restart: always
     env_file: .env
+    # The server has 4 GB for this, Amarok and Postgres. The JVM sizes its
+    # heap from this limit (MaxRAMPercentage below).
+    mem_limit: 1200m
     volumes:
       - /home/ubuntu/santase/backend_logs:/app/logs
     environment:
       - TZ=Europe/Sofia
-      - JAVA_OPTS=-Duser.timezone=Europe/Sofia
+      # JAVA_TOOL_OPTIONS, not JAVA_OPTS: the image starts java directly
+      # (ENTRYPOINT ["java", "-jar", ...]), so nothing would read JAVA_OPTS.
+      # The JVM itself reads JAVA_TOOL_OPTIONS.
+      - JAVA_TOOL_OPTIONS=-XX:MaxRAMPercentage=70 -Duser.timezone=Europe/Sofia
     networks:
       - santase_network
+      - db_network
 
 networks:
   santase_network:
@@ -32,3 +44,5 @@ networks:
     # is adopted as-is rather than recreated under the new project name.
     external: true
     name: app_santase_network
+  db_network:
+    external: true
